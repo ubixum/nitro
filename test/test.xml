@@ -1,0 +1,84 @@
+<deviceinterface
+	xmlns="http://ubixum.com/deviceinterface/"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://ubixum.com/deviceinterface/ deviceinterface.xsd">
+	
+	<terminal
+		name="Terminal1"
+		regAddrWidth="16"
+		regDataWidth="16"
+		addr="3">
+		<register
+            name="reg1"
+            addr="0">
+            <type>int</type>
+            <mode>write
+            </mode>            
+            <width>18</width> <!-- bigger than regDataWidth -->
+            <init>0</init>
+            <array>1</array>
+        </register>
+        <register name="addr2reg"> <!-- addr becomes 2 because reg1 width -->
+            <comment><![CDATA[cOMMENTS can Have 0x25 all & kinds of ></ special " characters!@]]></comment>
+            <type>int</type>
+            <mode>write</mode>
+            
+            <width>3</width>
+        </register>
+        <register 
+            name="reg2" addr="23">
+            <type>trigger</type>
+            <mode>write</mode>
+            <width>1</width>
+        </register>
+        <register name="reg3">
+            <type>int</type>
+            <mode>  read </mode> <!-- width should be 3 -->
+                                 <!-- addr should be 24 -->
+            <subregister name="subreg1">
+                <width>2</width>                
+            </subregister>
+            <subregister name="subreg2">
+                <width>1</width>
+                <valuemap>
+                    <entry name="ON" value="0" />
+                    <entry name="OFF" value="1" />
+                </valuemap>
+            </subregister>
+        </register>
+	</terminal>
+    <terminal
+        name="term2"
+        regAddrWidth="16"
+        regDataWidth="16"
+        > <!-- addr should be 4 -->
+    </terminal>
+
+    <terminal
+        name="array_term"
+        regDataWidth="5"
+        regAddrWidth="5">
+        <!-- array 5 total width 15 -->
+        <register
+            name="array1">
+            <type>int</type>
+            <mode>write</mode>
+            <width>3</width>
+            <array>5</array>
+        </register>
+        <register
+            name="array2">
+            <type>int</type>
+            <mode>write</mode>             
+            <width>32</width>
+            <init>1, 2, 34567891011121314, four, 5</init>
+            <array>5</array>
+            <valuemap>
+                 <entry name="four" value="4" />
+            </valuemap>
+        </register>
+ 
+    </terminal>
+
+    
+</deviceinterface>

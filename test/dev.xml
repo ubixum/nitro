@@ -1,0 +1,186 @@
+<deviceinterface
+	xmlns="http://ubixum.com/deviceinterface/"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://ubixum.com/deviceinterface/ deviceinterface.xsd">
+	<terminal
+		name="Terminal1"
+		regAddrWidth="5"
+		regDataWidth="5"
+		addr="0">
+		<register
+            name="reg1"
+            addr="0">
+            <type>int</type>
+            <mode>write
+            </mode>
+            <width>18</width> <!-- bigger than regDataWidth -->
+            <init>0</init>
+            <array>1</array>
+            <valuemap>
+                <entry name="evens" value="174762" /> <!-- 2AAAA -->
+                <entry name="odds" value="87381" /> <!-- 15555 -->
+            </valuemap>
+        </register>
+        <register
+            name="reg2">
+            <type>int</type>
+            <mode>write</mode>
+            <subregister
+                name="sub1">
+                <width>3</width>
+                </subregister>
+            <subregister
+                name="sub2">
+                <width>3</width>
+                <valuemap>
+                    <entry name="7" value="7" />
+                    <entry name="6" value="6" />
+                </valuemap>
+                </subregister>
+       </register>
+       <!-- 20 sets of 3 bits -->
+       <register
+         name="array_reg1">
+         <type>int</type>
+         <mode>write</mode>
+         <width>3</width>
+         <array>20</array>
+       </register>
+
+       <!-- 4 sets of 7 bits -->
+       <register
+         name="array_reg2">
+         <type>int</type>
+         <mode>write</mode>
+         <width>7</width>
+         <array>4</array>
+       </register>
+
+       <!-- 3 sets of 18 bits -->
+       <register
+        name="array_reg3">
+         <type>int</type>
+         <mode>write</mode>
+         <width>18</width>
+         <array>3</array>
+       </register>
+
+    </terminal>
+    <terminal
+        name="int_term"
+        regAddrWidth="16"
+        regDataWidth="16">
+        <register 
+            name="int">
+            <type>int</type>
+            <mode>write</mode>
+            <subregister
+                name="lw">
+                <width>16</width>
+                </subregister>
+            <subregister
+                name="hw">
+                <width>16</width>
+                </subregister>
+        </register>
+            
+        <register
+            name="wide_reg">
+            <type>int</type>
+            <mode>write</mode>
+            <subregister
+                name="big_sub1">
+                <width>37</width>
+                </subregister>
+            <subregister
+                name="big_sub2">
+                <width>4</width>
+                </subregister>
+            <subregister
+                name="big_sub3">
+                <width>33</width>
+                </subregister>
+          </register>
+        <!-- Models an actual subregister that had some problems -->
+        <register
+            name="many_subregs">
+            <type>int</type>
+            <mode>write</mode>
+            <subregister
+                name="one">
+                <width>8</width>
+            </subregister>
+            <subregister
+                name="two">
+                <width>8</width>
+            </subregister>
+            <subregister
+                name="three">
+                <width>8</width>
+            </subregister>
+            <subregister
+                name="four">
+                <width>8</width>
+            </subregister>
+            <subregister
+                name="five">
+                <width>8</width>
+            </subregister>
+            <subregister
+                name="six">
+                <width>8</width>
+            </subregister>
+            <subregister
+                name="seven">
+                <width>4</width>
+            </subregister>
+            <subregister
+                name="eight">
+                <width>12</width>
+            </subregister>
+            <subregister
+                name="nine">
+                <width>12</width>
+            </subregister>
+            <subregister
+                name="ten">
+                <width>12</width>
+            </subregister>
+            <subregister
+                name="eleven">
+                <width>12</width>
+            </subregister>
+            <subregister
+                name="twelve">
+                <width>12</width>
+            </subregister>
+            <subregister
+                name="thirteen">
+                <width>12</width>
+            </subregister>
+            <subregister
+                name="fourteen">
+                <width>12</width>
+            </subregister>
+            <subregister
+                name="fifteen">
+                <width>12</width>
+            </subregister>
+            <subregister
+                name="sixteen">
+                <width>12</width>
+            </subregister>
+            <subregister
+                name="seventeen">
+                <width>12</width>
+            </subregister>
+            <subregister
+                name="eighteen">
+                <width>12</width>
+            </subregister>
+        </register>
+
+    </terminal>
+
+
+</deviceinterface>

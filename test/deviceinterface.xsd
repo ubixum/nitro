@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema targetNamespace="http://ubixum.com/deviceinterface/"           
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"           
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xi="http://www.w3.org/2001/XInclude"            
+	   xsi:schemaLocation="http://www.w3.org/2001/XMLSchema 
+	   		       http://www.w3.org/2001/XMLSchema.xsd"
+	   xmlns="http://ubixum.com/deviceinterface/">
+
+  <xs:import namespace="http://www.w3.org/2001/XInclude" schemaLocation="http://www.w3.org/2001/XInclude.xsd" />
+       
+  <xs:element name="deviceinterface">
+   <xs:annotation>
+       <xs:documentation>
+        A devide interface element contains a collection of terminals.
+       </xs:documentation>
+   </xs:annotation>
+   <xs:complexType>
+    <xs:sequence>
+      <xs:element maxOccurs="unbounded" minOccurs="0" ref="terminal" />
+      <xs:element maxOccurs="unbounded" minOccurs="0" ref="xi:include" />
+    </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:attributeGroup name="nodeAttributes">     
+    <xs:attribute name="name" type="nameType" use="required"/>
+    <xs:attribute name="addr" type="addrType" use="optional"/>    
+  </xs:attributeGroup>
+
+  <xs:element name="terminal">
+    <xs:complexType>      
+      <xs:sequence>
+        <xs:element ref="comment" minOccurs="0" maxOccurs="1" />
+        <xs:element maxOccurs="unbounded" minOccurs="0" ref="register"/>        
+      </xs:sequence>
+      <xs:attributeGroup ref="nodeAttributes"/>
+      <xs:attribute name="regDataWidth" type="xs:positiveInteger" use="required"/>
+      <xs:attribute name="regAddrWidth" type="xs:nonNegativeInteger" use="required"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="register">
+    <xs:complexType>
+              
+          <xs:sequence>
+            <xs:element ref="comment" minOccurs="0" maxOccurs="1" />
+            <xs:element ref="type" />
+            <xs:element ref="mode"/>            
+           <xs:choice>
+              <xs:sequence>                                          
+                    <xs:element ref="width"/>    
+                    <xs:element ref="init" minOccurs="0"/>    
+                    <xs:element ref="array" minOccurs="0"/>    
+                    <xs:element ref="valuemap" minOccurs="0"/>                  
+              </xs:sequence>
+
+              <xs:sequence>
+                <xs:element maxOccurs="unbounded" ref="subregister" minOccurs="2" />
+              </xs:sequence>
+            </xs:choice>
+            
+            
+          </xs:sequence>
+
+
+      <xs:attributeGroup ref="nodeAttributes"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="subregister">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="comment" minOccurs="0" maxOccurs="1" />
+        <xs:element ref="width"/>
+        <xs:element ref="init" minOccurs="0" />
+        <xs:element minOccurs="0" ref="valuemap"/>
+        
+      </xs:sequence>
+      <xs:attribute name="name" type="nameType" />      
+    </xs:complexType>
+  </xs:element>
+  
+  
+	<xs:simpleType name="nameType">
+		<xs:restriction base="xs:string">
+			<xs:pattern value="[_A-Za-z0-9]+" />
+		</xs:restriction>
+	</xs:simpleType>
+    <xs:simpleType name="addrType">
+        <xs:restriction base="xs:integer" >
+            <xs:minInclusive value="0" />
+        </xs:restriction>
+    </xs:simpleType>
+
+  <xs:element name="mode">
+    <xs:simpleType>
+      <xs:restriction base="xs:string">
+        <xs:enumeration value="write"/>
+        <xs:enumeration value="read"/>
+        <xs:whiteSpace value="collapse" />
+      </xs:restriction>
+    </xs:simpleType>
+  </xs:element>
+  
+  <xs:element name="type">
+    <xs:simpleType>
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="int" />
+            <xs:enumeration value="trigger" />
+            <xs:whiteSpace value="collapse" />
+        </xs:restriction>
+    </xs:simpleType>
+  </xs:element>
+  <xs:element name="width" type="xs:positiveInteger" />
+  <xs:element name="comment" type="xs:string" />
+  <xs:element name="init" type="xs:string" />  
+  <xs:element name="array" type="xs:positiveInteger" />
+  <xs:element name="entry">
+    <xs:complexType>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="value" type="xs:integer"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="valuemap">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element maxOccurs="unbounded" minOccurs="1" ref="entry" />        
+      </xs:sequence>      
+    </xs:complexType>
+    <xs:unique name="uniqueName">
+      <xs:selector xpath="entry" />
+      <xs:field xpath="@name" />
+    </xs:unique>
+  </xs:element>
+</xs:schema>

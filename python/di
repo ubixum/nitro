@@ -1,0 +1,65 @@
+#! /usr/bin/env python
+
+#/////////////////////////////////////////////////////////////////////////////
+# Copyright: 2007 Lane Brooks                                               //
+# License:   GPL                                                            //
+#                                                                           //
+# This program is free software; you can redistribute it and/or modify      //
+# it under the terms of the GNU General Public License as published by      //
+# the Free Software Foundation; either version 2 of the License, or         //
+# (at your option) any later version.                                       //
+#                                                                           //
+# This program is distributed in the hope that it will be useful,           //
+# but WITHOUT ANY WARRANTY; without even the implied warranty of            //
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the             //
+# GNU General Public License for more details.                              //
+#                                                                           //
+# You should have received a copy of the GNU General Public License         //
+# along with this program; if not, write to the Free Software               //
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA  //
+#/////////////////////////////////////////////////////////////////////////////
+
+
+from optparse import OptionParser
+import sys,os
+from nitro import *
+
+parser = OptionParser()
+parser.add_option("-o", "--outdir", dest="outdir",
+                  help="write data to DIR", metavar="DIR", default=".")
+parser.add_option("-v", "--verilog", dest="verilog",
+                  help="dump verilog data for the comma-seperate LIST of terminals, default is to dump all terminals.", metavar="LIST")
+parser.add_option("-d", "--verilog-defs", dest="verilog_defs", metavar='filename',
+                  help="Give a custom filename to the defs file dumped for the di terminals.  Defaults to the name of the di file + '_defs.v'" )
+
+(options, args) = parser.parse_args(sys.argv[1:])
+if(len(args) != 1):
+    raise RuntimeError("You must specify a DI file to read.  Use -h option to see command line options")
+#sys.path.insert(0,'.')
+#exec ( "import %s as dimodule" % args[0] )
+filename = args[0]
+
+
+if filename.endswith(".py"):
+    difile = {}
+    execfile(filename, difile)
+    try:
+        di=difile["di"]
+    except KeyError:
+        raise Exception("Python DI file must set top level to a variable called 'di'.  No variable 'di' found in "+filename)
+elif filename.endswith(".xml"):
+    x=XmlReader(filename)
+    di=DeviceInterface('di')
+    x.read(di)
+else:
+    raise Exception("No DI handler implimented for "+ filename)
+
+terms = options.verilog and options.verilog.split(",") or di.keys()
+for term in terms:
+    module = term + "Terminal";
+    printVerilogModule(  di[term], module, options.outdir + "/" + module + ".v")
+    printVerilogInstance(di[term], module, options.outdir + "/" + module + "Instance.v")
+defs_name = options.verilog_defs is not None and options.verilog_defs or \
+    "%s_defs.v" % ( os.path.splitext(filename)[0] )
+printVerilogDefs( di, os.path.splitext(defs_name)[0].replace('.','_').replace(' ','_').upper(), options.outdir + "/" + defs_name )
+

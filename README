@@ -1,0 +1,14 @@
+Nitrogen Data Acquisition Drivers
+
+Full documentation for the Nitrogen API are provided in
+<installation directory>\html.
+
+See the Changelog for a list of changes in each release.
+
+Upgrading:
+
+1) Uninstall previous driver releases.
+   This is not necessarily required, but helps ensure no conflicting DLLs are on the system.
+2) Install new driver and software by running the installer.
+3) Projects based on previous release may have minor API incompatibilities
+   and will need to be recompiled.

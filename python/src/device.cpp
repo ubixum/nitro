@@ -1,0 +1,552 @@
+/**
+ * Copyright (C) 2009 Ubixum, Inc. 
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ **/
+
+#include <pynitro/device.h>
+
+#include <structmember.h>
+
+//#include <numpy/arrayobject.h>
+
+#include <iostream>
+#include <string>
+
+
+#include <pynitro/nitro_pyutil.h>
+
+#include <pynitro/node.h>
+
+using namespace std;
+using namespace Nitro;
+
+
+
+PyMethodDef nitro_Device_methods[] = {
+    {"load_xml", (PyCFunction)nitro_Device_LoadXML, METH_VARARGS, "load_xml( xml_path )" },
+    {"write_xml", (PyCFunction)nitro_Device_WriteXML, METH_O, "write_xml ( xml_path )" },
+    {"get_di", (PyCFunction)nitro_Device_GetDi, METH_NOARGS, "get_di()-> Device Interface Nodes"},
+    {"set_di", (PyCFunction)nitro_Device_SetDi, METH_O, "set_di(di)" },
+    {"lock", (PyCFunction)nitro_Device_Lock, METH_NOARGS, "lock()"},
+    {"unlock", (PyCFunction)nitro_Device_Unlock, METH_NOARGS, "lock()"},
+    {"get", (PyCFunction)nitro_Device_Get, METH_VARARGS, "Wrapped C++ API member function" },
+    {"set", (PyCFunction)nitro_Device_Set, METH_VARARGS, "Wrapped C++ API member function" },
+    {"read", (PyCFunction)nitro_Device_Read, METH_VARARGS, 
+        "read( term, reg, data, timeout=1000 )\n"
+        "\tdata can be either string or array data." },
+    {"write", (PyCFunction)nitro_Device_Write, METH_VARARGS, "Wrapped C++ API member function" },
+    {"close", (PyCFunction)nitro_Device_Close, METH_NOARGS, "Wrapped C++ API member function" },
+    {"enable_mode",(PyCFunction)nitro_Device_EnableMode, METH_VARARGS, "enable_mode(mode,term=None)" },
+    {"disable_mode",(PyCFunction)nitro_Device_DisableMode, METH_VARARGS, "disable_mode(mode,term=None)" },
+    {"set_modes",(PyCFunction)nitro_Device_SetModes, METH_VARARGS, "set_modes(mode,term=None)" },
+    {"get_modes",(PyCFunction)nitro_Device_GetModes, METH_VARARGS, "get_modes(term=None)" },
+    {"set_timeout",(PyCFunction)nitro_Device_SetTimeout, METH_O, "set_timeout(timeout)" },
+    {NULL}
+};
+
+static PyObject* 
+nitro_Device_new ( PyTypeObject* type, PyObject *args, PyObject *kwds ) {
+
+    nitro_DeviceObject *self = (nitro_DeviceObject*)type->tp_alloc(type,0);
+    if (self != NULL) {
+        self->nitro_device = NULL;
+    }
+    return (PyObject*)self;
+
+}
+
+static void nitro_Device_dealloc (nitro_DeviceObject* self) {
+
+    self->ob_type->tp_free((PyObject*)self);
+}
+
+PyTypeObject nitro_DeviceType = {
+
+    PyObject_HEAD_INIT(NULL)
+    0,                         /*ob_size*/
+    "nitro.Device",            /*tp_name*/
+    sizeof(nitro_DeviceObject),  /*tp_basicsize*/
+    0,                         /*tp_itemsize*/
+    (destructor)nitro_Device_dealloc, /*tp_dealloc*/
+    0,                         /*tp_print*/
+    0,                         /*tp_getattr*/
+    0,                         /*tp_setattr*/
+    0,                         /*tp_compare*/
+    0,                         /*tp_repr*/
+    0,                         /*tp_as_number*/
+    0,                         /*tp_as_sequence*/
+    0,                         /*tp_as_mapping*/
+    0,                         /*tp_hash */
+    0,                         /*tp_call*/
+    0,                         /*tp_str*/
+    0,                         /*tp_getattro*/
+    0,                         /*tp_setattro*/
+    0,                         /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,        /*tp_flags*/
+    "Basic Nitro Device Object",           /* tp_doc */
+    0,                    /* tp_traverse */
+    0,                     /* tp_clear */
+    0,                     /* tp_richcompare */
+    0,                     /* tp_weaklistoffset */
+    0,                     /* tp_iter */
+    0,                     /* tp_iternext */
+    nitro_Device_methods,   /* tp_methods */
+    0,                       /* tp_members */
+    0,                         /* tp_getset */
+    0,                         /* tp_base */
+    0,                         /* tp_dict */
+    0,                         /* tp_descr_get */
+    0,                         /* tp_descr_set */
+    0,                         /* tp_dictoffset */
+    0,                        /* tp_init */
+    0,                         /* tp_alloc */
+    nitro_Device_new,                 /* tp_new */
+};
+
+
+#define CHECK_ABSTRACT() if (!self->nitro_device) { \
+        PyErr_SetString(PyExc_Exception,"Device is abstract and cannot be uses directly."); \
+        return NULL; \
+    }
+
+
+
+PyObject* nitro_Device_Lock(nitro_DeviceObject* self) {
+    CHECK_ABSTRACT();
+    
+    Py_BEGIN_ALLOW_THREADS  
+    self->nitro_device->lock();
+    Py_END_ALLOW_THREADS  
+    
+    Py_RETURN_NONE;
+}
+
+PyObject* nitro_Device_Unlock(nitro_DeviceObject* self) {
+    CHECK_ABSTRACT();
+    
+    Py_BEGIN_ALLOW_THREADS  
+    self->nitro_device->unlock();
+    Py_END_ALLOW_THREADS  
+    
+    Py_RETURN_NONE;
+}
+
+
+
+PyObject* nitro_Device_Get(nitro_DeviceObject* self, PyObject* args) {
+      PyObject *ret = NULL;
+
+      CHECK_ABSTRACT();
+
+      DataType term(0);
+      DataType reg(0);
+      int32 timeout=-1;
+      if (!PyArg_ParseTuple ( args, "O&O&|I", to_datatype, &term, to_datatype, &reg, &timeout ) ) {
+        return NULL;
+      }
+
+      Exception* saveme=NULL;
+      Py_BEGIN_ALLOW_THREADS
+      try {
+        ret = from_datatype(self->nitro_device->get (term,reg,timeout));
+      } catch (const Exception& e) {
+	   // can't use NITRO_EXC here.
+       saveme=new Exception(e);
+      }
+      Py_END_ALLOW_THREADS
+
+      if (saveme) {
+        SET_NITRO_EXC(*saveme);
+        delete saveme;
+        return NULL;
+      }
+
+      return ret ;
+}
+
+PyObject* nitro_Device_Set(nitro_DeviceObject* self, PyObject *args) {
+    CHECK_ABSTRACT();
+
+    DataType term(0);
+    DataType reg(0);
+    DataType val(0);
+    int32 timeout=-1;
+    if (!PyArg_ParseTuple ( args, "O&O&O&|I", to_datatype, &term, to_datatype, &reg, to_datatype, &val, &timeout ) ) {
+        return NULL;
+    }
+    
+    Exception* saveme=NULL;
+    Py_BEGIN_ALLOW_THREADS
+    try {
+      self->nitro_device->set(term,reg,val,timeout);
+
+    } catch (const Exception& e) {
+        saveme=new Exception(e);
+    }
+    Py_END_ALLOW_THREADS
+
+    if (saveme) {
+        SET_NITRO_EXC(*saveme);
+        delete saveme;
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyObject* nitro_Device_Read(nitro_DeviceObject* self, PyObject *args) {
+
+    CHECK_ABSTRACT();
+
+    DataType term(0);
+    DataType reg(0);
+    PyObject* pydata = NULL;;
+    uint8* data = NULL;
+    uint32 timeout=1000;
+
+    if (!PyArg_ParseTuple( args, "O&O&O|I",
+                    to_datatype, &term, to_datatype, &reg, &pydata, &timeout )) {
+        return NULL;
+    }
+    uint32 length;
+    if (PyString_Check(pydata)) {
+        data = (uint8*)PyString_AsString(pydata);
+        length = PyString_Size(pydata);
+    } else if(PyObject_CheckReadBuffer(pydata)) {
+      void *d;
+      Py_ssize_t l;
+      if(PyObject_AsWriteBuffer(pydata, &d, &l) == -1) {
+	return NULL;
+      }
+      data = (uint8 *) d;
+      length = (uint32) l;
+	} else {
+        PyErr_SetString(PyExc_Exception, "Data must be a string, single-segment buffer, or array object." );
+        return NULL;
+    }
+    
+         
+    Exception* saveme=NULL;
+    Py_BEGIN_ALLOW_THREADS  
+        try {
+            
+            self->nitro_device->read ( term, reg, data, length, timeout );
+    
+        } catch ( const Exception& e) {
+            // can't use NITRO_EXC here.
+            saveme=new Exception(e);
+        }
+    Py_END_ALLOW_THREADS
+
+    if (saveme) {
+        SET_NITRO_EXC(*saveme);
+        delete saveme;
+        return NULL;
+    }
+    Py_RETURN_NONE;
+
+}
+PyObject* nitro_Device_Write(nitro_DeviceObject* self, PyObject *args) {
+   CHECK_ABSTRACT();
+
+
+    DataType term(0);
+    DataType reg(0);
+    PyObject* pydata = NULL;;
+    uint8* data = NULL;
+    uint32 timeout=1000;
+
+    if (!PyArg_ParseTuple( args, "O&O&O|I",  
+                    to_datatype, &term, to_datatype, &reg, &pydata, &timeout )) {
+        return NULL;
+    }
+
+    uint32 length;
+    if (PyString_Check(pydata)) {
+        data = (uint8*)PyString_AsString(pydata);
+        length = PyString_Size(pydata);
+    } else if(PyObject_CheckReadBuffer(pydata)) {
+      const void *d;
+      Py_ssize_t l;
+      if(PyObject_AsReadBuffer(pydata, &d, &l) == -1) {
+	return NULL;
+      }
+      data = (uint8 *) d;
+      length = (uint32) l;
+	} else {
+        PyErr_SetString(PyExc_Exception, "Data must be a string or array object." );
+        return NULL;
+    }
+    
+         
+    Exception* saveme=NULL;
+    Py_BEGIN_ALLOW_THREADS  
+        try {
+            
+            self->nitro_device->write ( term, reg, data, length, timeout );
+    
+        } catch ( const Exception& e) {
+            // can't use NITRO_EXC here.
+            saveme=new Exception(e);
+        }
+    Py_END_ALLOW_THREADS
+
+    if (saveme) {
+        SET_NITRO_EXC(*saveme);
+        delete saveme;
+        return NULL;
+    }
+    Py_RETURN_NONE;
+
+}
+PyObject* nitro_Device_Close(nitro_DeviceObject* self) {
+
+    CHECK_ABSTRACT(); 
+
+    Py_BEGIN_ALLOW_THREADS
+    self->nitro_device->close();
+    Py_END_ALLOW_THREADS
+
+    Py_RETURN_NONE;
+}
+
+PyObject* nitro_Device_LoadXML(nitro_DeviceObject* self, PyObject *args) {
+    CHECK_ABSTRACT();
+
+    const char* s;
+    if (!PyArg_ParseTuple( args, "s", &s )) {
+        return NULL;
+    }
+
+    try { 
+        XmlReader r ( s );
+        r.read ( self->nitro_device->get_di() );
+        Py_RETURN_NONE;
+    } catch ( const Exception &e ) {
+        NITRO_EXC(e,NULL);
+    }
+
+}
+
+PyObject* nitro_Device_WriteXML(nitro_DeviceObject* self, PyObject *arg ){
+    CHECK_ABSTRACT();
+    const char* s;
+    if (!PyString_Check( arg )) {
+        PyErr_SetString( PyExc_Exception, "write_xml(file_path)" );
+        return NULL;
+    }
+
+    s=PyString_AsString(arg);
+    try {
+
+        XmlWriter w ( s );
+        w.write ( self->nitro_device->get_di() );
+        Py_RETURN_NONE;
+
+    } catch ( const Exception &e ) {
+        NITRO_EXC(e,NULL);
+    }
+}
+
+PyObject* nitro_Device_GetDi(nitro_DeviceObject* self ) {
+
+    try {
+
+        Nitro::NodeRef di = self->nitro_device->get_di();
+        return nitro_BuildNode(di); 
+
+    } catch ( const Exception &e) {
+        NITRO_EXC(e,NULL);
+    }
+
+}
+
+PyObject* nitro_Device_SetDi(nitro_DeviceObject* self, PyObject *arg) {
+
+    if (!PyObject_TypeCheck(arg, &nitro_NodeType)) {
+        PyErr_SetObject(PyExc_Exception, arg );
+        return NULL;
+    }
+    try {
+         self->nitro_device->set_di ( *((nitro_NodeObject*)arg)->m_node ) ;
+         Py_RETURN_NONE;
+    } catch ( const Exception &e) {
+        NITRO_EXC(e,NULL);
+    }
+}
+
+PyObject* nitro_Device_EnableMode(nitro_DeviceObject* self, PyObject *arg) {
+    CHECK_ABSTRACT();
+    uint32 m;
+    DataType term(-1);
+    if (!PyArg_ParseTuple(arg, "I|O&", &m, to_datatype, &term)) {
+      PyErr_SetObject(PyExc_Exception, arg);
+      return NULL;
+    }
+    Exception* saveme=NULL;
+    Py_BEGIN_ALLOW_THREADS  
+        try {
+            
+            if (term != -1) {
+                self->nitro_device->enable_mode ( term, m );
+            } else {
+                self->nitro_device->enable_mode ( m );
+            }
+    
+        } catch ( const Exception& e) {
+            // can't use NITRO_EXC here.
+            saveme=new Exception(e);
+        }
+    Py_END_ALLOW_THREADS
+
+    if (saveme) {
+        SET_NITRO_EXC(*saveme);
+        delete saveme;
+        return NULL;
+    }
+    Py_RETURN_NONE;
+
+
+   
+}
+
+PyObject* nitro_Device_SetModes(nitro_DeviceObject* self, PyObject *arg) {
+    CHECK_ABSTRACT();
+    uint32 m;
+    DataType term(-1);
+    if (!PyArg_ParseTuple(arg, "I|O&", &m, to_datatype, &term)) {
+      PyErr_SetObject(PyExc_Exception, arg);
+      return NULL;
+    }
+    Exception* saveme=NULL;
+    Py_BEGIN_ALLOW_THREADS  
+        try {
+            
+            if (term != -1) {
+                self->nitro_device->set_modes ( term, m );
+            } else {
+                self->nitro_device->set_modes ( m );
+            }
+    
+        } catch ( const Exception& e) {
+            // can't use NITRO_EXC here.
+            saveme=new Exception(e);
+        }
+    Py_END_ALLOW_THREADS
+
+    if (saveme) {
+        SET_NITRO_EXC(*saveme);
+        delete saveme;
+        return NULL;
+    }
+    Py_RETURN_NONE;
+   
+}
+
+PyObject* nitro_Device_DisableMode(nitro_DeviceObject* self, PyObject *arg) {
+    CHECK_ABSTRACT();
+    uint32 m;
+    DataType term(-1);
+    if (!PyArg_ParseTuple(arg, "I|O&", &m, to_datatype, &term)) {
+      PyErr_SetObject(PyExc_Exception, arg);
+      return NULL;
+    }
+    Exception* saveme=NULL;
+    Py_BEGIN_ALLOW_THREADS  
+        try {
+            
+            if (term != -1) {
+                self->nitro_device->disable_mode ( term, m );
+            } else {
+                self->nitro_device->disable_mode ( m );
+            }
+    
+        } catch ( const Exception& e) {
+            // can't use NITRO_EXC here.
+            saveme=new Exception(e);
+        }
+    Py_END_ALLOW_THREADS
+
+    if (saveme) {
+        SET_NITRO_EXC(*saveme);
+        delete saveme;
+        return NULL;
+    }
+    Py_RETURN_NONE;
+
+    
+}
+PyObject* nitro_Device_GetModes(nitro_DeviceObject* self, PyObject *arg) {
+    CHECK_ABSTRACT();
+    DataType term(-1);
+    if (!PyArg_ParseTuple(arg, "|O&", to_datatype, &term)) {
+      PyErr_SetObject(PyExc_Exception, arg);
+      return NULL;
+    }
+    Exception* saveme=NULL;
+    uint32 ret=0;
+    Py_BEGIN_ALLOW_THREADS  
+        try {
+            
+            if (term != -1) {
+                ret=self->nitro_device->get_modes ( term );
+            } else {
+                ret=self->nitro_device->get_modes ( );
+            }
+    
+        } catch ( const Exception& e) {
+            // can't use NITRO_EXC here.
+            saveme=new Exception(e);
+        }
+    Py_END_ALLOW_THREADS
+
+    if (saveme) {
+        SET_NITRO_EXC(*saveme);
+        delete saveme;
+        return NULL;
+    }
+
+    return Py_BuildValue ( "I", ret );
+}
+
+PyObject* nitro_Device_SetTimeout(nitro_DeviceObject* self, PyObject *arg) {
+  
+  CHECK_ABSTRACT();
+
+  unsigned long timeout = PyInt_AsUnsignedLongMask(arg);
+  if (PyErr_Occurred()) {
+    PyErr_SetObject ( PyExc_Exception, arg );
+    return NULL;
+  }
+
+  Exception* saveme=NULL;
+  Py_BEGIN_ALLOW_THREADS  
+     try {
+       self->nitro_device->set_timeout(timeout);
+     } catch ( const Exception& e) {
+         // can't use NITRO_EXC here.
+         saveme=new Exception(e);
+     }
+  Py_END_ALLOW_THREADS
+
+  if (saveme) {
+      SET_NITRO_EXC(*saveme);
+      delete saveme;
+      return NULL;
+  }
+
+  Py_RETURN_NONE;
+
+}

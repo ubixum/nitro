@@ -1,0 +1,7 @@
+# udev rules file for all Ubixum VID matches.
+# This file allows udev to change the mode to 666 (all read/write)
+# for any Ubixum VID.
+#
+
+KERNEL=="usb*", SYSFS{idVendor}=="1fe1", MODE="0666"
+

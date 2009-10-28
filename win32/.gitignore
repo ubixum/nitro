@@ -1,0 +1,14 @@
+*.ncb
+*.suo
+*.vcproj.*
+BinDebug
+BinRelease
+DllRelease
+DllDebug
+DllStatic Release
+DllStatic Debug
+TestRelease
+TestDebug
+BinStatic Release
+VerDebug
+VerRelease
