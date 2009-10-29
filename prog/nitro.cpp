@@ -15,7 +15,7 @@
 #include <python_nitro.h>
 
 #define DEFAULT_VID 0x1fe1
-#define DEFAULT_PID 0x7848
+#define DEFAULT_PID 0x1212
 
 
 using namespace std;

@@ -12,7 +12,7 @@ PROG_NAMES=nitro nitro_version
 PROG_FILES=$(addprefix prog/, $(addsuffix .cpp, $(PROG_NAMES)))
 PROGS=$(addprefix $(BINDIR)/, $(PROG_NAMES))
 
-CPPFLAGS:=$(CPPFLAGS) -Wall -fPIC -Iinclude -I../firmware -I`python -c "from distutils import sysconfig; print sysconfig.get_config_var('INCLUDEPY');"` -Ipython/py/nitro/include
+CPPFLAGS:=$(CPPFLAGS) -Wall -fPIC -Iinclude -I`python -c "from distutils import sysconfig; print sysconfig.get_config_var('INCLUDEPY');"` -Ipython/py/nitro/include
 PYLIB:=`python -c "from distutils import sysconfig; print sysconfig.get_config_var('BLDLIBRARY')"`
 
 ifeq ($(USB_BACKEND), libusb0)

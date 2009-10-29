@@ -29,7 +29,7 @@
 #include <nitro/usb.h>
 #include <nitro/error.h>
 
-#include <vendor_commands.h>
+#include "vendor_commands.h"
 
 #include "ihx.h"
 
@@ -257,14 +257,12 @@ uint16 USBDevice::_transfer_checksum() {
 }
 
 void USBDevice::set_device_serial ( const std::string serial ) {
-    if ((m_impl->firmware_version() >> 8) < 2) throw Exception ( DEVICE_OP_ERROR, "Firmware version older than 2.0 does not support this method." );
     if ( serial.size() != 8 ) throw Exception ( DEVICE_OP_ERROR, "Invalid serial number length", (uint32)serial.size() ); 
     const char* buf = serial.c_str();
     m_impl->control_transfer ( NITRO_OUT, VC_SERIAL, 0, 0, reinterpret_cast<uint8*>(const_cast<char*>(buf)), 8, 1000 ); 
 }
 
 std::string USBDevice::get_device_serial ( ) {
-    if ((m_impl->firmware_version() >> 8) < 2) throw Exception ( DEVICE_OP_ERROR, "Firmware version older than 2.0 does not support this method." );
     uint8 buf[8];
     m_impl->control_transfer ( NITRO_IN, VC_SERIAL, 0, 0, buf, 8, 1000 );
     return std::string(reinterpret_cast<const char*>(buf),8);
