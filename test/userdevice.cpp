@@ -1,4 +1,6 @@
 
+#include <cstdio>
+
 #include <iostream>
 #include <nitro/types.h>
 
