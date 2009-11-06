@@ -25,6 +25,10 @@ if itype == "py":
     d=dict()
     execfile(ifile, d)
     di = d["di"]
+elif itype == "xml":
+    x = nitro.XmlReader(ifile)
+    di = nitro.DeviceInterface("DI")
+    x.read(di)
 else:
     raise Exception("Don't know how to convert input file type '%s'" % itype)
 
