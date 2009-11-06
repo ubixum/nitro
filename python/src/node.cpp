@@ -326,10 +326,41 @@ static PyObject* nitro_Node_GetItem (PyObject* s, PyObject* key) {
 
 }
 
+static int nitro_Node_SetItem(PyObject* s, PyObject* key, PyObject *v) {
+    if (!PyString_Check(key)) {
+        PyErr_SetObject(PyExc_Exception, key );
+        return -1;
+    }
+    const char* k = PyString_AsString(key);
+    nitro_NodeObject* self = (nitro_NodeObject*)s;
+    try {
+        if (NULL==v) {
+           // delete item
+           (*self->m_node)->del_child(k); 
+        } else {
+           if (!PyObject_TypeCheck(v, &nitro_NodeType )) {
+             PyErr_SetObject(PyExc_Exception, v );
+             return -1;
+           }
+
+           DataType new_dt(0);
+           if (to_datatype(v,&new_dt)) {
+               NodeRef new_child = (NodeRef)new_dt;
+               new_child->set_name(k); // overwrite name if they passed in a different key
+               (*self->m_node)->add_child(new_child);
+           }
+        }
+    } catch ( Exception &e ) {
+        NITRO_EXC(e,-1);
+    }
+    return 0;
+}
+
+
 PyMappingMethods nitro_Node_Mapping = {
    nitro_Node_Len,
    nitro_Node_GetItem,
-   NULL
+   nitro_Node_SetItem
 };
 
 
