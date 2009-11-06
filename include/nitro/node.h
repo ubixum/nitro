@@ -216,6 +216,17 @@ class DLL_API Node {
 
        static NodeRef create ( const std::string& name );
 
+       /**
+        * \brief create a copy of the node
+        *
+        * The clone method returns a copy of this node and it's children.
+        * Whether or not the node is currently a child of another node, the copy
+        * is not a child of any other node.  Other than that, they should be the
+        * same.
+        *
+        **/
+       virtual NodeRef clone () const;
+
        virtual ~Node() throw();
        /**
         * \brief Unique identifier for derived node type.
@@ -265,11 +276,11 @@ class DLL_API Node {
          * }
          * \endcode
          **/
-        DITreeIter child_begin();
+        DITreeIter child_begin() const;
         /**
          * \copydoc child_begin
          **/
-        DITreeIter child_end();
+        DITreeIter child_end() const;
 
 
         /**
@@ -340,11 +351,11 @@ class DLL_API Node {
          *  }
          * \endcode
          **/
-        DIAttrIter attrs_begin();
+        DIAttrIter attrs_begin() const;
         /**
          * \copydoc attrs_begin
          **/
-        DIAttrIter attrs_end();
+        DIAttrIter attrs_end() const;
 
 };
 

@@ -146,6 +146,27 @@ NodeRef Node::create ( const std::string& name ) {
     return NodeRef ( new Node ( name ) );
 }
 
+NodeRef Node::clone () const {
+
+    // children, childrenmap, attrmap
+    NodeRef copy = this->create ( this->get_name() );
+    for ( DITreeIter itr = this->child_begin(); itr != this->child_end(); ++itr ) {
+        NodeRef child = (*itr)->clone();
+        copy->add_child ( child );
+    }
+
+    for ( DIAttrIter itr = this->attrs_begin(); itr != this->attrs_end(); ++itr ) {
+        if ( itr->second.get_type() == NODE_DATA ) {
+            copy->set_attr( itr->first, ((NodeRef)(itr->second))->clone() );
+        } else {
+            copy->set_attr( itr->first, itr->second );
+        }
+    }
+
+    return copy;
+
+}
+
 bool Node::has_children()  const { return !m_impl->m_children.empty(); }
 
 
@@ -240,12 +261,12 @@ void Node::set_attr(const std::string& name, const DataType& value) {
 	m_impl->m_attrmap.insert( make_pair( name, value ) );
 }
 
-DITreeIter Node::child_begin() { return m_impl->m_children.begin(); }
-DITreeIter Node::child_end() { return m_impl->m_children.end(); }
+DITreeIter Node::child_begin() const { return m_impl->m_children.begin(); }
+DITreeIter Node::child_end() const { return m_impl->m_children.end(); }
 
 
-DIAttrIter Node::attrs_begin() { return m_impl->m_attrmap.begin(); }
-DIAttrIter Node::attrs_end() { return m_impl->m_attrmap.end(); }
+DIAttrIter Node::attrs_begin() const { return m_impl->m_attrmap.begin(); }
+DIAttrIter Node::attrs_end() const { return m_impl->m_attrmap.end(); }
 
 
 std::ostream& operator << ( std::ostream& out, const Node& n ) {

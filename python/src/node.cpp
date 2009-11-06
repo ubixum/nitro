@@ -140,6 +140,17 @@ PyObject* nitro_Node_Attr_Values( nitro_NodeObject* self) {
    } 
 }
 
+PyObject* nitro_Node_Clone(nitro_NodeObject* self) {
+    try {
+        NodeRef &n = (*self->m_node);
+        NodeRef copy = n->clone();
+        PyObject* pycopy = from_datatype(copy);
+        return pycopy;
+    } catch ( const Exception &e) {
+        NITRO_EXC(e,NULL);
+    }
+}
+
 PyObject* nitro_Node_AddChild(nitro_NodeObject* self, PyObject* arg) {
 
     if (!PyObject_TypeCheck(arg, &nitro_NodeType)) {
@@ -217,6 +228,7 @@ static PyMethodDef nitro_Node_Methods[] = {
     {"attr_keys", (PyCFunction)nitro_Node_Attr_Keys, METH_NOARGS, "attribute keys" },
     {"attr_values", (PyCFunction)nitro_Node_Attr_Values, METH_NOARGS, "attribute values" },
     {"attr_items", (PyCFunction)nitro_Node_Attr_Items, METH_NOARGS, "attribute items" },
+    {"clone", (PyCFunction)nitro_Node_Clone, METH_NOARGS, "create clone of node" },
     {NULL}
 };
 

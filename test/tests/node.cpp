@@ -16,6 +16,8 @@ class NodeTest : public CppUnit::TestFixture {
     CPPUNIT_TEST ( testNodeRefPtr );
     CPPUNIT_TEST ( testErase );
     CPPUNIT_TEST ( testNameChange );
+    CPPUNIT_TEST ( testClone );
+
 
     CPPUNIT_TEST_SUITE_END();
 
@@ -198,6 +200,32 @@ class NodeTest : public CppUnit::TestFixture {
             CPPUNIT_ASSERT_NO_THROW ( p->get_child ( "child1" ) );
 
 
+        }
+
+        void testClone() {
+            NodeRef p = Node::create("Parent");
+            NodeRef c = Node::create("child");
+
+            p->add_child(c);
+
+            NodeRef copy = p->clone();
+
+            copy->get_child("child")->set_name("child1");
+
+            CPPUNIT_ASSERT_NO_THROW ( copy->get_child("child1") );
+            CPPUNIT_ASSERT_NO_THROW ( p->get_child("child") );
+            CPPUNIT_ASSERT_THROW ( p->get_child("child1"), Exception );
+
+            NodeRef attr = Node::create("attr");
+            p->set_attr("test",attr);
+            p->set_attr("data",3);
+
+            copy = p->clone();
+            ((NodeRef)copy->get_attr("test"))->set_name("attr1");
+            CPPUNIT_ASSERT_EQUAL ( ((NodeRef)p->get_attr("test"))->get_name(), std::string("attr" ) );
+            CPPUNIT_ASSERT_EQUAL ( ((NodeRef)copy->get_attr("test"))->get_name(), std::string("attr1" ) );
+            CPPUNIT_ASSERT_NO_THROW ( copy->get_attr("data") );
+            CPPUNIT_ASSERT_EQUAL ( 3, (int) copy->get_attr("data" ) );
         }
 
 };
