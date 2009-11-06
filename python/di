@@ -60,6 +60,6 @@ for term in terms:
     printVerilogModule(  di[term], module, options.outdir + "/" + module + ".v")
     printVerilogInstance(di[term], module, options.outdir + "/" + module + "Instance.v")
 defs_name = options.verilog_defs is not None and options.verilog_defs or \
-    "%s_defs.v" % ( os.path.splitext(filename)[0] )
+    "%s_defs.v" % ( os.path.splitext(os.path.basename(filename))[0] )
 printVerilogDefs( di, os.path.splitext(defs_name)[0].replace('.','_').replace(' ','_').upper(), options.outdir + "/" + defs_name )
 
