@@ -42,11 +42,27 @@
 #define usb_debug(d)
 #endif
 
-#define FIRMWARE_MAJOR 1 // current drivers support this version of the device firmware
-#define FIRMWARE_MAJOR_MIN 1 // min version drivers support.
+#define FIRMWARE_MAJOR 3 // current drivers support this version of the device firmware
+#define FIRMWARE_MAJOR_MIN 0 // min version drivers support.
 
 #define VC_HI_REGVAL (NITRO_VC)0xb2 // version 1 vendor command no longer in firmware
 
+// protocol v2 structure
+#ifdef WIN32
+#pragma pack(push)
+#pragma pack(1)
+#endif
+typedef struct {
+    uint8 command;
+    uint32 length;
+}
+#ifdef __GNUG__
+ __attribute__((__packed__))
+#endif
+rdwr_v2;
+#ifdef WIN32
+#pragma pack(pop)
+#endif
 
 namespace Nitro {
 
@@ -70,6 +86,7 @@ struct usbdev_impl_core {
 
     virtual int control_transfer ( NITRO_DIR, NITRO_VC, uint16 value, uint16 index, uint8* data, size_t length, uint32 timeout )=0;
     virtual int bulk_transfer ( NITRO_DIR, uint8, uint8* , size_t, uint32 )=0; 
+    virtual uint16 firmware_version() = 0;
     int write_ram(uint16 addr, const uint8* data, size_t length, unsigned int timeout ) {
     
     	size_t transferred = 0;
@@ -90,11 +107,20 @@ struct usbdev_impl_core {
     }
    void rdwr_setup (uint8 command, size_t length, uint16 terminal_addr, uint32 reg_addr, uint32 timeout) {
         // send usb read command
-        rdwr_data_header c = { command, terminal_addr, reg_addr, length };
-    	assert (sizeof(c)==11);
-        int ret=control_transfer( NITRO_OUT, VC_HI_RDWR, 0, 0, reinterpret_cast<uint8*>(&c), sizeof(c),  timeout);
-        if (ret != sizeof(c)){ 
-            throw Exception ( USB_COMM, "Unable to initiate rdwr process on device.", ret);//, usb_strerror() );
+        if ( (firmware_version() >> 8) < 3) {
+            rdwr_v2 c = { command, length };
+            assert (sizeof(c)==5);
+            int ret=control_transfer( NITRO_OUT, VC_HI_RDWR, terminal_addr, reg_addr, reinterpret_cast<uint8*>(&c), sizeof(c),  timeout);
+            if (ret != sizeof(c)){ 
+                throw Exception ( USB_COMM, "Unable to initiate rdwr process on device.", ret);//, usb_strerror() );
+            }
+        } else {
+            rdwr_data_header c = { command, terminal_addr, reg_addr, length };
+        	assert (sizeof(c)==11);
+            int ret=control_transfer( NITRO_OUT, VC_HI_RDWR, 0, 0, reinterpret_cast<uint8*>(&c), sizeof(c),  timeout);
+            if (ret != sizeof(c)){ 
+                throw Exception ( USB_COMM, "Unable to initiate rdwr process on device.", ret);//, usb_strerror() );
+            }
         }
     }
 
@@ -211,10 +237,17 @@ DataType USBDevice::_get( uint32 terminal_addr, uint32 reg_addr, uint32 timeout 
     
 	usb_debug ( "Get term: " << terminal_addr << " reg: " << reg_addr );
     uint16 value=0;
-    //_read ( terminal_addr, reg_addr, reinterpret_cast<uint8*>(&value), sizeof(value), timeout );
-    m_impl->rdwr_setup ( COMMAND_GET, sizeof(value), terminal_addr, reg_addr, timeout );
-    m_impl->rdwr_data ( NITRO_IN, READ_EP, reinterpret_cast<uint8*>(&value), sizeof(value), timeout );
-    m_impl->read_ack(timeout);
+    if ((m_impl->firmware_version() >> 8) < 2) {
+        int ret=m_impl->control_transfer( NITRO_IN, VC_HI_REGVAL, reg_addr, terminal_addr, reinterpret_cast<uint8*>(&value), 2, timeout );
+        if (ret<0) {
+            throw Exception ( USB_COMM, "_get: transfer failed", ret );
+        } 
+    } else {
+        //_read ( terminal_addr, reg_addr, reinterpret_cast<uint8*>(&value), sizeof(value), timeout );
+        m_impl->rdwr_setup ( COMMAND_GET, sizeof(value), terminal_addr, reg_addr, timeout );
+        m_impl->rdwr_data ( NITRO_IN, READ_EP, reinterpret_cast<uint8*>(&value), sizeof(value), timeout );
+        m_impl->read_ack(timeout);
+    } 
     usb_debug ( "Value: " << value );
     return DataType( static_cast<uint32>(value) );
 }
@@ -223,10 +256,18 @@ void USBDevice::_set( uint32 terminal_addr, uint32 reg_addr, const DataType& val
 
 	usb_debug ( "Set term: " << terminal_addr << " reg: " << reg_addr << " val: " << value);
     uint16 val = static_cast<uint32>(value);
-    //_write ( terminal_addr, reg_addr, reinterpret_cast<uint8*>(&val), sizeof(val), timeout );
-    m_impl->rdwr_setup ( COMMAND_SET, sizeof(val), terminal_addr, reg_addr, timeout );
-    m_impl->rdwr_data ( NITRO_OUT, WRITE_EP, reinterpret_cast<uint8*>(&val), sizeof(val), timeout );
-    m_impl->read_ack(timeout);
+    if ((m_impl->firmware_version() >> 8) < 2) {
+        int ret=m_impl->control_transfer( NITRO_OUT, VC_HI_REGVAL, reg_addr, terminal_addr, reinterpret_cast<uint8*>(&val), 2, timeout );
+        if (ret<0) {
+            usb_debug ( "Control transfer ret: " << ret );
+            throw Exception ( USB_COMM, "_set: transfer failed.", ret );
+        }
+    } else {
+        //_write ( terminal_addr, reg_addr, reinterpret_cast<uint8*>(&val), sizeof(val), timeout );
+        m_impl->rdwr_setup ( COMMAND_SET, sizeof(val), terminal_addr, reg_addr, timeout );
+        m_impl->rdwr_data ( NITRO_OUT, WRITE_EP, reinterpret_cast<uint8*>(&val), sizeof(val), timeout );
+        m_impl->read_ack(timeout);
+    }
 }
 
 void USBDevice::_read( uint32 terminal_addr, uint32 reg_addr, uint8* data, size_t length, uint32 timeout ) {
@@ -234,10 +275,50 @@ void USBDevice::_read( uint32 terminal_addr, uint32 reg_addr, uint8* data, size_
     // send usb read command
 	usb_debug ( "Read term: " << terminal_addr << " reg: " << reg_addr << " length: " << length );
     m_impl->rdwr_setup( COMMAND_READ, length, terminal_addr, reg_addr, timeout );
+  
+
     m_impl->rdwr_data ( NITRO_IN, READ_EP, data, length, timeout );
-    m_impl->read_ack(timeout);
+
+    if ((m_impl->firmware_version() >> 8) >= 2) {
+        m_impl->read_ack(timeout);
+    }
 
 }
+
+// old structure for 1.0 firmware
+// structure for passing data from rdwr vendor command to rdwr handlers
+#ifdef WIN32
+#pragma pack(push)
+#pragma pack(1)
+#endif
+typedef struct { 
+  uint8 in_progress;
+  uint8 initialized;
+  uint8 command;
+  uint16 term_addr;
+  uint16 reg_addr;
+  uint32 transfer_length;
+  uint16 bytes_avail; // bytes available for writing or ep size for reading
+  union {
+   uint32 bytes_written;
+   uint32 bytes_read;
+  };
+  uint8 aborted;
+  uint32 busy_cnt;
+  uint32 gpif_tc;
+  uint8 gpif_idlecs;
+  uint32 buffer_full;
+
+} 
+#ifdef __GNUG__
+ __attribute__((__packed__))
+#endif
+rdwr_v1;
+#ifdef WIN32
+#pragma pack(pop)
+#endif
+
+
 void USBDevice::_write( uint32 terminal_addr, uint32 reg_addr, const uint8* data, size_t length, uint32 timeout ) {
 
 	usb_debug ( "Write term: " << terminal_addr << " reg: " << reg_addr << " length: " << length );
@@ -245,7 +326,19 @@ void USBDevice::_write( uint32 terminal_addr, uint32 reg_addr, const uint8* data
 	usb_debug ( "Write process initialized." );
 
     m_impl->rdwr_data( NITRO_OUT, WRITE_EP, const_cast<uint8*>(data), length, timeout );
-    m_impl->read_ack(timeout);
+
+    if ((m_impl->firmware_version() >> 8) < 2) {
+        // when a write occurs, you have to wait for the device to finish writing.
+        rdwr_v1 stats;
+        int sanity_check=0;
+        do {
+            usb_debug ( "Transfer finished, checking device done." );
+            m_impl->control_transfer ( NITRO_IN, VC_RDWR_STAT, 0, 0, reinterpret_cast<uint8*>(&stats), sizeof(stats), 10000 ); 
+            usb_debug ( "Transfer Length " << stats.transfer_length << " bytes written " << stats.bytes_written );
+        } while ( stats.bytes_written < stats.transfer_length && sanity_check++<10);
+    } else {
+        m_impl->read_ack(timeout);
+    }
 
 }
 
@@ -257,12 +350,14 @@ uint16 USBDevice::_transfer_checksum() {
 }
 
 void USBDevice::set_device_serial ( const std::string serial ) {
+    if ((m_impl->firmware_version() >> 8) < 2) throw Exception ( DEVICE_OP_ERROR, "Firmware version older than 2.0 does not support this method." );
     if ( serial.size() != 8 ) throw Exception ( DEVICE_OP_ERROR, "Invalid serial number length", (uint32)serial.size() ); 
     const char* buf = serial.c_str();
     m_impl->control_transfer ( NITRO_OUT, VC_SERIAL, 0, 0, reinterpret_cast<uint8*>(const_cast<char*>(buf)), 8, 1000 ); 
 }
 
 std::string USBDevice::get_device_serial ( ) {
+    if ((m_impl->firmware_version() >> 8) < 2) throw Exception ( DEVICE_OP_ERROR, "Firmware version older than 2.0 does not support this method." );
     uint8 buf[8];
     m_impl->control_transfer ( NITRO_IN, VC_SERIAL, 0, 0, buf, 8, 1000 );
     return std::string(reinterpret_cast<const char*>(buf),8);
