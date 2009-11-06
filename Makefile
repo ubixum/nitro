@@ -100,5 +100,5 @@ clean:
 	rm -rf build
 
 install:
-	sudo cp -r $(BUILDDIR)$(PREFIX)/* $(PREFIX)
-	sudo cp -r $(BUILDDIR)/etc/* /etc/
+	cp -r $(BUILDDIR)$(PREFIX)/* $(PREFIX)
+	cp -r $(BUILDDIR)/etc/* /etc/
