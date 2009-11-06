@@ -298,13 +298,14 @@ def printVerilogInstance(ep, module, filename, clk="di_clk", resetb="resetb", we
 
 
     f.write("  wire [%d:0] %s_reg_datao;\n" % ( ep.regDataWidth-1, module ) )
+    f.write("  wire %s_%s = %s && (%s == %d);\n" % ( we, module, we, taddr, ep.addr ) )
     
     f.write("  " + module + " " + module + "(\n");
     f.write("     .clk(%s),\n"    % clk);
     f.write("     .resetb(%s),\n" % resetb);
     if(shadowed):
         f.write("     .shadow_sync(%s),\n" % (shadow_sync))
-    f.write("     .we(%s),\n"%  we )
+    f.write("     .we(%s_%s),\n"%  (we, module) )
     f.write("     .addr(%s[%d:0]),\n"   % (addr, ep.regDataWidth-1))
     f.write("     .datai(%s),\n"  % datai)
     f.write("     .datao(%s_reg_datao),\n\n" % module);
