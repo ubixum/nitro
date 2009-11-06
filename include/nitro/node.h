@@ -124,6 +124,11 @@ class DLL_API NodeRef {
         ~NodeRef () throw();
 
         /**
+         * \brief Determine if this NodeRef points to a valid node or NULL
+         **/
+        bool is_null() const;
+
+        /**
          *  \brief Obtain access to Node methods with this operator.
          **/
         Node* operator ->() const;

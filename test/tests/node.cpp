@@ -15,6 +15,7 @@ class NodeTest : public CppUnit::TestFixture {
     CPPUNIT_TEST ( testRefs );
     CPPUNIT_TEST ( testNodeRefPtr );
     CPPUNIT_TEST ( testErase );
+    CPPUNIT_TEST ( testNameChange );
 
     CPPUNIT_TEST_SUITE_END();
 
@@ -183,6 +184,20 @@ class NodeTest : public CppUnit::TestFixture {
            CPPUNIT_ASSERT_NO_THROW( node->del_child("child2") );
            CPPUNIT_ASSERT_EQUAL ( 1, (int) node->num_children() );
            CPPUNIT_ASSERT_THROW ( node->del_child ( "child2" ), Exception ); 
+        }
+
+        void testNameChange() {
+            NodeRef p = Node::create("Parent");
+            NodeRef c = Node::create("child");
+
+            p->add_child( c );
+
+            c->set_name ( "child1" );
+            
+            CPPUNIT_ASSERT_THROW ( p->get_child ( "child" ), Exception );
+            CPPUNIT_ASSERT_NO_THROW ( p->get_child ( "child1" ) );
+
+
         }
 
 };

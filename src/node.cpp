@@ -37,18 +37,20 @@ namespace Nitro {
 
 //********** Node::impl **************
 
+typedef std::map<std::string,int> childrenmap_t;
+
 struct Node::impl {
 	std::string m_name;
 	std::vector<NodeRef> m_children;
-	std::map<std::string,int> m_childrenmap;
+	childrenmap_t m_childrenmap;
 	std::map<std::string,DataType> m_attrmap;
     static int m_global_refs;
     int m_ref_count;
-    bool linked;
+    NodeRef m_parent;
     void inc() { ++m_ref_count; ++m_global_refs; }
     void dec() { --m_ref_count; --m_global_refs; }
 
-	impl(const std::string &name) : m_name(name), m_ref_count(0),linked(false) {}
+	impl(const std::string &name) : m_name(name), m_ref_count(0) {}
 
 	bool has_child(const std::string &name);
     ~impl() {}
@@ -94,6 +96,11 @@ NodeRef::NodeRef ( const NodeRef& copy ) : m_node (copy.m_node)  {
 NodeRef::~NodeRef ( ) throw() { 
     dec();
 }
+
+bool NodeRef::is_null() const {
+ return m_node == NULL;
+}
+
 Node* NodeRef::operator ->() const {
     if (!m_node) throw Exception ( NODE_OP_ERROR, "Attempt to use unassigned NodeRef" );
     node_debug ( "Using Pointer " << m_node);
@@ -160,7 +167,14 @@ Node::~Node() throw() {
 const std::string& Node::get_name() const { return m_impl->m_name; }
 
 void Node::set_name(const std::string& name) {
+    std::string orig_name = m_impl->m_name;
     m_impl->m_name = name;
+    if (!m_impl->m_parent.is_null()) {
+        childrenmap_t::iterator itr = m_impl->m_parent->m_impl->m_childrenmap.find ( orig_name );
+        int pos = itr->second;
+        m_impl->m_parent->m_impl->m_childrenmap.erase(itr);
+        m_impl->m_parent->m_impl->m_childrenmap[name] = pos;
+    }
 }
 
 
@@ -171,7 +185,7 @@ void Node::add_child(const NodeRef& node) {
 	if (m_impl->has_child(node->get_name())) {
 		throw Exception( NODE_DUP_CHILD, node->get_name() );
 	}
-    if (node->m_impl->linked ) {
+    if (!node->m_impl->m_parent.is_null()) {
         throw Exception( NODE_LINKED, node->get_name() );
     }
     if(this == &(*node)) {
@@ -180,7 +194,7 @@ void Node::add_child(const NodeRef& node) {
 	// child in order add to vector
 	m_impl->m_children.push_back(node);
 	m_impl->m_childrenmap[node->get_name()] = m_impl->m_children.size()-1;
-    node->m_impl->linked=true;
+    node->m_impl->m_parent = NodeRef ( this ); 
 }
 
 void Node::del_child(const std::string& name) {
