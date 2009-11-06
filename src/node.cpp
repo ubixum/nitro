@@ -224,6 +224,9 @@ void Node::del_child(const std::string& name) {
     if (!m_impl->has_child(name))
         throw Exception ( NODE_NOT_FOUND, name ); 
 
+    NodeRef child = m_impl->m_children.at(m_impl->m_childrenmap[name]);
+
+    child->m_impl->m_parent = NodeRef();
     m_impl->m_children.erase ( 
         m_impl->m_children.begin() + 
         m_impl->m_childrenmap[name] );
