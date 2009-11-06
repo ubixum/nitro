@@ -157,6 +157,11 @@ class DLL_API NodeRef {
 DLL_API std::ostream& operator << ( std::ostream& , const NodeRef & node );
 
 
+// for clone to work properly, a virtual function must call the derived
+// class create method.  Otherwise the base class create is called
+// and the clone node has the incorrect type.
+#define NODE_CALL_CREATE virtual NodeRef call_create(const std::string &name) const { return create(name); }
+
 
 /**
  * \ingroup devif
@@ -193,6 +198,9 @@ class DLL_API Node {
 //        **/       
 //        Unimplemented
 	   Node& operator=(const Node&);
+
+       NODE_CALL_CREATE;
+
     protected:
 
 
@@ -373,7 +381,7 @@ DLL_API std::ostream& operator << ( std::ostream&, const Node& node );
 class DLL_API DeviceInterface : public Node {
    private:
         DeviceInterface( const std::string& name) : Node(name) {}
-        
+        NODE_CALL_CREATE; 
    public:
         ~DeviceInterface() throw() {} 
         static NodeRef create ( const std::string& name );
@@ -395,6 +403,8 @@ class DLL_API Terminal : public Node {
             set_attr("regAddrWidth", regAddrWidth );
             set_attr("regDataWidth", regDataWidth );
         }
+        NODE_CALL_CREATE; 
+
     public:
         ~Terminal() throw() {}
         static NodeRef create ( const std::string& name );
@@ -413,6 +423,7 @@ class DLL_API Register: public Node {
         Register ( const std::string& name, const std::string& type = "int" ) : Node ( name ) {
             set_attr("type", type );
         }
+        NODE_CALL_CREATE; 
     public:
         ~Register() throw() {}
         static NodeRef create ( const std::string& name );
@@ -432,6 +443,7 @@ class DLL_API Register: public Node {
 class DLL_API Subregister: public Node {
     private:
         Subregister ( const std::string& name ) : Node ( name ) {}
+        NODE_CALL_CREATE; 
     public:
         ~Subregister() throw() {}
         static NodeRef create ( const std::string& name );
@@ -448,6 +460,7 @@ class DLL_API Subregister: public Node {
 class DLL_API Valuemap : public Node {
     private:
         Valuemap ( const std::string& name ) : Node ( name ) {}
+        NODE_CALL_CREATE; 
     public:
         ~Valuemap () throw() {}
         static NodeRef create ( const std::string & name );

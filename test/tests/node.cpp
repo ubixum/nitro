@@ -226,6 +226,15 @@ class NodeTest : public CppUnit::TestFixture {
             CPPUNIT_ASSERT_EQUAL ( ((NodeRef)copy->get_attr("test"))->get_name(), std::string("attr1" ) );
             CPPUNIT_ASSERT_NO_THROW ( copy->get_attr("data") );
             CPPUNIT_ASSERT_EQUAL ( 3, (int) copy->get_attr("data" ) );
+
+
+            
+            NodeRef di = DeviceInterface::create("di");
+            NodeRef term = Terminal::create("term1");
+            di->add_child(term);
+            NodeRef term2 = term->clone();
+            term2->set_name("term2");
+            CPPUNIT_ASSERT_NO_THROW( di->add_child(term2) ); 
         }
 
 };

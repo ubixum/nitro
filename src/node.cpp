@@ -143,13 +143,14 @@ Node::Node(const std::string &name) : m_impl(new impl(name)) {
 }
 
 NodeRef Node::create ( const std::string& name ) {
+    node_debug ( "Create Generic Node: " << name );
     return NodeRef ( new Node ( name ) );
 }
 
 NodeRef Node::clone () const {
 
     // children, childrenmap, attrmap
-    NodeRef copy = this->create ( this->get_name() );
+    NodeRef copy = this->call_create ( get_name() );
     for ( DITreeIter itr = this->child_begin(); itr != this->child_end(); ++itr ) {
         NodeRef child = (*itr)->clone();
         copy->add_child ( child );
@@ -294,6 +295,7 @@ std::ostream& operator << ( std::ostream& out, const Node& n ) {
 //*********************** Device Interface ***********************
 
 NodeRef DeviceInterface::create ( const std::string& name ) {
+    node_debug ( "Create Device Interface: " << name );
     return NodeRef ( new DeviceInterface ( name ) );
 }
 
@@ -326,6 +328,7 @@ void DeviceInterface::add_child ( const NodeRef& node ) {
 
 //********************* Terminal *********************************
 NodeRef Terminal::create ( const std::string& name ) {
+    node_debug ( "Create Terminal: " << name );
     return NodeRef ( new Terminal ( name ) );
 }
 
@@ -413,6 +416,7 @@ void Terminal::add_child ( const NodeRef& node ) {
 
 //*********************** Register ******************************
 NodeRef Register::create ( const std::string& name ) {
+    node_debug ( "Create Register: " << name );
     return NodeRef ( new Register ( name ) );
 }
 
@@ -454,6 +458,7 @@ void Register::add_child ( const NodeRef& node ) {
 
 //******************** Subregister *****************************
 NodeRef Subregister::create ( const std::string& name ) {
+    node_debug ( "Create Subregister: " << name );
     return NodeRef ( new Subregister ( name ) );
 }
 
@@ -461,6 +466,7 @@ NodeRef Subregister::create ( const std::string& name ) {
 //************************ Valuemap ********************************
 
 NodeRef Valuemap::create ( const std::string& name ) {
+    node_debug ( "Create Valuemap: " << name );
     return NodeRef ( new Valuemap ( name ) );
 }
 
