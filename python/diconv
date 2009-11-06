@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+
+import nitro
+
+import sys, os
+
+def print_usage():
+    print "Usage: diconv <input filename> <output filename>"
+    exit()
+
+if len(sys.argv) != 3:
+    print_usage()
+
+def get_extension(filename):
+    return filename.split(os.path.extsep)[-1]
+
+ifile = sys.argv[1]
+ofile = sys.argv[2]
+
+itype = get_extension(ifile)
+otype = get_extension(ofile)
+
+
+if itype == "py":
+    d=dict()
+    execfile(ifile, d)
+    di = d["di"]
+else:
+    raise Exception("Don't know how to convert input file type '%s'" % itype)
+
+if otype == "xml":
+    x = nitro.XmlWriter(ofile)
+    x.write(di)
+else:
+    raise Exception("Don't know how to convert output file type '%s'" % otype)
