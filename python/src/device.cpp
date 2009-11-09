@@ -40,6 +40,8 @@ PyMethodDef nitro_Device_methods[] = {
     {"write_xml", (PyCFunction)nitro_Device_WriteXML, METH_O, "write_xml ( xml_path )" },
     {"get_di", (PyCFunction)nitro_Device_GetDi, METH_NOARGS, "get_di()-> Device Interface Nodes"},
     {"set_di", (PyCFunction)nitro_Device_SetDi, METH_O, "set_di(di)" },
+    {"get_tree", (PyCFunction)nitro_Device_GetDi, METH_NOARGS, "Deprecated->Use get_di"},
+    {"set_tree", (PyCFunction)nitro_Device_SetDi, METH_O, "Deprecated->Use set_di(di)" },
     {"lock", (PyCFunction)nitro_Device_Lock, METH_NOARGS, "lock()"},
     {"unlock", (PyCFunction)nitro_Device_Unlock, METH_NOARGS, "lock()"},
     {"get", (PyCFunction)nitro_Device_Get, METH_VARARGS, "Wrapped C++ API member function" },
