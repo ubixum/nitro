@@ -19,6 +19,13 @@
 
 #include <iosfwd>
 
+#ifdef EXC_USE_STL
+#include <stdexcept>
+#define EXC_BASE : public std::runtime_error
+#else
+#define EXC_BASE 
+#endif
+
 #include "types.h" // DLL_API
 
 namespace Nitro {
@@ -75,7 +82,7 @@ enum NITRO_ERROR {
 /**
  * \brief %Exception class thrown by most %Nitro methods.
  **/
-class DLL_API Exception {
+class DLL_API Exception EXC_BASE {
 
     friend DLL_API std::ostream& operator << (std::ostream&, const Exception& );
     private:
@@ -84,11 +91,14 @@ class DLL_API Exception {
          * Not Implemented assignment operator
          **/
          Exception& operator == ( const Exception& e ); 
-    
+        #ifdef EXC_USE_STL
+        mutable std::string m_err_string;
+        #endif    
     protected:
         int32 m_err;
         const std::string* m_str;
         DataType m_userdata;
+
     public:
         /**
          * \brief Construct an Exception from an error code.
@@ -146,7 +156,7 @@ class DLL_API Exception {
          * \brief Retrieve userdata associated with exception.
          **/
         DataType userdata() const { return m_userdata; }
-        
+
 };
 
 /**

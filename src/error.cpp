@@ -26,15 +26,36 @@ using namespace std;
 namespace Nitro {
 
 
-Exception::Exception(NITRO_ERROR err) : m_err(err), m_str(NULL),m_userdata(0) {}
-Exception::Exception(int32 err, const std::string& str) : m_err(err), m_str(new string(str)),m_userdata(0) {}
-Exception::Exception(int32 err, const std::string& str, const DataType& userdata) : m_err(err), m_str(new string(str)), m_userdata(userdata) {}
+string make_str( int32 m_err, const string* m_str, DataType m_userdata );
+
+Exception::Exception(NITRO_ERROR err) : 
+#ifdef EXC_USE_STL
+ std::runtime_error(make_str(err,NULL,DataType(0))), 
+#endif
+m_err(err), m_str(NULL),m_userdata(0)
+{}
+
+Exception::Exception(int32 err, const std::string& str) : 
+#ifdef EXC_USE_STL
+ std::runtime_error(make_str(err, &str, DataType(0))), 
+#endif
+m_err(err), m_str(new string(str)),m_userdata(0) {}
+
+Exception::Exception(int32 err, const std::string& str, const DataType& ud) : 
+#ifdef EXC_USE_STL
+ std::runtime_error(make_str(err, &str, ud)),
+#endif
+m_err(err), m_str(new string(str)), m_userdata(ud) {}
 
 Exception::~Exception() throw() {
  if ( m_str ) delete m_str;
 }
 
-Exception::Exception(const Exception& e) : m_err(e.m_err), m_userdata(e.userdata()) {
+Exception::Exception(const Exception& e) : 
+#ifdef EXC_USE_STL
+ std::runtime_error(e.str_error()),
+#endif
+m_err(e.m_err), m_userdata(e.userdata()) {
     if (e.m_str) { 
         m_str=new string(*e.m_str);
     } else {
@@ -42,10 +63,16 @@ Exception::Exception(const Exception& e) : m_err(e.m_err), m_userdata(e.userdata
     }
 }
 
+string Exception::str_error() const {
+    return make_str ( m_err, m_str, m_userdata ); 
+}
+
+
 #define MAKESTR(str) \
     m_str ? string(str) + ": " + *m_str : str
 
-string Exception::str_error() const {
+string make_str( int32 m_err, const string* m_str, DataType m_userdata ) {
+
     if (m_err<0) {
        switch (m_err) {
             case INVALID_CAST:
