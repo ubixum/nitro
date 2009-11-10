@@ -42,6 +42,7 @@ PyObject* nitro_Device_SetDi(nitro_DeviceObject* self, PyObject *arg);
 PyObject* nitro_Device_Lock(nitro_DeviceObject* self);
 PyObject* nitro_Device_Unlock(nitro_DeviceObject* self);
 PyObject* nitro_Device_Get(nitro_DeviceObject* self, PyObject *args);
+PyObject* nitro_Device_GetSubregs(nitro_DeviceObject* self, PyObject *args);
 PyObject* nitro_Device_Set(nitro_DeviceObject* self, PyObject *args);
 PyObject* nitro_Device_Read(nitro_DeviceObject* self, PyObject *args);
 PyObject* nitro_Device_Write(nitro_DeviceObject* self, PyObject *args);

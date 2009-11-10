@@ -45,6 +45,7 @@ PyMethodDef nitro_Device_methods[] = {
     {"lock", (PyCFunction)nitro_Device_Lock, METH_NOARGS, "lock()"},
     {"unlock", (PyCFunction)nitro_Device_Unlock, METH_NOARGS, "lock()"},
     {"get", (PyCFunction)nitro_Device_Get, METH_VARARGS, "Wrapped C++ API member function" },
+    {"get_subregs", (PyCFunction)nitro_Device_GetSubregs, METH_VARARGS, "get_subregs(term,reg,timeout=None)" },
     {"set", (PyCFunction)nitro_Device_Set, METH_VARARGS, "Wrapped C++ API member function" },
     {"read", (PyCFunction)nitro_Device_Read, METH_VARARGS, 
         "read( term, reg, data, timeout=1000 )\n"
@@ -164,6 +165,37 @@ PyObject* nitro_Device_Get(nitro_DeviceObject* self, PyObject* args) {
       Py_BEGIN_ALLOW_THREADS
       try {
         ret = from_datatype(self->nitro_device->get (term,reg,timeout));
+      } catch (const Exception& e) {
+	   // can't use NITRO_EXC here.
+       saveme=new Exception(e);
+      }
+      Py_END_ALLOW_THREADS
+
+      if (saveme) {
+        SET_NITRO_EXC(*saveme);
+        delete saveme;
+        return NULL;
+      }
+
+      return ret ;
+}
+
+PyObject* nitro_Device_GetSubregs(nitro_DeviceObject* self, PyObject* args) {
+      PyObject *ret = NULL;
+
+      CHECK_ABSTRACT();
+
+      DataType term(0);
+      DataType reg(0);
+      int32 timeout=-1;
+      if (!PyArg_ParseTuple ( args, "O&O&|I", to_datatype, &term, to_datatype, &reg, &timeout ) ) {
+        return NULL;
+      }
+
+      Exception* saveme=NULL;
+      Py_BEGIN_ALLOW_THREADS
+      try {
+        ret = from_datatype(self->nitro_device->get_subregs (term,reg,timeout));
       } catch (const Exception& e) {
 	   // can't use NITRO_EXC here.
        saveme=new Exception(e);
