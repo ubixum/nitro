@@ -27,7 +27,7 @@ class XmlTest : public CppUnit::TestFixture {
             XmlReader dummy ( "some_nonexistent_file_path" ) ;
             NodeRef tmp = DeviceInterface::create("hi");
             CPPUNIT_ASSERT_THROW(dummy.read(tmp), Exception);
-            
+                        
             XmlReader reader (xml_path, true);
             NodeRef tree = DeviceInterface::create("root");
             CPPUNIT_ASSERT_NO_THROW(reader.read(tree));
@@ -90,15 +90,8 @@ class XmlTest : public CppUnit::TestFixture {
             const char* xml_path="test.xml";
             XmlReader reader ( xml_path, true );
             NodeRef tree = DeviceInterface::create("di");
-            try { 
             reader.read(tree);
-            //CPPUNIT_ASSERT_NO_THROW ( reader.read(tree) );
-                reader.read(tree);
-            } catch ( Exception &e ) {
-                cout << e << endl;
-            } catch ( ... ) {
-                cout << "What? " << endl;
-            }
+            CPPUNIT_ASSERT_NO_THROW ( reader.read(tree) );
         }
 
 };

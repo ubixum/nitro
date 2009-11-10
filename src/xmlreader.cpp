@@ -20,6 +20,8 @@
 #include <iostream>
 #include <sstream>
 
+#include <xercesc/parsers/XercesDOMParser.hpp>
+#include <xercesc/sax/HandlerBase.hpp>
 #include <xercesc/dom/DOM.hpp>
 #include <xercesc/util/XMLString.hpp>
 #include <xercesc/util/PlatformUtils.hpp>
@@ -91,25 +93,26 @@ struct XmlReader::impl {
 
 };
 
-class NitroErrorHandler : public DOMErrorHandler {
+
+class NitroErrorHandler : public HandlerBase {
   private:
-   string error;
+   string m_error;
    bool err;
    void operator=(const NitroErrorHandler&); // unimpled
    NitroErrorHandler(const NitroErrorHandler&); // unimpled
   public:
    NitroErrorHandler() : err(false) {}
-   bool handleError ( const DOMError &domerr ){
+   void error ( const SAXParseException &domerr ){
      stringstream errstr ;
      errstr << to_string ( domerr.getMessage() ); 
-     errstr << " (Line: " << domerr.getLocation()->getLineNumber() << ", Column: " << 
-                domerr.getLocation()->getColumnNumber() << ")";
-     error = errstr.rdbuf()->str();
+     errstr << " (Line: " << domerr.getLineNumber() << ", Column: " << 
+                domerr.getColumnNumber() << ")";
+     m_error = errstr.rdbuf()->str();
      err=true;
-     return false; 
    }
+   void fatalError ( const SAXParseException &e ) { error(e); }
    bool err_occurred() { return err; }
-   string get_message () { return error; }
+   string get_message () { return m_error; }
 };
 
 
@@ -343,10 +346,12 @@ XmlReader::~XmlReader() throw() { delete m_impl;}
 
 
 struct XmlUnitializer {
-    DOMLSParser* parser;
-    XmlUnitializer(DOMLSParser *p) : parser(p) {}
+    XercesDOMParser *parser;
+    NitroErrorHandler *handler;
+    XmlUnitializer() : parser(NULL), handler(NULL) {}
     ~XmlUnitializer() {
-        if (parser) parser->release(); // should be done before terminate
+        if (parser) delete parser; // should be done before terminate
+        if (handler) delete handler;
         XMLPlatformUtils::Terminate();
     }
 };
@@ -361,38 +366,31 @@ void XmlReader::read(NodeRef node) {
     }
 
     // terminate xml when function exits
-    XmlUnitializer xml_uninitializer(NULL);
+    XmlUnitializer xml_uninitializer;
     
-    // get the DOM LS parser
-    XMLCh tempStr[100];
-    XMLString::transcode("LS", tempStr, sizeof(tempStr)-1 );
-    DOMImplementation *impl = DOMImplementationRegistry::getDOMImplementation(tempStr);
-
-    DOMLSParser* parser = static_cast<DOMImplementationLS*>(impl)->createLSParser(DOMImplementationLS::MODE_SYNCHRONOUS, 0);
-    xml_uninitializer.parser=parser; // ensure delete parser before Terminate
-
-    DOMConfiguration *dc = parser->getDomConfig();
-
-    NitroErrorHandler handler;
-    dc->setParameter ( XMLUni::fgDOMErrorHandler, &handler);
-    dc->setParameter ( XMLUni::fgDOMComments, false );
-    dc->setParameter ( XMLUni::fgDOMElementContentWhitespace, false );
-    dc->setParameter ( XMLUni::fgDOMNamespaces, true );
+    XercesDOMParser *parser = new XercesDOMParser();
+    xml_uninitializer.parser = parser;
     if ( m_impl->m_validate ) {
-        dc->setParameter ( XMLUni::fgDOMValidate, true );
-        dc->setParameter ( XMLUni::fgXercesSchema, true );
-        dc->setParameter ( XMLUni::fgXercesSchemaFullChecking, true );
+        parser->setValidationScheme(XercesDOMParser::Val_Always);
+        parser->setDoNamespaces(true);    // optional
+        parser->setDoSchema(true);
+        parser->setValidationSchemaFullChecking(true);
     }
-    if (dc->canSetParameter(XMLUni::fgXercesDoXInclude, true)){
-          dc->setParameter(XMLUni::fgXercesDoXInclude, true);
-    } else {
-       throw Exception ( XML_INIT, "XInclude functionality not available." ); 
-    }
+    parser->setCreateCommentNodes(false);
+    parser->setIncludeIgnorableWhitespace(false);
+
+
+    NitroErrorHandler* handler = new NitroErrorHandler();
+    xml_uninitializer.handler = handler;
+    parser->setErrorHandler(handler);
+
 
     try {
-       DOMDocument *doc = parser->parseURI(m_impl->m_path.c_str()); 
-       if ( handler.err_occurred() ) {
-         throw Exception ( XML_PARSE, handler.get_message() );
+       //DOMDocument *doc = parser->parseURI(m_impl->m_path.c_str()); 
+       parser->parse(m_impl->m_path.c_str());
+       DOMDocument *doc = parser->getDocument();
+       if ( handler->err_occurred() ) {
+         throw Exception ( XML_PARSE, handler->get_message() );
        }
 
        DOMNode* root = doc->getDocumentElement();
@@ -409,6 +407,7 @@ void XmlReader::read(NodeRef node) {
         //cout << e.getMessage() << endl;
         throw Exception ( XML_PARSE, to_string(e.getMessage()) );
     } 
+
 }
 
 
