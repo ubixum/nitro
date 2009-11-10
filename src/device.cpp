@@ -863,6 +863,31 @@ DataType Device::get( const DataType& term, const DataType& reg, int32 timeout  
     throw Exception ( DEVICE_OP_ERROR, "Unhandled data type" );
 
 }
+
+NodeRef Device::get_subregs ( const DataType& term, const DataType& reg , int32 timeout ) {
+
+    MutexLock thread_safe_method(m_impl->m_mutex);
+    NodeRef tnode = m_impl->find_name_or_addr( m_impl->di , term );
+    NodeRef rnode = m_impl->find_name_or_addr( tnode, reg ); 
+    if ( !rnode->has_children()) {
+        throw Exception ( DEVICE_OP_ERROR, "Register must have subregisters to use this method.", reg );
+    }
+    DataType ret = get ( term, reg, timeout );
+    bitset<1024> data = to_bitset(ret); 
+    NodeRef subreg_vals = Node::create(rnode->get_name());
+    for (DITreeIter itr = rnode->child_begin(); itr != rnode->child_end(); ++itr ) {
+        NodeRef subreg = *itr;
+        uint32 swidth = subreg->get_attr("width");
+        bitset<1024> mask;
+        for (uint32 i=0;i<swidth;++i) mask.set(i);
+        bitset<1024> subreg_val = data & mask; 
+        data >>= swidth;
+        subreg_vals->set_attr( subreg->get_name(), from_bitset(subreg_val) );
+    }
+    return subreg_vals;
+}
+
+
 /**
  * Set the register by subregister values.
  **/

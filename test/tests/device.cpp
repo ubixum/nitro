@@ -112,6 +112,12 @@ class DeviceTest : public CppUnit::TestFixture {
         CPPUNIT_ASSERT_EQUAL ( 3, (int) dev.get("Terminal1", "reg2" ) );
 
 
+        CPPUNIT_ASSERT_NO_THROW ( vals = dev.get_subregs ( "Terminal1", "reg2" ) );
+        CPPUNIT_ASSERT ( vals->has_attr("sub1" ) );
+        CPPUNIT_ASSERT ( vals->has_attr("sub2" ) );
+        CPPUNIT_ASSERT_EQUAL ( 3, (int) vals->get_attr("sub1") );
+        CPPUNIT_ASSERT_EQUAL ( 0, (int) vals->get_attr("sub2") );
+
 
     }
 

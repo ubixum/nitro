@@ -314,6 +314,23 @@ public:
      * \throw Nitro::Exception on communication error.
      **/
     DataType get( const DataType& term, const DataType& reg, int32 timeout=-1  ) ;
+
+    /**
+     * \ingroup dataac
+     * \brief Get subregister values
+     * 
+     * This method calls get, but returns the values of the register as a dictionary of 
+     * subregister values.  There must be a device interface set to use this or an exception 
+     * will be thrown
+     *
+     * \param term String or integer address for terminal.
+     * \param reg String or integer address for register.
+     * \param timeout Timeout in milliseconds.  -1=use the default timeout. 0 = no timeout.
+     * \return Nitro::NodeRef  The attributes of the node are the subregister names/values.
+     * \throw Nitro::Exception on communication or invalid device interface registers.
+     **/
+    NodeRef get_subregs ( const DataType& term, const DataType& reg , int32 timeout=-1 );
+
     /**
      * \ingroup dataac
      * \brief Thread-safe read.
