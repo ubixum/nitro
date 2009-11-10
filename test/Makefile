@@ -1,6 +1,6 @@
 
 
-CPPFLAGS=-g -I../build/usr/include/
+CPPFLAGS:=-I../build/usr/include/ $(CPPFLAGS)
 LDFLAGS=`pkg-config --libs cppunit` -L../build/usr/lib/ -lnitro
 
 TESTS=tests/node.o tests/error.o tests/types.o tests/xml.o tests/device.o tests/userdevice.o tests/scripts.o
