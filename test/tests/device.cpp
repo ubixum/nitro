@@ -210,6 +210,7 @@ class DeviceTest : public CppUnit::TestFixture {
     void testVerify() {
         
         dev.clear();
+        dev.set_modes(0); // clear any defaults
         dev.enable_mode(Device::GETSET_VERIFY);
         dev.set_error_mode(true);
         try {

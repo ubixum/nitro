@@ -160,7 +160,7 @@ struct Device::impl{
     uint32 m_modes;
     map<uint32,uint32> m_term_modes;
 
-    impl(): m_timeout(1000), di(DeviceInterface::create("di")), m_modes(0)  {}
+    impl(): m_timeout(1000), di(DeviceInterface::create("di")), m_modes(STATUS_VERIFY)  {}
 
     uint32 get_timeout(int32 timeout);
     uint32 term_addr( const DataType& term );
