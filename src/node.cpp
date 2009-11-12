@@ -46,11 +46,11 @@ struct Node::impl {
 	std::map<std::string,DataType> m_attrmap;
     static int m_global_refs;
     int m_ref_count;
-    NodeRef m_parent;
+    Node* m_parent;
     void inc() { ++m_ref_count; ++m_global_refs; }
     void dec() { --m_ref_count; --m_global_refs; }
 
-	impl(const std::string &name) : m_name(name), m_ref_count(0) {}
+	impl(const std::string &name) : m_name(name), m_ref_count(0), m_parent(NULL) {}
 
 	bool has_child(const std::string &name);
     ~impl() {}
@@ -191,7 +191,7 @@ const std::string& Node::get_name() const { return m_impl->m_name; }
 void Node::set_name(const std::string& name) {
     std::string orig_name = m_impl->m_name;
     m_impl->m_name = name;
-    if (!m_impl->m_parent.is_null()) {
+    if (m_impl->m_parent) {
         childrenmap_t::iterator itr = m_impl->m_parent->m_impl->m_childrenmap.find ( orig_name );
         int pos = itr->second;
         m_impl->m_parent->m_impl->m_childrenmap.erase(itr);
@@ -207,7 +207,7 @@ void Node::add_child(const NodeRef& node) {
 	if (m_impl->has_child(node->get_name())) {
 		throw Exception( NODE_DUP_CHILD, node->get_name() );
 	}
-    if (!node->m_impl->m_parent.is_null()) {
+    if (node->m_impl->m_parent) {
         throw Exception( NODE_LINKED, node->get_name() );
     }
     if(this == &(*node)) {
@@ -216,7 +216,7 @@ void Node::add_child(const NodeRef& node) {
 	// child in order add to vector
 	m_impl->m_children.push_back(node);
 	m_impl->m_childrenmap[node->get_name()] = m_impl->m_children.size()-1;
-    node->m_impl->m_parent = NodeRef ( this ); 
+    node->m_impl->m_parent = this; 
 }
 
 void Node::del_child(const std::string& name) {
@@ -226,7 +226,7 @@ void Node::del_child(const std::string& name) {
 
     NodeRef child = m_impl->m_children.at(m_impl->m_childrenmap[name]);
 
-    child->m_impl->m_parent = NodeRef();
+    child->m_impl->m_parent = NULL;
     m_impl->m_children.erase ( 
         m_impl->m_children.begin() + 
         m_impl->m_childrenmap[name] );

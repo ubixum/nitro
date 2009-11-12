@@ -9,7 +9,7 @@ run: test userdevice.so
 	LD_LIBRARY_PATH=../build/usr/lib ./test
 
 mem: test
-	LD_LIBRARY_PATH=../build/usr/lib valgrind --leak-check=full --show-reachable=yes ./test
+	LD_LIBRARY_PATH=../build/usr/lib valgrind --leak-check=full --show-reachable=yes $(SUPP) ./test
 
 test: $(TESTS) test.o
 	g++ -o test test.o $(TESTS) $(LDFLAGS)
