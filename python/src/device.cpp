@@ -150,7 +150,6 @@ PyObject* nitro_Device_Unlock(nitro_DeviceObject* self) {
 
 
 PyObject* nitro_Device_Get(nitro_DeviceObject* self, PyObject* args) {
-      PyObject *ret = NULL;
 
       CHECK_ABSTRACT();
 
@@ -161,10 +160,11 @@ PyObject* nitro_Device_Get(nitro_DeviceObject* self, PyObject* args) {
         return NULL;
       }
 
+      DataType ret(0);
       Exception* saveme=NULL;
       Py_BEGIN_ALLOW_THREADS
       try {
-        ret = from_datatype(self->nitro_device->get (term,reg,timeout));
+        ret = self->nitro_device->get (term,reg,timeout);
       } catch (const Exception& e) {
 	   // can't use NITRO_EXC here.
        saveme=new Exception(e);
@@ -177,11 +177,10 @@ PyObject* nitro_Device_Get(nitro_DeviceObject* self, PyObject* args) {
         return NULL;
       }
 
-      return ret ;
+      return from_datatype(ret);
 }
 
 PyObject* nitro_Device_GetSubregs(nitro_DeviceObject* self, PyObject* args) {
-      PyObject *ret = NULL;
 
       CHECK_ABSTRACT();
 
@@ -192,10 +191,11 @@ PyObject* nitro_Device_GetSubregs(nitro_DeviceObject* self, PyObject* args) {
         return NULL;
       }
 
+      NodeRef subregs;
       Exception* saveme=NULL;
       Py_BEGIN_ALLOW_THREADS
       try {
-        ret = from_datatype(self->nitro_device->get_subregs (term,reg,timeout));
+        subregs = self->nitro_device->get_subregs (term,reg,timeout);
       } catch (const Exception& e) {
 	   // can't use NITRO_EXC here.
        saveme=new Exception(e);
@@ -208,7 +208,8 @@ PyObject* nitro_Device_GetSubregs(nitro_DeviceObject* self, PyObject* args) {
         return NULL;
       }
 
-      return ret ;
+      return from_datatype(subregs);
+
 }
 
 PyObject* nitro_Device_Set(nitro_DeviceObject* self, PyObject *args) {

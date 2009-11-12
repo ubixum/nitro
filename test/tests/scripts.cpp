@@ -25,7 +25,7 @@ class ScriptTest : public CppUnit::TestFixture {
             Scripts sc;
             CPPUNIT_ASSERT_NO_THROW( sc.import ( "s", "script_test.py" ) );
             vector<string> funcs = sc.func_list("s");
-            CPPUNIT_ASSERT_EQUAL ( 7, (int) funcs.size() ); 
+            CPPUNIT_ASSERT_EQUAL ( 8, (int) funcs.size() ); 
 
             CPPUNIT_ASSERT_THROW ( sc.get_params ( "s", "non-existent func" ), Exception );
             NodeRef args;
@@ -106,6 +106,7 @@ class ScriptTest : public CppUnit::TestFixture {
             reader.read ( dev.get_di() );
             CPPUNIT_ASSERT_NO_THROW ( sc.exec ( "s", "bigint_test", args ) );
 
+            CPPUNIT_ASSERT_NO_THROW ( sc.exec ( "s", "get_subreg_test", args ) );
 
 
         }
