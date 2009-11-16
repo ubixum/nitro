@@ -1,0 +1,10 @@
+<deviceinterface
+	xmlns="http://ubixum.com/deviceinterface/"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://ubixum.com/deviceinterface/ deviceinterface.xsd">
+	
+    <include src="../testinclude.xml" />
+    <include src="include.xml" />
+    
+</deviceinterface>
+

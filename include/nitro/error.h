@@ -44,6 +44,7 @@ enum NITRO_ERROR {
     INVALID_TYPE=-1, ///< Unsupported data type. 
     INVALID_CAST=-2, ///< Invalid cast between DataType and native type.
     UNSUPPORTED_OP=-3, ///< Unsupported Operation
+    PATH_LOOKUP=-4, ///< Unable to complete a path operation (absolute path lookup)
 
     NODE_OP_ERROR=-50, ///< Node Operation error
     NODE_NOT_FOUND, ///< Child node not found

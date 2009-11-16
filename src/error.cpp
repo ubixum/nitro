@@ -81,6 +81,8 @@ string make_str( int32 m_err, const string* m_str, DataType m_userdata ) {
                 return MAKESTR("Unsupported Data Type");
             case UNSUPPORTED_OP:
                 return MAKESTR("Unsupported Operation.");
+            case PATH_LOOKUP:
+                return MAKESTR("Unable to find absolute path of file.");
                 
             case NODE_OP_ERROR:
                 return MAKESTR("Invalid node operation.");

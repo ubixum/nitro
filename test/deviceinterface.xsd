@@ -12,9 +12,10 @@
         A devide interface element contains a collection of terminals.
        </xs:documentation>
    </xs:annotation>
-   <xs:complexType>
-    <xs:sequence>
-      <xs:element maxOccurs="unbounded" minOccurs="0" ref="terminal" />  
+   <xs:complexType>    
+    <xs:sequence maxOccurs="unbounded">
+      <xs:element maxOccurs="unbounded" minOccurs="0" ref="terminal" />
+      <xs:element maxOccurs="unbounded" minOccurs="0" ref="include" />
     </xs:sequence>
     </xs:complexType>
   </xs:element>
@@ -30,10 +31,46 @@
         <xs:element ref="comment" minOccurs="0" maxOccurs="1" />
         <xs:element maxOccurs="unbounded" minOccurs="0" ref="register"/>        
       </xs:sequence>
-      <xs:attributeGroup ref="nodeAttributes"/>
+      <xs:attributeGroup ref="nodeAttributes" />
       <xs:attribute name="regDataWidth" type="xs:positiveInteger" use="required"/>
       <xs:attribute name="regAddrWidth" type="xs:nonNegativeInteger" use="required"/>
     </xs:complexType>
+  </xs:element>
+  
+  <!-- 
+    Change the name, address or data bus specs of an included terminal, 
+    Add new registers, change the name or address of existing registers.
+  -->
+  <xs:element name="termoverlay">
+     <xs:complexType>
+        <xs:sequence maxOccurs="unbounded">
+            <xs:element maxOccurs="unbounded" minOccurs="0" ref="register" />
+            <xs:element maxOccurs="unbounded" minOccurs="0" ref="regoverlay" />
+        </xs:sequence>
+        <xs:attributeGroup ref="nodeAttributes" />
+        <xs:attribute name="newname" type="nameType" use="optional" />
+        <xs:attribute name="regDataWidth" type="xs:positiveInteger" use="optional"/>
+        <xs:attribute name="regAddrWidth" type="xs:nonNegativeInteger" use="optional"/>                
+     </xs:complexType>
+  </xs:element>
+  
+  <!--
+    Change the name or address of an included register.    
+  -->
+  <xs:element name="regoverlay">
+    <xs:complexType>
+        <xs:attributeGroup ref="nodeAttributes" />
+        <xs:attribute name="newname" type="nameType" use="optional" />
+    </xs:complexType>
+  </xs:element>
+  
+  <xs:element name="include">
+   <xs:complexType>
+    <xs:sequence>     
+     <xs:element ref="termoverlay" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+    <xs:attribute name="src" type="xs:string" use="required" />
+   </xs:complexType>   
   </xs:element>
 
   <xs:element name="register">

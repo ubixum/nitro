@@ -32,6 +32,7 @@
 #include <nitro/node.h>
 
 #include "bihelp.h"
+#include "xutils.h"
 
 XERCES_CPP_NAMESPACE_USE
 
@@ -305,37 +306,127 @@ void handle_registers ( NodeRef diterm , DOMNode *term ) {
  
 }
 
-void handle_terminals ( NodeRef dest, DOMNode *di ) {
+void handle_terminal ( NodeRef di, DOMNode *term ) {
+    NodeRef diterm = Terminal::create( get_attr(term, "name", STR_DATA) );
+    debug("  <terminal name=\"" << diterm->get_name() );
+    diterm->set_attr ( "regDataWidth", get_attr(term, "regDataWidth", UINT_DATA ) );
+    diterm->set_attr ( "regAddrWidth", get_attr(term, "regAddrWidth", UINT_DATA ) );
+    if (has_attr(term,"addr")) {
+      diterm->set_attr("addr", get_attr(term, "addr", UINT_DATA ));
+    }
+   
+    handle_registers ( diterm, term ); 
+    debug("  />");
 
-  debug ("<deviceinterface>");
-  for ( DOMNode *term = di->getFirstChild(); NULL != term; term = term->getNextSibling() ) {
-     string node_name = to_string ( term->getNodeName() ); 
+    if (di->has_child ( diterm->get_name() ) ) di->del_child ( diterm->get_name() );
+    di->add_child ( diterm );
+}
 
-     if ( node_name == "deviceinterface" ) {
-        // allows more terminals embedded in a device interface
-        handle_terminals ( dest, term );
-     } else if ( node_name == "terminal" ) {
-        NodeRef diterm = Terminal::create( get_attr(term, "name", STR_DATA) );
-        debug("  <terminal name=\"" << diterm->get_name() );
-        diterm->set_attr ( "regDataWidth", get_attr(term, "regDataWidth", UINT_DATA ) );
-        diterm->set_attr ( "regAddrWidth", get_attr(term, "regAddrWidth", UINT_DATA ) );
-        if (has_attr(term,"addr")) {
-          diterm->set_attr("addr", get_attr(term, "addr", UINT_DATA ));
+
+void handle_regover ( NodeRef term, DOMNode *overlay ) {
+    string name = get_attr ( overlay, "name", STR_DATA );
+    NodeRef origreg = term->get_child( name );
+    if (has_attr(overlay, "newname" )) {
+        origreg->set_name( get_attr ( overlay, "newname", STR_DATA ) );
+    }
+    if (has_attr(overlay, "addr")) {
+        origreg->set_attr( "addr", get_attr ( overlay, "addr", UINT_DATA ) );
+    }
+}
+
+
+void handle_termoverlay ( NodeRef di, DOMNode *overlay ) {
+    string name = get_attr ( overlay, "name", STR_DATA );
+    NodeRef origterm = di->get_child ( name );
+    if (has_attr ( overlay, "newname" )) {
+        string newname = get_attr ( overlay, "newname", STR_DATA );
+        origterm->set_name(newname);
+    }
+    if (has_attr ( overlay, "addr" )) {
+        origterm->set_attr("addr", get_attr(overlay,"addr",UINT_DATA));
+    }
+
+    for (DOMNode *regover = overlay->getFirstChild();
+         NULL != regover;
+         regover = regover->getNextSibling() ) {
+        string node_name = to_string(regover->getNodeName());
+        if ( node_name == "register" ) {
+            NodeRef reg = Register::create( get_attr ( regover, "name", STR_DATA ) ); 
+            handle_register ( reg, regover );
+            origterm->add_child( reg );
+        } else if ( node_name == "regoverlay" ) {
+            handle_regover ( origterm, regover );
         }
-       
-        handle_registers ( diterm, term ); 
-        debug("  />");
+    }
+}
 
-        if (dest->has_child ( diterm->get_name() ) ) dest->del_child ( diterm->get_name() );
-        dest->add_child ( diterm );
+void handle_include ( NodeRef dest, DOMNode *include, bool validate, string orig_path ) {
+     string src = get_attr ( include, "src", STR_DATA );
+     NodeRef includedi = DeviceInterface::create("includedi");
+     string unique_fake_term_name = "fake_addr_term879873498723947293797998749527"; 
+     if ( dest->has_children() ) {
+        /**
+         * To make sure the included terminals are 
+         * auto-number (address) from the correct 
+         * address number, we need a fake terminal
+         **/
+        NodeRef fake_addr_term = Terminal::create(unique_fake_term_name);
+        NodeRef last_real_term = *(dest->child_end()-1);
+        fake_addr_term->set_attr("addr", last_real_term->get_attr("addr"));
+        includedi->add_child(fake_addr_term);
+     }
+     
+     // resolve src path to abs path
+     string absdir = xdirname ( orig_path );
+     string abspath = xjoin ( absdir , src );
 
-     } else {
-        if ( term->getNodeType() != DOMNode::TEXT_NODE )
-            throw Exception ( XML_INVALID, "Invalid child node deviceinterface: " + node_name ); 
+     XmlReader xmlr ( abspath, validate );
+     xmlr.read ( includedi );
+
+     // overlay/add items
+     for ( DOMNode *overlay = include->getFirstChild(); 
+           NULL != overlay;
+           overlay= overlay->getNextSibling () ) {
+           string node_name = to_string ( overlay->getNodeName() );
+           if ( node_name == "termoverlay" ) {
+               handle_termoverlay ( includedi, overlay ); 
+           } 
+           // else don't know how to handle element
      }
 
+     for ( DITreeIter itr = includedi->child_begin(); itr != includedi->child_end(); ++itr ) {
+         NodeRef iterm = (*itr)->clone();
+         if (iterm->get_name() != unique_fake_term_name ) {
+             if (dest->has_child( iterm->get_name() ) ) dest->del_child ( iterm->get_name() );
+             dest->add_child(iterm);
+         }
+     }
+}
+
+void handle_terminals ( NodeRef dest, DOMNode *di, bool validate, string orig_path ) {
+
+
+  string dest_name = to_string ( di->getNodeName() ) ;
+  if (dest_name == "deviceinterface") {
+      debug ("<deviceinterface>");
+      for ( DOMNode *term = di->getFirstChild(); NULL != term; term = term->getNextSibling() ) {
+         string node_name = to_string ( term->getNodeName() ); 
+         if ( node_name == "terminal" ) {
+            handle_terminal(dest, term); 
+         } else if ( node_name == "include" ) {
+            handle_include ( dest, term, validate, orig_path );
+         } else {
+            if ( term->getNodeType() != DOMNode::TEXT_NODE )
+                throw Exception ( XML_INVALID, "Invalid child node deviceinterface: " + node_name ); 
+         }
+    
+      }
+      debug("/>");
+  } else if (dest_name == "terminal") {
+      debug ("<terminal>");
+      handle_terminal(dest, di); 
+      debug ("</terminal>");
   }
-  debug("/>");
 }
 
 
@@ -375,6 +466,18 @@ void XmlReader::read(NodeRef node) {
         parser->setDoNamespaces(true);    // optional
         parser->setDoSchema(true);
         parser->setValidationSchemaFullChecking(true);
+        vector<string> schema_paths;
+        string namesp = "http://ubixum.com/deviceinterface/";
+        string xsd = "deviceinterface.xsd";
+        schema_paths.push_back ( "/usr/share/docs/nitro/xml/" ); 
+        schema_paths.push_back ( xgetcwd() ); 
+        #ifdef WIN32
+        schema_paths.push_back ( get_inst_dir() ); 
+        #endif
+        string schema_path_str;
+        for (vector<string>::iterator itr = schema_paths.begin(); itr != schema_paths.end(); ++itr )
+            schema_path_str += namesp + " " + xjoin ( *itr, xsd ) + " ";
+        parser->setExternalSchemaLocation ( schema_path_str.c_str() );
     }
     parser->setCreateCommentNodes(false);
     parser->setIncludeIgnorableWhitespace(false);
@@ -395,7 +498,7 @@ void XmlReader::read(NodeRef node) {
 
        DOMNode* root = doc->getDocumentElement();
        root->normalize(); // gets rid of empty text nodes etc.
-       handle_terminals ( node, root );
+       handle_terminals ( node, root, m_impl->m_validate, m_impl->m_path );
        
     } catch ( const XMLException& e ) {
         //cout << e.getMessage() << endl;

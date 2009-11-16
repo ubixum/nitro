@@ -13,6 +13,7 @@ class XmlTest : public CppUnit::TestFixture {
     CPPUNIT_TEST_SUITE ( XmlTest );
     CPPUNIT_TEST ( testXml );
     CPPUNIT_TEST ( testTwice );
+    CPPUNIT_TEST ( testPaths );
     CPPUNIT_TEST_SUITE_END();
 
     public:
@@ -84,6 +85,15 @@ class XmlTest : public CppUnit::TestFixture {
             CPPUNIT_ASSERT_EQUAL ( 2, (int) init.at(1) );
             CPPUNIT_ASSERT_EQUAL ( BIGINT_DATA, init.at(2).get_type() ); 
 
+
+            // include
+            CPPUNIT_ASSERT_NO_THROW ( tree->get_child ( "include_term" ) );
+            CPPUNIT_ASSERT_EQUAL ( 6, (int) tree->get_child ( "include_term" )->get_attr ( "addr" ) );
+            CPPUNIT_ASSERT_NO_THROW ( tree->get_child ( "include_term1" ) );
+            CPPUNIT_ASSERT_NO_THROW ( tree->get_child ( "include_term1" )->get_child("reg_renamed"));
+            CPPUNIT_ASSERT_EQUAL ( 77, (int) tree->get_child ( "include_term1")->get_attr ( "addr" ) );
+            CPPUNIT_ASSERT_EQUAL ( 1, (int) tree->get_child("include_term1")->get_child("reg_renamed")->get_attr("addr") );
+            CPPUNIT_ASSERT_NO_THROW ( tree->get_child ("include_term1" )->get_child ("new_register") );
         }
 
         void testTwice() {
@@ -93,6 +103,15 @@ class XmlTest : public CppUnit::TestFixture {
             reader.read(tree);
             CPPUNIT_ASSERT_NO_THROW ( reader.read(tree) );
         }
+
+        void testPaths() {
+            const char* xml_path = "xmldir/test.xml";
+            XmlReader reader ( xml_path, true );
+            NodeRef di = DeviceInterface::create("di");
+            CPPUNIT_ASSERT_NO_THROW( reader.read(di) );
+
+        }
+
 
 };
 

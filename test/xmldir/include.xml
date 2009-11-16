@@ -1,0 +1,17 @@
+<deviceinterface
+	xmlns="http://ubixum.com/deviceinterface/"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://ubixum.com/deviceinterface/ deviceinterface.xsd">
+<terminal
+    name="include"
+    regAddrWidth="16"
+    regDataWidth="16"
+    >
+	<register name="included_reg" addr="3">
+        <type>int</type>
+        <mode>write</mode>
+        <width>5</width>
+    </register>
+
+</terminal>
+</deviceinterface>
