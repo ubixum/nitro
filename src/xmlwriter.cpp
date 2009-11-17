@@ -67,7 +67,14 @@ void XmlWriter::write(const NodeRef& node) {
    out << "<deviceinterface" << endl;
    out << "  xmlns=\"http://ubixum.com/deviceinterface/\"" << endl;
    out << "  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"" << endl;
-   out << "  xsi:schemaLocation=\"http://ubixum.com/deviceinterface/ deviceinterface.xsd\">" << endl;
+   out << "  xsi:schemaLocation=\"http://ubixum.com/deviceinterface/ deviceinterface.xsd\"" << endl;
+   if ( node->has_attr("name")) {
+       out << "  name=\"" << node->get_attr("name") << '"' << endl;
+   }
+   if ( node->has_attr("version")) {
+       out << "  version=\"" << node->get_attr("version") << '"' << endl;
+   }
+   out << "  >" << endl;
 
    for (DITreeIter term_itr = node->child_begin(); term_itr != node->child_end(); ++term_itr ) {
         NodeRef term = *term_itr;
@@ -75,7 +82,11 @@ void XmlWriter::write(const NodeRef& node) {
         out << "      name=\"" << term->get_name() << '"' << endl; 
         out << "      regAddrWidth=\"" << term->get_attr ( "regAddrWidth" ) << '"' << endl;
         out << "      regDataWidth=\"" << term->get_attr ( "regDataWidth" ) << '"' << endl;
-        out << "      addr=\"" << term->get_attr("addr") << "\">" << endl;
+        out << "      addr=\"" << term->get_attr("addr") << '"' << endl;
+        if ( term->has_attr("version") ) {
+            out << "      version=\"" << term->get_attr("version") << '"' << endl;
+        }
+        out << "      >" << endl;
 
         COMMENT ( "   " , term );
 

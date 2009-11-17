@@ -17,6 +17,8 @@
       <xs:element maxOccurs="unbounded" minOccurs="0" ref="terminal" />
       <xs:element maxOccurs="unbounded" minOccurs="0" ref="include" />
     </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="optional" />
+    <xs:attribute name="version" type="xs:string" use="optional" />
     </xs:complexType>
   </xs:element>
 
@@ -34,6 +36,7 @@
       <xs:attributeGroup ref="nodeAttributes" />
       <xs:attribute name="regDataWidth" type="xs:positiveInteger" use="required"/>
       <xs:attribute name="regAddrWidth" type="xs:nonNegativeInteger" use="required"/>
+      <xs:attribute name="version" type="xs:string" use="optional" />
     </xs:complexType>
   </xs:element>
   
