@@ -109,7 +109,6 @@ class XmlTest : public CppUnit::TestFixture {
             XmlReader reader ( xml_path, true );
             NodeRef di = DeviceInterface::create("di");
             CPPUNIT_ASSERT_NO_THROW( reader.read(di) );
-
         }
 
 

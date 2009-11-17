@@ -469,15 +469,27 @@ void XmlReader::read(NodeRef node) {
         vector<string> schema_paths;
         string namesp = "http://ubixum.com/deviceinterface/";
         string xsd = "deviceinterface.xsd";
-        schema_paths.push_back ( "/usr/share/docs/nitro/xml/" ); 
-        schema_paths.push_back ( xgetcwd() ); 
+
+        // add a number of default schema paths
+
+        schema_paths.push_back ( xgetcwd() );
         #ifdef WIN32
-        schema_paths.push_back ( get_inst_dir() ); 
+        schema_paths.push_back ( xjoin(get_inst_dir(),"xml") );
+		#else
+		schema_paths.push_back ( "/usr/share/docs/nitro/xml/" );
         #endif
         string schema_path_str;
-        for (vector<string>::iterator itr = schema_paths.begin(); itr != schema_paths.end(); ++itr )
-            schema_path_str += namesp + " " + xjoin ( *itr, xsd ) + " ";
-        parser->setExternalSchemaLocation ( schema_path_str.c_str() );
+		size_t pos=0;
+		for (vector<string>::iterator itr = schema_paths.begin(); itr != schema_paths.end(); ++itr ) {
+			string prefix = "file:///";
+			if (itr->substr(0,1) == "/") prefix = "file://";
+			string path = xjoin ( *itr, xsd );
+			while ( (pos = path.find(" ")) != std::string::npos ) {
+				path.replace(pos,1,"%20");
+			}
+			schema_path_str += namesp + " " + prefix + path + " ";
+		}
+		parser->setExternalSchemaLocation ( schema_path_str.c_str() );
     }
     parser->setCreateCommentNodes(false);
     parser->setIncludeIgnorableWhitespace(false);

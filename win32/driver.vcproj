@@ -378,6 +378,10 @@
 				RelativePath="..\src\xmlwriter.cpp"
 				>
 			</File>
+			<File
+				RelativePath="..\src\xutils.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"

@@ -17,6 +17,12 @@
 
 #include "xutils.h"
 
+#ifdef DEBUG_UTILS
+#include <iostream>
+#define utils_debug(x) std::cout << x << std::endl;
+#else
+#define utils_debug(x)
+#endif
 
 using namespace Nitro;
 
@@ -64,7 +70,7 @@ std::string xjoin ( const std::string &path, const std::string &file ) {
 
 #ifdef WIN32
 std::string get_inst_dir() {
-    string ret;
+	std::string inst_dir;
    	HKEY reg_handle;
 	if ( RegOpenKeyEx (
 		HKEY_LOCAL_MACHINE,
@@ -84,35 +90,60 @@ std::string get_inst_dir() {
 				
 				try {
 					std::wstring wbuf ((wchar_t*)buffer );
-					std::string tmp;
-					ret.assign ( wbuf.begin(), wbuf.end() );
-					py_debug ( "Retrieved Buffer: " << tmp );
+					inst_dir.assign ( wbuf.begin(), wbuf.end() );
+					utils_debug ( "Retrieved Buffer: " << inst_dir );
 				} catch ( const Exception &e ) {
-					py_debug ( e );
+					utils_debug ( e );
 				} // silent ignore again
 			} else {
-				py_debug ( "Didn't query value." );
+				utils_debug ( "Didn't query value." );
 			}
 			delete [] buffer;
 		} else {
-			py_debug ( "Didn't query value size: " << ret );
+			utils_debug ( "Didn't query value size: " << ret );
 		}
 
 		RegCloseKey(reg_handle);
 	
 	} else {
 		// else silently ignore error.  Pehraps PYTHONPATH will work.
-		py_debug ( "Couldn't open hkey" );
+		utils_debug ( "Couldn't open hkey" );
 	}
-    return ret;
+    return inst_dir;
  
 }
 #endif
 
 
+#ifdef WIN32
+#define CWD_MAX MAX_PATH
+#else
+#define CWD_MAX PATH_MAX
+#endif
+
 std::string xgetcwd() {
-    char path[PATH_MAX+1];
-    char *ret = getcwd ( path, PATH_MAX+1 );
-    if (ret) return std::string(ret);
-    throw Exception ( PATH_LOOKUP, "Error retrieving current directory." , errno );
+
+   
+#ifdef WIN32
+   TCHAR path[CWD_MAX+1];
+   DWORD ret = GetCurrentDirectory(CWD_MAX+1, path);
+
+   if( ret == 0 ) throw Exception ( PATH_LOOKUP, "Error retrieving current directory." , (int)ret );
+   
+   if(ret > CWD_MAX) throw Exception ( PATH_LOOKUP, "Error retrieving current directory." , (int)ret );
+
+   std::wstring ws ( path );
+   std::string s;
+   s.assign ( ws.begin(), ws.end() );
+   return s;
+  
+#else    
+	char path[CWD_MAX+1];
+    char *ret = getcwd ( path, CWD_MAX+1 );
+    if (!ret) throw Exception ( PATH_LOOKUP, "Error retrieving current directory." , errno );
+	return std::string(path);
+#endif
+
+	
+
 }
