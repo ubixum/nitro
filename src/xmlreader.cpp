@@ -314,6 +314,9 @@ void handle_terminal ( NodeRef di, DOMNode *term ) {
     if (has_attr(term,"addr")) {
       diterm->set_attr("addr", get_attr(term, "addr", UINT_DATA ));
     }
+    if (has_attr(term,"version")) {
+        diterm->set_attr( "version", get_attr( term, "version", STR_DATA ) );
+    }
    
     handle_registers ( diterm, term ); 
     debug("  />");
@@ -409,6 +412,9 @@ void handle_terminals ( NodeRef dest, DOMNode *di, bool validate, string orig_pa
   string dest_name = to_string ( di->getNodeName() ) ;
   if (dest_name == "deviceinterface") {
       debug ("<deviceinterface>");
+      if (has_attr(di,"version") ) {
+         dest->set_attr("version", get_attr(di,"version",STR_DATA));
+      }
       for ( DOMNode *term = di->getFirstChild(); NULL != term; term = term->getNextSibling() ) {
          string node_name = to_string ( term->getNodeName() ); 
          if ( node_name == "terminal" ) {

@@ -36,6 +36,11 @@ class XmlTest : public CppUnit::TestFixture {
             CPPUNIT_ASSERT_NO_THROW ( tree->get_child("Terminal1") );
             CPPUNIT_ASSERT_THROW ( tree->get_child("some_other_term"), Exception );
             CPPUNIT_ASSERT_NO_THROW ( tree->get_child("Terminal1")->get_child("reg1"));
+
+            CPPUNIT_ASSERT_NO_THROW ( tree->get_attr("version") );
+            CPPUNIT_ASSERT_EQUAL ( string("test_di"), (string) tree->get_attr("version") );
+            CPPUNIT_ASSERT_NO_THROW ( tree->get_child ( "Terminal1")->get_attr("version") );
+            CPPUNIT_ASSERT_EQUAL ( string("1.0"), (string) tree->get_child("Terminal1")->get_attr("version") );
  
             NodeRef term1=tree->get_child("Terminal1");
             NodeRef reg1=term1->get_child("reg1");
