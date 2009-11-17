@@ -64,7 +64,7 @@ Source: "..\win32\DllRelease\nitro.lib"; Components: "c"; DestDir: "{app}\lib"
 Source: "..\csharp\Release\CSNitro.dll"; Components: "csharp"; DestDir: "{app}\csharp";
 
 [Registry]
-Root: HKLM; SubKey: "Software\Ubixum\Nitro\InstDir"; ValueType: string; ValueData: "{app}\nitro_py"; Flags: uninsdeletekey;
+Root: HKLM; SubKey: "Software\Ubixum\Nitro\InstDir"; ValueType: string; ValueData: "{app}"; Flags: uninsdeletekey;
 
 [Components]
 Name: "driver"; Description: "Nitro USB Driver"; Types: full custom; Flags: fixed

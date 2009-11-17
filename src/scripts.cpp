@@ -100,8 +100,8 @@ Scripts::impl::impl() : m_sys(NULL) {
 
 	// On Windows, we need to add the path to our local nitro_py directory"
 	#ifdef WIN32
-    string inst_dir = get_inst_dir();
-    add_path(inst_dir);	
+    std::string inst_dir = get_inst_dir();
+    add_path(xjoin(inst_dir, "nitro_py"));
 	#endif
 
     if (import_nitro() < 0) throw Exception ( SCRIPTS_INIT, "Unable to import nitro module." ); 
