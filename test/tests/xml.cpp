@@ -32,6 +32,8 @@ class XmlTest : public CppUnit::TestFixture {
             XmlReader reader (xml_path, true);
             NodeRef tree = DeviceInterface::create("root");
             CPPUNIT_ASSERT_NO_THROW(reader.read(tree));
+            CPPUNIT_ASSERT_NO_THROW(tree->get_attr("name"));
+            CPPUNIT_ASSERT_EQUAL( string("Test Device Interface"), (string) tree->get_attr("name") );
  
             CPPUNIT_ASSERT_NO_THROW ( tree->get_child("Terminal1") );
             CPPUNIT_ASSERT_THROW ( tree->get_child("some_other_term"), Exception );

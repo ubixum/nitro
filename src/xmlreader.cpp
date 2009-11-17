@@ -415,6 +415,9 @@ void handle_terminals ( NodeRef dest, DOMNode *di, bool validate, string orig_pa
       if (has_attr(di,"version") ) {
          dest->set_attr("version", get_attr(di,"version",STR_DATA));
       }
+      if (has_attr(di,"name") ) {
+         dest->set_attr("name", get_attr(di,"name",STR_DATA));
+      }
       for ( DOMNode *term = di->getFirstChild(); NULL != term; term = term->getNextSibling() ) {
          string node_name = to_string ( term->getNodeName() ); 
          if ( node_name == "terminal" ) {

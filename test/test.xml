@@ -2,7 +2,8 @@
 	xmlns="http://ubixum.com/deviceinterface/"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://ubixum.com/deviceinterface/ deviceinterface.xsd"
-    version="test_di">
+    version="test_di"
+    name="Test Device Interface">
 	
 	<terminal
 		name="Terminal1"
