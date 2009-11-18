@@ -17,7 +17,6 @@ AppName = Ubixum Nitrogen Data Acquisition
 AppVerName = Nitro 1.0.0.0
 AppPublisher = Ubixum, Inc
 AppPublisherURL = http://ubixum.com/
-; NOTE change the registry key below too
 AppVersion = 1.0.0.0
 DefaultDirName = {pf}\Ubixum\Nitro
 DefaultGroupName = Nitro
@@ -66,6 +65,8 @@ Source: "..\csharp\Release\CSNitro.dll"; Components: "csharp"; DestDir: "{app}\c
 
 [Registry]
 Root: HKLM; SubKey: "Software\Ubixum\Nitro\InstDir"; ValueType: string; ValueData: "{app}"; Flags: uninsdeletekey;
+Root: HKLM; SubKey: "SYSTEM\CurrentControlSet\Control\UsbFlags"; ValueName: "IgnoreHWSerNum1fe11212"; ValueType: binary; ValueData: "01";
+Root: HKLM; SubKey: "SYSTEM\CurrentControlSet\Control\UsbFlags"; ValueName: "IgnoreHWSerNum1fe12030"; ValueType: binary; ValueData: "01";
 
 [Components]
 Name: "driver"; Description: "Nitro USB Driver"; Types: full custom; Flags: fixed
@@ -89,4 +90,62 @@ Filename: "rundll32"; Parameters: "libusb0.dll,usb_install_driver_np_rundll {app
 
 ; bin/dll have to have the 2008 redistributables
 Filename: "{tmp}\vcredist_x86.exe"; Parameters: "/q:a"; StatusMsg: "Install MS VC 2008 Runtime Libraries ...";
+
+
+[Code]
+// Delete all the OemXX.inf and OemXX.PNF files associated with previous driver installs.
+procedure CleanupOEMFiles();
+var
+ RegKeys: TArrayOfString;
+ I: Integer;
+ RegPath: String;
+ CurKey: String;
+ CurValue: String;
+ DeletePath: String;
+begin
+    RegPath := 'SYSTEM\CurrentControlSet\Control\Class\{EB781AAF-9C70-4523-A5DF-642A87ECA567}';
+    if RegGetSubkeyNames ( HKEY_LOCAL_MACHINE, RegPath , RegKeys ) then
+    begin
+      for I := 0 to GetArrayLength (RegKeys)-1 do
+      begin
+        // remove OemXX.inf any file associated with Ubixum, Inc. LibUSB devices
+        CurKey := RegPath + '\' + RegKeys[I];
+        if RegQueryStringValue ( HKEY_LOCAL_MACHINE, CurKey, 'ProviderName', CurValue ) then
+        begin
+          if CurValue = 'Ubixum, Inc.' then
+          begin
+            if  RegQueryStringValue ( HKEY_LOCAL_MACHINE, CurKey, 'InfPath', CurValue ) then
+            begin
+              DeletePath := GetWinDir() + '\inf\' + CurValue;
+              DeleteFile ( DeletePath );
+              CurValue := ChangeFileExt ( CurValue, '.PNF' );
+              DeletePath := GetWinDir() + '\inf\' + CurValue;
+              DeleteFile ( DeletePath );
+            end // end successful query of InfPath
+          end // end CurValue = Ubixum
+        end // end successful queried Provider Name
+      end // ned processing current key
+    end //
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssInstall then
+    // actual install is about to begin
+    CleanupOEMFiles();
+end;
+
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  case CurUninstallStep of
+    usPostUninstall:
+      begin
+        // uninstall just finished
+        CleanupOEMFiles();
+      end;
+  end; // end case
+end; // end CurUninstallStepChanged
+
+
 
