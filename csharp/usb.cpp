@@ -33,16 +33,22 @@ namespace NET {
 	}
 
 	Node^ USBDevice::GetTree() {
+        return GetDi();
+	}
+    Node^ USBDevice::GetDi() {
 		try{			
-			return gcnew Node(m_dev->get_tree());
+			return gcnew Node(m_dev->get_di());
 		} catch ( Nitro::Exception& e ) {
 			throw static_cast<NitroException^>(e);
 		}
-	}
+    }
 
 	void USBDevice::SetTree(const Node^ node) {
+        SetDi(node);
+    }
+	void USBDevice::SetDi(const Node^ node) {
 		try {
-			m_dev->set_tree( (Nitro::NodeRef)node );
+			m_dev->set_di( (Nitro::NodeRef)node );
 		} catch ( Nitro::Exception& e ) {
 			throw static_cast<NitroException^>(e);
 		}

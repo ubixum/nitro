@@ -37,6 +37,7 @@ Source: "c:\WINDOWS\system32\Python26.dll"; DestDir: "{win}\system32"; Flags: on
 Source: "..\win32\BinRelease\nitro.exe"; DestDir: "{app}\bin";
 Source: "..\README"; Flags: isreadme; DestDir: "{app}"; DestName: "readme.txt";
 Source: "..\CHANGELOG"; DestDir: "{app}"; DestName: "changelog.txt";
+Source: "..\test\deviceinterface.xsd"; DestDir: "{app}\xml";
 ; install dll regardless, py bindings require it
 Source: "..\win32\DllRelease\nitro.dll"; DestDir: "{win}\system32"; Flags: restartreplace replacesameversion
 Source: "..\python\build\lib.win32-2.6\_nitro.pyd"; DestDir: "{app}\nitro_py";

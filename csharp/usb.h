@@ -76,8 +76,16 @@ namespace NET {
 		void Set(const DataType^ term, const DataType^ reg, const DataType^ val, UInt32 timeout);
 		void Read(const DataType^ term, const DataType^ reg, array<Byte>^ bytes, UInt32 timeout);
 		void Write(const DataType^ term, const DataType^ reg, array<Byte>^ bytes, UInt32 timeout);
+        /**
+         * Deprecated, use GetDi()
+         **/
 		Node^ GetTree ();
+        Node^ GetDi();
+        /**
+         * Deprecated, use SetDi()
+         **/
 		void SetTree(const Node^ node);
+        void SetDi(const Node^ node);
 		void Reset();
 		void Close () { m_dev->close(); }
 	

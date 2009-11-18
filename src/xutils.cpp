@@ -84,17 +84,16 @@ std::string get_inst_dir() {
 			reg_handle, NULL, NULL, NULL,
 			NULL, &size
 			)) == ERROR_SUCCESS ) {
-			
-			char *buffer = new char[size];
+
+            char *buffer = new char[size];
 			if ( RegQueryValueEx ( reg_handle, NULL, NULL, NULL, (LPBYTE)buffer, &size ) == ERROR_SUCCESS ) {
-				
 				try {
-					std::wstring wbuf ((wchar_t*)buffer );
-					inst_dir.assign ( wbuf.begin(), wbuf.end() );
-					utils_debug ( "Retrieved Buffer: " << inst_dir );
-				} catch ( const Exception &e ) {
-					utils_debug ( e );
-				} // silent ignore again
+                    std::wstring wbuf ((wchar_t*)buffer );
+                    inst_dir.assign ( wbuf.begin(), wbuf.end() );
+                    utils_debug ( "Retrieved Buffer: " << inst_dir );
+                } catch ( const Exception &e ) {
+                    utils_debug ( e );
+                } // silent ignore again
 			} else {
 				utils_debug ( "Didn't query value." );
 			}
