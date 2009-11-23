@@ -182,6 +182,10 @@ def printVerilogModule(ep, module, filename):
 
     #Writable registers:
     writable = getRegs(ep, types=["int"], modes=["write"])
+
+    def init_str(width, init):
+        return "%d'h%x" % (width, init)
+
     if len(writable):
         f.write("// Create writable static registers\n")
         f.write("always @(posedge clk or negedge resetb) begin\n");
@@ -191,13 +195,13 @@ def printVerilogModule(ep, module, filename):
                 if len(reg.init) != reg.array:
                     raise Exception(str(reg) + " init sequence is not the same length as the array")
                 for i in range(reg.array):
-                    f.write("     " + reg.name + "[%d:%d] <= " %((i+1)*reg.width-1, i*reg.width) + str(getValueFromMap(reg.init[i], reg)) + ";\n");
+                    f.write("     " + reg.name + "[%d:%d] <= " %((i+1)*reg.width-1, i*reg.width) + init_str(reg.width, getValueFromMap(reg.init[i], reg)) + ";\n");
             else:
                 if(reg.array > 1):
                     for i in range(reg.array):
-                        f.write("     " + reg.name + "[%d:%d] <= %s;\n" % ((i+1)*reg.width-1, i*reg.width, str(getValueFromMap(reg.init, reg))))
+                        f.write("     " + reg.name + "[%d:%d] <= %s;\n" % ((i+1)*reg.width-1, i*reg.width, init_str(reg.width, getValueFromMap(reg.init, reg))))
                 else:
-                    f.write("     " + reg.name + " <= " + str(getValueFromMap(reg.init, reg)) + ";\n");
+                    f.write("     " + reg.name + " <= %s;\n" % (init_str(reg.width, getValueFromMap(reg.init, reg)),))
                     
         f.write("  end else if(we) begin\n");
         f.write("    case(addr)\n");
@@ -330,11 +334,12 @@ def printVerilogDefs(di, module, filename):
     f = open(filename, "w");
     f.write("// This file is auto-generated. Do not edit.\n");
     f.write("`ifndef _%s_DEFS_\n" % module)
-    f.write("`define _%s_DEFS_\n" % module)
+    f.write("`define _%s_DEFS_\n\n" % module)
 
     for term in di.values():
-        f.write("`define TERM_" + term.name + " " + str(term.addr) + "\n\n");
-        f.write("`define TERM_" + term.name + "_ADDR_WIDTH " + str(term.regAddrWidth) + "\n\n")
+        f.write(("/"*75) + "\n")
+        f.write("`define TERM_" + term.name + " " + str(term.addr) + "\n");
+        f.write("`define   TERM_" + term.name + "_ADDR_WIDTH " + str(term.regAddrWidth) + "\n")
         for reg in term.values():
             w = (reg.width-1)/term.regDataWidth
             for array in range(reg.array):
@@ -342,16 +347,24 @@ def printVerilogDefs(di, module, filename):
                 i = w
                 while(i>=0):
                     if(reg.array > 1):
-                        f.write("`define REG_" + term.name + "_" + reg.name + str(array))
+                        f.write("`define   "+ term.name + "_" + reg.name + str(array))
                         if(w > 0):
                             f.write("_" + str(i))
                         f.write(" " + str(i+reg.addr+(w+1)*array) + "\n")
                     else:
-                        f.write("`define REG_" + term.name + "_" + reg.name)
+                        f.write("`define   " + term.name + "_" + reg.name)
                         if(w>0):
                             f.write("_" + str(i))
                         f.write(" " + str(i+reg.addr) + "\n")
+                        if(w>0 and i==0):
+                            f.write("`define   " + term.name + "_" + reg.name)
+                            f.write(" " + str(i+reg.addr) + "\n")
                     i=i-1
+                f.write("`define    WIDTH_"+term.name+"_"+reg.name+" %d\n" % reg.width)
+
+            for subreg in reg.values():
+                f.write("`define     "+term.name+"_"+reg.name+"_"+subreg.name+ " %d:%d\n" % (subreg.addr+subreg.width-1,subreg.addr))
+        f.write("\n\n")
     f.write("`endif\n")
     f.close()
 
