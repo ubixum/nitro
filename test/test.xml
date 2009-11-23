@@ -1,13 +1,16 @@
 <deviceinterface
 	xmlns="http://ubixum.com/deviceinterface/"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://ubixum.com/deviceinterface/ deviceinterface.xsd">
+	xsi:schemaLocation="http://ubixum.com/deviceinterface/ deviceinterface.xsd"
+    version="test_di"
+    name="Test Device Interface">
 	
 	<terminal
 		name="Terminal1"
 		regAddrWidth="16"
 		regDataWidth="16"
-		addr="3">
+		addr="3"
+        version="1.0">
 		<register
             name="reg1"
             addr="0">
@@ -80,5 +83,22 @@
  
     </terminal>
 
+    <include src="testinclude.xml"> <!-- include_term addr should be 6 -->
+    </include>
+    <include src="testinclude.xml">
+        <termoverlay name="include_term"
+                  newname="include_term1"
+                  addr="77">
+                  <regoverlay name="rename_me"
+                            newname="reg_renamed"
+                            addr="1" />
+                  <register name="new_register">
+                    <type>int</type>
+                    <mode>read</mode>
+                    <width>32</width>
+                  </register>
+        </termoverlay>        
+    </include>
     
 </deviceinterface>
+

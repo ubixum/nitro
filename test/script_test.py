@@ -50,3 +50,7 @@ def bigint_test(dev):
             print "wide_reg", hex(r), "expect", hex(int_tests[0])
             raise nitro.Exception ( 1, "return value not correct.", int_tests[0] )
 
+def get_subreg_test(dev):
+    " was sigsegv on some platforms "
+    dev.get_subregs ( "int_term" , "many_subregs" );
+

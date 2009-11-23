@@ -26,7 +26,7 @@ endif
 OBJNAMES=node device usb error types reader xmlreader userdevice writer xmlwriter scripts version
 DLLHEADERS=$(addprefix include/nitro/, $(addsuffix .h, $(OBJNAMES)))
 DLLSOURCES=$(addprefix src/, $(addsuffix .cpp, $(OBJNAMES)))
-DLLOBJS=$(addprefix src/, $(addsuffix .o, $(OBJNAMES))) src/hr_time.o src/bihelp.o src/ihx.o
+DLLOBJS=$(addprefix src/, $(addsuffix .o, $(OBJNAMES))) src/hr_time.o src/bihelp.o src/ihx.o src/xutils.o
 
 
 ifeq ($(dist), .el5)

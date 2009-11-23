@@ -21,13 +21,6 @@
 typedef int Py_ssize_t;
 #endif
 
-#ifdef WIN32
-#include <Windows.h>
-#include <cstdlib> // path operations on Windows
-#define REG_INST_DIR L"Software\\Ubixum\\Nitro\\InstDir"
-#else
-#include <libgen.h> // dirname/basename on Linux
-#endif
 
 #include <map>
 #include <string>
@@ -39,6 +32,8 @@ typedef int Py_ssize_t;
 #include <nitro/node.h>
 
 #include <python_nitro.h>
+
+#include "xutils.h"
 
 #ifdef DEBUG_PY
 #include <iostream>
@@ -83,7 +78,6 @@ struct Scripts::impl {
 	/**
 	 * \return the absolute directory path to the file
 	 **/
-	std::string dirname( const std::string &path );
 	std::string modname ( const std::string &path );
 	void add_path ( const std::string &path );
 };
@@ -106,47 +100,8 @@ Scripts::impl::impl() : m_sys(NULL) {
 
 	// On Windows, we need to add the path to our local nitro_py directory"
 	#ifdef WIN32
-	HKEY reg_handle;
-	if ( RegOpenKeyEx (
-		HKEY_LOCAL_MACHINE,
-			REG_INST_DIR,
-			0, KEY_READ,
-			&reg_handle
-		) == ERROR_SUCCESS ) {
-
-		DWORD size; LONG ret;
-		if ( (ret = RegQueryValueEx (
-			reg_handle, NULL, NULL, NULL,
-			NULL, &size
-			)) == ERROR_SUCCESS ) {
-			
-			char *buffer = new char[size];
-			if ( RegQueryValueEx ( reg_handle, NULL, NULL, NULL, (LPBYTE)buffer, &size ) == ERROR_SUCCESS ) {
-				
-				try {
-					std::wstring wbuf ((wchar_t*)buffer );
-					std::string tmp;
-					tmp.assign ( wbuf.begin(), wbuf.end() );
-					py_debug ( "Retrieved Buffer: " << tmp );
-					add_path ( tmp );
-				} catch ( const Exception &e ) {
-					py_debug ( e );
-				} // silent ignore again
-			} else {
-				py_debug ( "Didn't query value." );
-			}
-			delete [] buffer;
-		} else {
-			py_debug ( "Didn't query value size: " << ret );
-		}
-
-		RegCloseKey(reg_handle);
-	
-	} else {
-		// else silently ignore error.  Pehraps PYTHONPATH will work.
-		py_debug ( "Couldn't open hkey" );
-	}
-	
+    std::string inst_dir = get_inst_dir();
+    add_path(xjoin(inst_dir, "nitro_py"));
 	#endif
 
     if (import_nitro() < 0) throw Exception ( SCRIPTS_INIT, "Unable to import nitro module." ); 
@@ -178,30 +133,6 @@ void Scripts::impl::cleanup() {
         }
     }
 	Py_XDECREF(m_sys);
-}
-
-
-std::string Scripts::impl::dirname ( const std::string &path ) {
-
-#ifdef WIN32
-
-	char path_buffer[_MAX_PATH];
-	if ( _fullpath ( path_buffer, path.c_str(), _MAX_PATH ) == NULL) throw Exception ( SCRIPTS_PATH, std::string("Unable to find full path: ")+ path );
-	char drive[_MAX_DRIVE];
-	char dir[_MAX_DIR];
-	_splitpath ( path_buffer, drive, dir, NULL, NULL );
-	char res[_MAX_DIR+_MAX_PATH];
-	sprintf ( res, "%s%s", drive, dir );
-	return std::string(res);
-
-#else
-    char* path_tmp = strdup ( path.c_str() );
-    char* dir = ::dirname(path_tmp);
-    std::string ret(dir);
-    free(path_tmp);
-    return ret; 
-#endif
-
 }
 
 std::string Scripts::impl::modname ( const std::string &path ) {
@@ -253,7 +184,7 @@ void Scripts::import ( const std::string &module, const std::string &script_path
 
 
 	// add the script path to the module python path
-	std::string dir = m_impl->dirname ( script_path );
+	std::string dir = xdirname ( script_path );
 	// for python, the strings need escaped
 	std::string modname = m_impl->modname ( script_path );
 

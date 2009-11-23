@@ -13,6 +13,7 @@ class XmlTest : public CppUnit::TestFixture {
     CPPUNIT_TEST_SUITE ( XmlTest );
     CPPUNIT_TEST ( testXml );
     CPPUNIT_TEST ( testTwice );
+    CPPUNIT_TEST ( testPaths );
     CPPUNIT_TEST_SUITE_END();
 
     public:
@@ -27,14 +28,21 @@ class XmlTest : public CppUnit::TestFixture {
             XmlReader dummy ( "some_nonexistent_file_path" ) ;
             NodeRef tmp = DeviceInterface::create("hi");
             CPPUNIT_ASSERT_THROW(dummy.read(tmp), Exception);
-            
+                        
             XmlReader reader (xml_path, true);
             NodeRef tree = DeviceInterface::create("root");
             CPPUNIT_ASSERT_NO_THROW(reader.read(tree));
+            CPPUNIT_ASSERT_NO_THROW(tree->get_attr("name"));
+            CPPUNIT_ASSERT_EQUAL( string("Test Device Interface"), (string) tree->get_attr("name") );
  
             CPPUNIT_ASSERT_NO_THROW ( tree->get_child("Terminal1") );
             CPPUNIT_ASSERT_THROW ( tree->get_child("some_other_term"), Exception );
             CPPUNIT_ASSERT_NO_THROW ( tree->get_child("Terminal1")->get_child("reg1"));
+
+            CPPUNIT_ASSERT_NO_THROW ( tree->get_attr("version") );
+            CPPUNIT_ASSERT_EQUAL ( string("test_di"), (string) tree->get_attr("version") );
+            CPPUNIT_ASSERT_NO_THROW ( tree->get_child ( "Terminal1")->get_attr("version") );
+            CPPUNIT_ASSERT_EQUAL ( string("1.0"), (string) tree->get_child("Terminal1")->get_attr("version") );
  
             NodeRef term1=tree->get_child("Terminal1");
             NodeRef reg1=term1->get_child("reg1");
@@ -84,22 +92,32 @@ class XmlTest : public CppUnit::TestFixture {
             CPPUNIT_ASSERT_EQUAL ( 2, (int) init.at(1) );
             CPPUNIT_ASSERT_EQUAL ( BIGINT_DATA, init.at(2).get_type() ); 
 
+
+            // include
+            CPPUNIT_ASSERT_NO_THROW ( tree->get_child ( "include_term" ) );
+            CPPUNIT_ASSERT_EQUAL ( 6, (int) tree->get_child ( "include_term" )->get_attr ( "addr" ) );
+            CPPUNIT_ASSERT_NO_THROW ( tree->get_child ( "include_term1" ) );
+            CPPUNIT_ASSERT_NO_THROW ( tree->get_child ( "include_term1" )->get_child("reg_renamed"));
+            CPPUNIT_ASSERT_EQUAL ( 77, (int) tree->get_child ( "include_term1")->get_attr ( "addr" ) );
+            CPPUNIT_ASSERT_EQUAL ( 1, (int) tree->get_child("include_term1")->get_child("reg_renamed")->get_attr("addr") );
+            CPPUNIT_ASSERT_NO_THROW ( tree->get_child ("include_term1" )->get_child ("new_register") );
         }
 
         void testTwice() {
             const char* xml_path="test.xml";
             XmlReader reader ( xml_path, true );
             NodeRef tree = DeviceInterface::create("di");
-            try { 
             reader.read(tree);
-            //CPPUNIT_ASSERT_NO_THROW ( reader.read(tree) );
-                reader.read(tree);
-            } catch ( Exception &e ) {
-                cout << e << endl;
-            } catch ( ... ) {
-                cout << "What? " << endl;
-            }
+            CPPUNIT_ASSERT_NO_THROW ( reader.read(tree) );
         }
+
+        void testPaths() {
+            const char* xml_path = "xmldir/test.xml";
+            XmlReader reader ( xml_path, true );
+            NodeRef di = DeviceInterface::create("di");
+            CPPUNIT_ASSERT_NO_THROW( reader.read(di) );
+        }
+
 
 };
 

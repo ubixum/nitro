@@ -20,6 +20,8 @@
 #include <iostream>
 #include <sstream>
 
+#include <xercesc/parsers/XercesDOMParser.hpp>
+#include <xercesc/sax/HandlerBase.hpp>
 #include <xercesc/dom/DOM.hpp>
 #include <xercesc/util/XMLString.hpp>
 #include <xercesc/util/PlatformUtils.hpp>
@@ -30,6 +32,7 @@
 #include <nitro/node.h>
 
 #include "bihelp.h"
+#include "xutils.h"
 
 XERCES_CPP_NAMESPACE_USE
 
@@ -91,25 +94,26 @@ struct XmlReader::impl {
 
 };
 
-class NitroErrorHandler : public DOMErrorHandler {
+
+class NitroErrorHandler : public HandlerBase {
   private:
-   string error;
+   string m_error;
    bool err;
    void operator=(const NitroErrorHandler&); // unimpled
    NitroErrorHandler(const NitroErrorHandler&); // unimpled
   public:
    NitroErrorHandler() : err(false) {}
-   bool handleError ( const DOMError &domerr ){
+   void error ( const SAXParseException &domerr ){
      stringstream errstr ;
      errstr << to_string ( domerr.getMessage() ); 
-     errstr << " (Line: " << domerr.getLocation()->getLineNumber() << ", Column: " << 
-                domerr.getLocation()->getColumnNumber() << ")";
-     error = errstr.rdbuf()->str();
+     errstr << " (Line: " << domerr.getLineNumber() << ", Column: " << 
+                domerr.getColumnNumber() << ")";
+     m_error = errstr.rdbuf()->str();
      err=true;
-     return false; 
    }
+   void fatalError ( const SAXParseException &e ) { error(e); }
    bool err_occurred() { return err; }
-   string get_message () { return error; }
+   string get_message () { return m_error; }
 };
 
 
@@ -302,37 +306,136 @@ void handle_registers ( NodeRef diterm , DOMNode *term ) {
  
 }
 
-void handle_terminals ( NodeRef dest, DOMNode *di ) {
+void handle_terminal ( NodeRef di, DOMNode *term ) {
+    NodeRef diterm = Terminal::create( get_attr(term, "name", STR_DATA) );
+    debug("  <terminal name=\"" << diterm->get_name() );
+    diterm->set_attr ( "regDataWidth", get_attr(term, "regDataWidth", UINT_DATA ) );
+    diterm->set_attr ( "regAddrWidth", get_attr(term, "regAddrWidth", UINT_DATA ) );
+    if (has_attr(term,"addr")) {
+      diterm->set_attr("addr", get_attr(term, "addr", UINT_DATA ));
+    }
+    if (has_attr(term,"version")) {
+        diterm->set_attr( "version", get_attr( term, "version", STR_DATA ) );
+    }
+   
+    handle_registers ( diterm, term ); 
+    debug("  />");
 
-  debug ("<deviceinterface>");
-  for ( DOMNode *term = di->getFirstChild(); NULL != term; term = term->getNextSibling() ) {
-     string node_name = to_string ( term->getNodeName() ); 
+    if (di->has_child ( diterm->get_name() ) ) di->del_child ( diterm->get_name() );
+    di->add_child ( diterm );
+}
 
-     if ( node_name == "deviceinterface" ) {
-        // allows more terminals embedded in a device interface
-        handle_terminals ( dest, term );
-     } else if ( node_name == "terminal" ) {
-        NodeRef diterm = Terminal::create( get_attr(term, "name", STR_DATA) );
-        debug("  <terminal name=\"" << diterm->get_name() );
-        diterm->set_attr ( "regDataWidth", get_attr(term, "regDataWidth", UINT_DATA ) );
-        diterm->set_attr ( "regAddrWidth", get_attr(term, "regAddrWidth", UINT_DATA ) );
-        if (has_attr(term,"addr")) {
-          diterm->set_attr("addr", get_attr(term, "addr", UINT_DATA ));
+
+void handle_regover ( NodeRef term, DOMNode *overlay ) {
+    string name = get_attr ( overlay, "name", STR_DATA );
+    NodeRef origreg = term->get_child( name );
+    if (has_attr(overlay, "newname" )) {
+        origreg->set_name( get_attr ( overlay, "newname", STR_DATA ) );
+    }
+    if (has_attr(overlay, "addr")) {
+        origreg->set_attr( "addr", get_attr ( overlay, "addr", UINT_DATA ) );
+    }
+}
+
+
+void handle_termoverlay ( NodeRef di, DOMNode *overlay ) {
+    string name = get_attr ( overlay, "name", STR_DATA );
+    NodeRef origterm = di->get_child ( name );
+    if (has_attr ( overlay, "newname" )) {
+        string newname = get_attr ( overlay, "newname", STR_DATA );
+        origterm->set_name(newname);
+    }
+    if (has_attr ( overlay, "addr" )) {
+        origterm->set_attr("addr", get_attr(overlay,"addr",UINT_DATA));
+    }
+
+    for (DOMNode *regover = overlay->getFirstChild();
+         NULL != regover;
+         regover = regover->getNextSibling() ) {
+        string node_name = to_string(regover->getNodeName());
+        if ( node_name == "register" ) {
+            NodeRef reg = Register::create( get_attr ( regover, "name", STR_DATA ) ); 
+            handle_register ( reg, regover );
+            origterm->add_child( reg );
+        } else if ( node_name == "regoverlay" ) {
+            handle_regover ( origterm, regover );
         }
-       
-        handle_registers ( diterm, term ); 
-        debug("  />");
+    }
+}
 
-        if (dest->has_child ( diterm->get_name() ) ) dest->del_child ( diterm->get_name() );
-        dest->add_child ( diterm );
+void handle_include ( NodeRef dest, DOMNode *include, bool validate, string orig_path ) {
+     string src = get_attr ( include, "src", STR_DATA );
+     NodeRef includedi = DeviceInterface::create("includedi");
+     string unique_fake_term_name = "fake_addr_term879873498723947293797998749527"; 
+     if ( dest->has_children() ) {
+        /**
+         * To make sure the included terminals are 
+         * auto-number (address) from the correct 
+         * address number, we need a fake terminal
+         **/
+        NodeRef fake_addr_term = Terminal::create(unique_fake_term_name);
+        NodeRef last_real_term = *(dest->child_end()-1);
+        fake_addr_term->set_attr("addr", last_real_term->get_attr("addr"));
+        includedi->add_child(fake_addr_term);
+     }
+     
+     // resolve src path to abs path
+     string absdir = xdirname ( orig_path );
+     string abspath = xjoin ( absdir , src );
 
-     } else {
-        if ( term->getNodeType() != DOMNode::TEXT_NODE )
-            throw Exception ( XML_INVALID, "Invalid child node deviceinterface: " + node_name ); 
+     XmlReader xmlr ( abspath, validate );
+     xmlr.read ( includedi );
+
+     // overlay/add items
+     for ( DOMNode *overlay = include->getFirstChild(); 
+           NULL != overlay;
+           overlay= overlay->getNextSibling () ) {
+           string node_name = to_string ( overlay->getNodeName() );
+           if ( node_name == "termoverlay" ) {
+               handle_termoverlay ( includedi, overlay ); 
+           } 
+           // else don't know how to handle element
      }
 
+     for ( DITreeIter itr = includedi->child_begin(); itr != includedi->child_end(); ++itr ) {
+         NodeRef iterm = (*itr)->clone();
+         if (iterm->get_name() != unique_fake_term_name ) {
+             if (dest->has_child( iterm->get_name() ) ) dest->del_child ( iterm->get_name() );
+             dest->add_child(iterm);
+         }
+     }
+}
+
+void handle_terminals ( NodeRef dest, DOMNode *di, bool validate, string orig_path ) {
+
+
+  string dest_name = to_string ( di->getNodeName() ) ;
+  if (dest_name == "deviceinterface") {
+      debug ("<deviceinterface>");
+      if (has_attr(di,"version") ) {
+         dest->set_attr("version", get_attr(di,"version",STR_DATA));
+      }
+      if (has_attr(di,"name") ) {
+         dest->set_attr("name", get_attr(di,"name",STR_DATA));
+      }
+      for ( DOMNode *term = di->getFirstChild(); NULL != term; term = term->getNextSibling() ) {
+         string node_name = to_string ( term->getNodeName() ); 
+         if ( node_name == "terminal" ) {
+            handle_terminal(dest, term); 
+         } else if ( node_name == "include" ) {
+            handle_include ( dest, term, validate, orig_path );
+         } else {
+            if ( term->getNodeType() != DOMNode::TEXT_NODE )
+                throw Exception ( XML_INVALID, "Invalid child node deviceinterface: " + node_name ); 
+         }
+    
+      }
+      debug("/>");
+  } else if (dest_name == "terminal") {
+      debug ("<terminal>");
+      handle_terminal(dest, di); 
+      debug ("</terminal>");
   }
-  debug("/>");
 }
 
 
@@ -343,10 +446,12 @@ XmlReader::~XmlReader() throw() { delete m_impl;}
 
 
 struct XmlUnitializer {
-    DOMLSParser* parser;
-    XmlUnitializer(DOMLSParser *p) : parser(p) {}
+    XercesDOMParser *parser;
+    NitroErrorHandler *handler;
+    XmlUnitializer() : parser(NULL), handler(NULL) {}
     ~XmlUnitializer() {
-        if (parser) parser->release(); // should be done before terminate
+        if (parser) delete parser; // should be done before terminate
+        if (handler) delete handler;
         XMLPlatformUtils::Terminate();
     }
 };
@@ -361,43 +466,60 @@ void XmlReader::read(NodeRef node) {
     }
 
     // terminate xml when function exits
-    XmlUnitializer xml_uninitializer(NULL);
+    XmlUnitializer xml_uninitializer;
     
-    // get the DOM LS parser
-    XMLCh tempStr[100];
-    XMLString::transcode("LS", tempStr, sizeof(tempStr)-1 );
-    DOMImplementation *impl = DOMImplementationRegistry::getDOMImplementation(tempStr);
-
-    DOMLSParser* parser = static_cast<DOMImplementationLS*>(impl)->createLSParser(DOMImplementationLS::MODE_SYNCHRONOUS, 0);
-    xml_uninitializer.parser=parser; // ensure delete parser before Terminate
-
-    DOMConfiguration *dc = parser->getDomConfig();
-
-    NitroErrorHandler handler;
-    dc->setParameter ( XMLUni::fgDOMErrorHandler, &handler);
-    dc->setParameter ( XMLUni::fgDOMComments, false );
-    dc->setParameter ( XMLUni::fgDOMElementContentWhitespace, false );
-    dc->setParameter ( XMLUni::fgDOMNamespaces, true );
+    XercesDOMParser *parser = new XercesDOMParser();
+    xml_uninitializer.parser = parser;
     if ( m_impl->m_validate ) {
-        dc->setParameter ( XMLUni::fgDOMValidate, true );
-        dc->setParameter ( XMLUni::fgXercesSchema, true );
-        dc->setParameter ( XMLUni::fgXercesSchemaFullChecking, true );
+        parser->setValidationScheme(XercesDOMParser::Val_Always);
+        parser->setDoNamespaces(true);    // optional
+        parser->setDoSchema(true);
+        parser->setValidationSchemaFullChecking(true);
+        vector<string> schema_paths;
+        string namesp = "http://ubixum.com/deviceinterface/";
+        string xsd = "deviceinterface.xsd";
+
+        // add a number of default schema paths
+
+        schema_paths.push_back ( xgetcwd() );
+        #ifdef WIN32
+        schema_paths.push_back ( xjoin(get_inst_dir(),"xml") );
+		#else
+		schema_paths.push_back ( "/usr/share/docs/nitro/xml/" );
+        #endif
+        string schema_path_str;
+		size_t pos=0;
+		for (vector<string>::iterator itr = schema_paths.begin(); itr != schema_paths.end(); ++itr ) {
+			string prefix = "file:///";
+			if (itr->substr(0,1) == "/") prefix = "file://";
+			string path = xjoin ( *itr, xsd );
+			while ( (pos = path.find(" ")) != std::string::npos ) {
+				path.replace(pos,1,"%20");
+			}
+			schema_path_str += namesp + " " + prefix + path + " ";
+		}
+		parser->setExternalSchemaLocation ( schema_path_str.c_str() );
     }
-    if (dc->canSetParameter(XMLUni::fgXercesDoXInclude, true)){
-          dc->setParameter(XMLUni::fgXercesDoXInclude, true);
-    } else {
-       throw Exception ( XML_INIT, "XInclude functionality not available." ); 
-    }
+    parser->setCreateCommentNodes(false);
+    parser->setIncludeIgnorableWhitespace(false);
+
+
+    NitroErrorHandler* handler = new NitroErrorHandler();
+    xml_uninitializer.handler = handler;
+    parser->setErrorHandler(handler);
+
 
     try {
-       DOMDocument *doc = parser->parseURI(m_impl->m_path.c_str()); 
-       if ( handler.err_occurred() ) {
-         throw Exception ( XML_PARSE, handler.get_message() );
+       //DOMDocument *doc = parser->parseURI(m_impl->m_path.c_str()); 
+       parser->parse(m_impl->m_path.c_str());
+       DOMDocument *doc = parser->getDocument();
+       if ( handler->err_occurred() ) {
+         throw Exception ( XML_PARSE, handler->get_message() );
        }
 
        DOMNode* root = doc->getDocumentElement();
        root->normalize(); // gets rid of empty text nodes etc.
-       handle_terminals ( node, root );
+       handle_terminals ( node, root, m_impl->m_validate, m_impl->m_path );
        
     } catch ( const XMLException& e ) {
         //cout << e.getMessage() << endl;
@@ -409,6 +531,7 @@ void XmlReader::read(NodeRef node) {
         //cout << e.getMessage() << endl;
         throw Exception ( XML_PARSE, to_string(e.getMessage()) );
     } 
+
 }
 
 
