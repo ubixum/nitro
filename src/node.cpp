@@ -265,6 +265,11 @@ void Node::set_attr(const std::string& name, const DataType& value) {
 	m_impl->m_attrmap.insert( make_pair( name, value ) );
 }
 
+
+void Node::del_attr(const std::string &name) {
+    m_impl->m_attrmap.erase(name);
+}
+
 DITreeIter Node::child_begin() const { return m_impl->m_children.begin(); }
 DITreeIter Node::child_end() const { return m_impl->m_children.end(); }
 

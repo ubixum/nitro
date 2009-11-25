@@ -347,6 +347,11 @@ class DLL_API Node {
          **/
         void set_attr(const std::string& name, const DataType& value);
 
+        /**
+         * \brief Remove node attribute.
+         **/
+        void del_attr(const std::string& name);
+
 
         /**
          * Attributes can be iterated exactly according to 
