@@ -80,7 +80,7 @@ class XmlTest : public CppUnit::TestFixture {
  
  
             CPPUNIT_ASSERT_NO_THROW ( tree->get_child("term2") );
-            CPPUNIT_ASSERT ( tree->get_child("term2")->get_attr("addr") == 4 );
+            CPPUNIT_ASSERT_EQUAL ( 0x200, (int) tree->get_child("term2")->get_attr("addr") );
 
             CPPUNIT_ASSERT_NO_THROW ( tree->get_child("array_term" )->get_child("array1") );
             CPPUNIT_ASSERT_EQUAL ( 5, (int) tree->get_child("array_term")->get_child("array1")->get_attr("array") );
@@ -95,7 +95,7 @@ class XmlTest : public CppUnit::TestFixture {
 
             // include
             CPPUNIT_ASSERT_NO_THROW ( tree->get_child ( "include_term" ) );
-            CPPUNIT_ASSERT_EQUAL ( 6, (int) tree->get_child ( "include_term" )->get_attr ( "addr" ) );
+            CPPUNIT_ASSERT_EQUAL ( 76, (int) tree->get_child ( "include_term" )->get_attr ( "addr" ) );
             CPPUNIT_ASSERT_NO_THROW ( tree->get_child ( "include_term1" ) );
             CPPUNIT_ASSERT_NO_THROW ( tree->get_child ( "include_term1" )->get_child("reg_renamed"));
             CPPUNIT_ASSERT_EQUAL ( 77, (int) tree->get_child ( "include_term1")->get_attr ( "addr" ) );

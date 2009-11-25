@@ -313,17 +313,33 @@ void DeviceInterface::add_child ( const NodeRef& node ) {
     // regAddrWidth
     // regDataWidth 
     if ( TERMINAL != node->get_type() ) throw Exception ( NODE_UNSUPPORTED_CHILD, node->get_name());
-    if ( !node->has_attr( "regAddrWidth" ) ) throw Exception ( NODE_ATTR_ERROR , std::string("Terminal node missing regAddrWidth:" ) + node->get_name() );
-    if ( !node->has_attr( "regDataWidth" ) ) throw Exception ( NODE_ATTR_ERROR, std::string("Terminal node missing regDataWidth: ") + node->get_name() );
+    if ( !node->has_attr( "regAddrWidth" ) ) throw Exception ( NODE_ATTR_ERROR , "Terminal node missing regAddrWidth:", node->get_name() );
+    if ( !node->has_attr( "regDataWidth" ) ) throw Exception ( NODE_ATTR_ERROR, "Terminal node missing regDataWidth: ", node->get_name() );
 
-
-    if ( !node->has_attr("addr") ) {
-        uint32 next_addr = 0;
-        if ( has_children() ) {
-            DITreeIter itr = child_end()-1;
-            next_addr = (uint32)((*itr)->get_attr("addr")) + 1;
+    if (node->has_attr("addr")) {
+        uint32 node_addr = node->get_attr("addr");
+        for ( DITreeIter itr = child_begin(); itr != child_end(); ++itr ) {
+           uint32 child_addr = (*itr)->get_attr("addr");
+           if (node_addr == child_addr) throw Exception ( NODE_ATTR_ERROR, "Terminal address already exists in device interface.", node_addr );
         }
-        node->set_attr("addr", next_addr );
+    } else {
+        // auto assigned addresses start at 0x200
+        uint32 next_addr = 0x200;
+        while (true) {
+            bool inc = false;
+            for (DITreeIter itr = child_begin(); itr != child_end(); ++itr ) {
+                if (next_addr == (uint32)(*itr)->get_attr("addr") ) {
+                    inc=true;
+                    break;
+                }
+            }
+            if (inc) {
+                ++next_addr;
+            } else {
+                node->set_attr("addr", next_addr );
+                break;
+            }
+        }
     }
 
     if ( !node->has_attr("comment") ) {

@@ -234,6 +234,7 @@ class NodeTest : public CppUnit::TestFixture {
             di->add_child(term);
             NodeRef term2 = term->clone();
             term2->set_name("term2");
+            term2->del_attr("addr"); // so we get a new one
             CPPUNIT_ASSERT_NO_THROW( di->add_child(term2) ); 
         }
 

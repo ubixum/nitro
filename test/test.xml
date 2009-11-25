@@ -54,7 +54,7 @@
         name="term2"
         regAddrWidth="16"
         regDataWidth="16"
-        > <!-- addr should be 4 -->
+        > <!-- addr should be 512 -->
     </terminal>
 
     <terminal
@@ -62,6 +62,7 @@
         regDataWidth="5"
         regAddrWidth="5">
         <!-- array 5 total width 15 -->
+        <!-- addr 513 -->
         <register
             name="array1">
             <type>int</type>
@@ -83,7 +84,9 @@
  
     </terminal>
 
-    <include src="testinclude.xml"> <!-- include_term addr should be 6 -->
+    <include src="testinclude.xml">
+        <termoverlay name="include_term"
+                     addr="76" />
     </include>
     <include src="testinclude.xml">
         <termoverlay name="include_term"
