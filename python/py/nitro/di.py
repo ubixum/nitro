@@ -310,7 +310,7 @@ def printVerilogInstance(ep, module, filename, clk="di_clk", resetb="resetb", we
     if(shadowed):
         f.write("     .shadow_sync(%s),\n" % (shadow_sync))
     f.write("     .we(%s_%s),\n"%  (we, module) )
-    f.write("     .addr(%s[%d:0]),\n"   % (addr, ep.regDataWidth-1))
+    f.write("     .addr(%s[%d:0]),\n"   % (addr, ep.regAddrWidth-1))
     f.write("     .datai(%s),\n"  % datai)
     f.write("     .datao(%s_reg_datao),\n\n" % module);
     
