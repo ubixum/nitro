@@ -142,6 +142,9 @@ def printVerilogModule(ep, module, filename):
                 f.write ( ", ".join ( [ s.vlog_name for s in subregs ] ) ) 
                 f.write ( "};\n" )
 
+    def init_str(width, init):
+        return "%d'h%x" % (width, init)
+
     # create shadow registers
     if shadowed:
         for reg in shadowed:
@@ -154,7 +157,7 @@ def printVerilogModule(ep, module, filename):
         f.write("always @(posedge clk or negedge resetb) begin\n")
         f.write("  if(!resetb) begin\n")
         for reg in shadowed:
-            f.write("    %s <= %s;\n" % (reg.name, str(getValueFromMap(reg.init, reg))))
+            f.write("    %s <= %s;\n" % (reg.name, init_str(reg.width, getValueFromMap(reg.init, reg)))) #  str(getValueFromMap(reg.init, reg))))
         f.write("  end else if(shadow_sync) begin\n")
         for reg in shadowed:
             f.write("    %s <= %s_internal_;\n" % (reg.name, reg.name,))
@@ -183,8 +186,6 @@ def printVerilogModule(ep, module, filename):
     #Writable registers:
     writable = getRegs(ep, types=["int"], modes=["write"])
 
-    def init_str(width, init):
-        return "%d'h%x" % (width, init)
 
     if len(writable):
         f.write("// Create writable static registers\n")
