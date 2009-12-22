@@ -37,8 +37,10 @@
 #include <python_nitro.h>
 
 
+static PyObject* nitro_LoadDi(PyObject*, PyObject*);
 
 static PyMethodDef core_methods[] = {
+   {"load_di", (PyCFunction)nitro_LoadDi, METH_O, "load_di(filename) -> Load a device interface." }, 
    {NULL}
 };
 
@@ -167,6 +169,22 @@ PyMODINIT_FUNC init_nitro_d(void) { init_nitro(); }
 
 
 // **************** util functions ************************
+
+static PyObject* nitro_LoadDi(PyObject* self, PyObject* arg) {
+    if (!PyString_Check(arg)) {
+        PyErr_SetString( PyExc_Exception, "load_di(filename)" );
+        return 0;
+    }
+
+    char* filename = PyString_AsString(arg);
+    try {
+        Nitro::NodeRef di = Nitro::load_di(filename);
+        return from_datatype(di); 
+    } catch ( Nitro::Exception &e ) {
+        NITRO_EXC(e,0);
+    }
+
+}
 
 
 int to_datatype(PyObject *object, void *address) {

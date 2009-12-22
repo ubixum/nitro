@@ -16,6 +16,6 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USAimport struct
 from _nitro import Device, USBDevice, UserDevice, XmlReader, XmlWriter, _NITRO_API , Exception, Buffer, \
     GETSET_VERIFY, DOUBLEGET_VERIFY, STATUS_VERIFY, RETRY_ON_FAILURE, \
-    version, str_version
+    version, str_version, load_di
 from di import * 
 

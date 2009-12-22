@@ -472,6 +472,23 @@ class DLL_API Valuemap : public Node {
         virtual NODE_TYPE get_type() const { return VALUEMAP; }
 };
 
+/**
+ * \ingroup devif
+ * \brief Load a Device interface from a file.
+ *
+ *  This function first checks the absolute or relative path specified by
+ *  filepath.  If that doesn't exist, it looks for the NITRO_DI_PATH environment
+ *  variable and checks the filepath appended to each of the colon separated
+ *  paths in the environment variable for a match.  It loads the first one it 
+ *  finds.
+ *
+ * \param filepath relative or absolute path to a file.
+ * \return DeviceInterface created by loading the file.
+ * \throw Exception if the file is not found or if the specified file does not 
+ *                  load a device interface properly.
+ **/
+DLL_API NodeRef load_di( const std::string &filepath );
+
 } // end namespace
 
 #endif

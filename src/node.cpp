@@ -15,14 +15,20 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  **/
+
+#include <cstdlib> // getenv
 #include <cassert>
 #include <string>
 #include <iostream>
+#include <fstream>
+#include <sstream>
 
 #include <nitro/node.h>
 #include <nitro/error.h>
+#include <nitro/xmlreader.h>
 
 #include "bihelp.h"
+#include "xutils.h"
 
 namespace Nitro {
 
@@ -33,6 +39,39 @@ namespace Nitro {
 #define node_debug(d)
 #endif
 
+bool file_exists(const std::string &path) {
+   std::ifstream file(path.c_str());
+   return file; // file closed if goes out of scope.
+}
+
+NodeRef load_di( const std::string &path ) {
+    // construct list of paths to search
+
+    std::string found_path = path;
+    
+    if (!file_exists(found_path)) {
+        // in this case, try additional
+        // paths with the NITRO_DI_PATH var
+        char *env = getenv ( "NITRO_DI_PATH" );
+        if (env) {
+            std::string envpath  ( env ); // don't modify env
+            std::istringstream in ( envpath );
+            while (in.good()) {
+                std::getline(in, envpath, ':');
+                if (!in.bad()) {
+                    found_path = xjoin ( envpath, path );
+                    if (file_exists(found_path)) break;
+                }
+            }
+
+        } else throw Exception ( PATH_LOOKUP );
+    }
+
+    XmlReader reader ( found_path );
+    NodeRef di = DeviceInterface::create("deviceinterface");
+    reader.read(di);
+    return di;
+}
 
 
 //********** Node::impl **************
