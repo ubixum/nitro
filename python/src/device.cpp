@@ -366,8 +366,7 @@ PyObject* nitro_Device_LoadXML(nitro_DeviceObject* self, PyObject *args) {
     }
 
     try { 
-        XmlReader r ( s );
-        r.read ( self->nitro_device->get_di() );
+        Nitro::load_di( s, self->nitro_device->get_di() );
         Py_RETURN_NONE;
     } catch ( const Exception &e ) {
         NITRO_EXC(e,NULL);

@@ -40,7 +40,7 @@
 static PyObject* nitro_LoadDi(PyObject*, PyObject*);
 
 static PyMethodDef core_methods[] = {
-   {"load_di", (PyCFunction)nitro_LoadDi, METH_O, "load_di(filename) -> Load a device interface." }, 
+   {"load_di", (PyCFunction)nitro_LoadDi, METH_VARARGS, "load_di(filename) -> Load a device interface." }, 
    {NULL}
 };
 
@@ -171,15 +171,23 @@ PyMODINIT_FUNC init_nitro_d(void) { init_nitro(); }
 // **************** util functions ************************
 
 static PyObject* nitro_LoadDi(PyObject* self, PyObject* arg) {
-    if (!PyString_Check(arg)) {
-        PyErr_SetString( PyExc_Exception, "load_di(filename)" );
+
+    char* filename;
+    Nitro::DataType di_obj(0);
+
+    if (!PyArg_ParseTuple(arg, "s|O&", &filename, to_datatype, &di_obj) ) {
+        PyErr_SetString( PyExc_Exception, "load_di(filename, di=None)" );
         return 0;
     }
 
-    char* filename = PyString_AsString(arg);
     try {
-        Nitro::NodeRef di = Nitro::load_di(filename);
-        return from_datatype(di); 
+        if (di_obj.get_type() == Nitro::NODE_DATA) {
+            Nitro::NodeRef di = Nitro::load_di(filename, (Nitro::NodeRef)di_obj);
+            return from_datatype(di);
+        } else {
+            Nitro::NodeRef di = Nitro::load_di(filename);
+            return from_datatype(di); 
+        }
     } catch ( Nitro::Exception &e ) {
         NITRO_EXC(e,0);
     }

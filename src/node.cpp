@@ -44,7 +44,7 @@ bool file_exists(const std::string &path) {
    return file; // file closed if goes out of scope.
 }
 
-NodeRef load_di( const std::string &path ) {
+NodeRef load_di( const std::string &path, NodeRef dst ) {
     // construct list of paths to search
 
     std::string found_path = path;
@@ -68,9 +68,8 @@ NodeRef load_di( const std::string &path ) {
     }
 
     XmlReader reader ( found_path );
-    NodeRef di = DeviceInterface::create("deviceinterface");
-    reader.read(di);
-    return di;
+    reader.read(dst);
+    return dst;
 }
 
 

@@ -483,11 +483,13 @@ class DLL_API Valuemap : public Node {
  *  finds.
  *
  * \param filepath relative or absolute path to a file.
- * \return DeviceInterface created by loading the file.
+ * \param dst Optional NodeRef destination.  If dst is passed as a parameter, the di
+ *            is loaded into dst.  
+ * \return DeviceInterface If dst is passed as a parameter, this function retuns dst.
  * \throw Exception if the file is not found or if the specified file does not 
  *                  load a device interface properly.
  **/
-DLL_API NodeRef load_di( const std::string &filepath );
+DLL_API NodeRef load_di( const std::string &filepath, NodeRef dst = DeviceInterface::create("di") );
 
 } // end namespace
 
