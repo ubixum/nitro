@@ -36,6 +36,7 @@ using namespace Nitro;
 PyMethodDef nitro_USBDevice_methods[] = {
     {"open", (PyCFunction)nitro_USBDevice_Open, METH_VARARGS, "Wrapped C++ API member function" },
     {"open_by_serial", (PyCFunction)nitro_USBDevice_OpenBySerial, METH_VARARGS, "Wrapped C++ API member function" },
+    {"open_by_address", (PyCFunction)nitro_USBDevice_OpenByAddress, METH_VARARGS, "Open device by usb bus address." },
     {"set_serial", (PyCFunction)nitro_USBDevice_SetSerial, METH_O, "Wrapped C++ API member function" },
     {"get_serial", (PyCFunction)nitro_USBDevice_GetSerial, METH_NOARGS, "Wrapped C++ API member function" },
     {"get_device_serial", (PyCFunction)nitro_USBDevice_GetDeviceSerial, METH_STATIC|METH_VARARGS, "Wrapped C++ API member function" },
@@ -188,6 +189,21 @@ PyObject* nitro_USBDevice_OpenBySerial(nitro_USBDeviceObject* self, PyObject* ar
         NITRO_EXC(e,NULL);
     }
     Py_RETURN_NONE;    
+}
+
+PyObject* nitro_USBDevice_OpenByAddress(nitro_USBDeviceObject* self, PyObject* args) {
+
+    uint16 addr;
+    if (!PyArg_ParseTuple( args, "I", &addr)) {
+        return NULL;
+    }
+    try {
+        ((USBDevice*)self->dev_base.nitro_device)->open_by_address(addr);
+    } catch (const Exception &e) {
+        NITRO_EXC(e,NULL);
+    }
+    Py_RETURN_NONE;    
+
 }
 
 PyObject* nitro_USBDevice_IsOpen(nitro_USBDeviceObject* self) {

@@ -100,6 +100,31 @@ struct USBDevice::impl : public usbdev_impl_core {
                 }
         };
 
+        class AddrOpener : public DevItr {
+            private:
+                uint16 m_addr;
+            public:
+                libusb_device_handle* m_dev;
+                uint16 m_ver;
+                AddrOpener( uint16 addr ) : m_addr(addr), m_dev(NULL) {}
+                bool process(libusb_device* dev, libusb_device_descriptor &dscr) {
+                    uint8 bn = libusb_get_bus_number ( dev );
+                    uint8 dn = libusb_get_device_address ( dev );
+                    uint16 addr = (bn<<8) | dn;
+                    if (m_addr == addr) {
+                        int ret = libusb_open(dev, &m_dev);
+                        if (ret) {
+                            throw Exception ( USB_PROTO, "Failed to open device.", ret );
+                        }
+                        m_ver = dscr.bcdDevice;
+                        return false;
+                        
+                    }
+                    return true;
+                }
+
+        };
+
         /**
          * Gets the serial number from an opened (not necessarily configured) device.
          **/
@@ -177,6 +202,7 @@ struct USBDevice::impl : public usbdev_impl_core {
         }
         void open ( uint32 index, bool override_version=false );
         void open ( const std::string& serial );
+        void open_addr ( uint16 addr );
         bool is_open() { return m_dev != NULL; }
         uint16 firmware_version() { check_open(); return m_ver; }
         static uint32 get_device_count ( uint32 vid, uint32 pid );
@@ -240,7 +266,11 @@ uint32 USBDevice::impl::get_device_count(uint32 vid, uint32 pid) {
 
 }
 
+#define CHECK_ALREADY_OPENED() if (m_dev) throw Exception ( USB_PROTO, "Device Already Opened." )
+
 void USBDevice::impl::open(uint32 index, bool override_version) {
+
+ CHECK_ALREADY_OPENED();
 
  IndexOpener d ( index, override_version );
  iter_devices( m_vid, m_pid, d );
@@ -251,7 +281,20 @@ void USBDevice::impl::open(uint32 index, bool override_version) {
  config_device();
 }
 
+void USBDevice::impl::open_addr(uint16 addr) {
+   CHECK_ALREADY_OPENED();
+   AddrOpener a ( addr ); 
+   iter_devices ( m_vid, m_pid, a );
+   if (!a.m_dev) throw Exception ( USB_PROTO, "Failed to open device.", "No matching device address with vid/pid found." );
+   m_dev = a.m_dev;
+   m_ver = a.m_ver;
+
+   config_device();
+}
+
 void USBDevice::impl::open(const std::string& serial) {
+
+ CHECK_ALREADY_OPENED();
 
  SerialOpener d ( serial );
  iter_devices ( m_vid, m_pid, d );
@@ -269,7 +312,6 @@ void USBDevice::impl::check_open() const {
 
 
 void USBDevice::impl::config_device() {
-
 
   if (libusb_set_configuration(m_dev,1)) {
     libusb_close(m_dev);

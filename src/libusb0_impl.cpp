@@ -47,11 +47,13 @@ struct USBDevice::impl : public usbdev_impl_core {
         void check_open() const;
         void config_device(struct usb_device* dev, bool override_version=false);
         static std::string device_serial ( struct usb_device* dev);
+        static uint16 get_addr ( struct usb_device* dev);
     public:
 
         impl(uint32 vid, uint32 pid): m_vid(vid),m_pid(pid),m_dev(NULL){}
         void open ( uint32 index, bool override_version );
         void open ( const std::string& serial );
+        void open_addr ( uint16 addr );
         uint16 firmware_version();
 		bool is_open() { return m_dev != NULL; }
         static void get_device_list(uint32 vid, uint32 pid, DeviceList& list) ;
@@ -119,6 +121,33 @@ void USBDevice::impl::open(const std::string& serial) {
    throw Exception ( USB_COMM, "No connected device with serial found." );
 }
 
+uint16 USBDevice::impl::get_addr( struct usb_device* dev ) {
+   uint32 bn;
+#ifdef WIN32
+#define sscanf sscanf_s
+#define BUS_SCAN_FORMAT "bus-%u"
+#else
+#define BUS_SCAN_FORMAT "%03u"
+#endif
+   sscanf ( dev->bus->dirname, BUS_SCAN_FORMAT, &bn );
+   usb_debug ( "bus location " << bn << " dirname " << dev->bus->dirname );
+   uint8 dn = dev->devnum;
+   return (uint16(bn) << 8) | dn;
+}
+
+void USBDevice::impl::open_addr(uint16 addr) {
+    DeviceList list;
+    get_device_list(m_vid,m_pid,list);
+
+    for (DeviceListItr itr=list.begin(); itr != list.end(); ++itr ) {
+       if (addr == get_addr(*itr)) {
+          config_device(*itr);
+          return;
+       }
+    }
+    throw Exception ( USB_COMM, "Failed to open device.", "No device with address and maching vid/pid found." );
+}
+
 void USBDevice::impl::check_open() const {
     if (!m_dev) throw Exception( USB_COMM, "IO method called on unopened device.");
 }
@@ -149,6 +178,10 @@ void USBDevice::impl::get_device_list(uint32 vid, uint32 pid, DeviceList& devlis
 }
 
 void USBDevice::impl::config_device(struct usb_device* dev, bool override_version) {
+
+  if (m_dev) {
+    throw Exception ( USB_PROTO, "Device already openened." );
+  }
 
   m_ver = dev->descriptor.bcdDevice;
   usb_debug ( "Product firmware version: " << m_ver );
@@ -266,18 +299,7 @@ uint16 USBDevice::impl::get_device_address(uint32 vid,uint32 pid, uint32 index) 
      throw Exception ( USB_COMM, "Invalid index.  Not enough connected devices." );
    }
    struct usb_device *dev = list.at(index);
-   uint32 bn;
-#ifdef WIN32
-#define sscanf sscanf_s
-#define BUS_SCAN_FORMAT "bus-%u"
-#else
-#define BUS_SCAN_FORMAT "%03u"
-#endif
-   sscanf ( dev->bus->dirname, BUS_SCAN_FORMAT, &bn );
-   usb_debug ( "bus location " << bn << " dirname " << dev->bus->dirname );
-   uint8 dn = dev->devnum;
-   return (uint16(bn) << 8) | dn;
-   
+   return get_addr(dev);
 }
 
 std::string USBDevice::impl::get_device_serial(uint32 vid, uint32 pid, uint32 index ) {

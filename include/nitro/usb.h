@@ -123,6 +123,16 @@ public:
      **/
     void open(const std::string& serial);
 
+
+    /**
+     * Opens the device with the specified address.  Addresses are determined
+     * by the operating system and device driver.  The device address can be
+     * retrieved with USBDevice::get_device_address.
+     *
+     * \param addr The address as returned by get_device_address.
+     **/
+    void open_by_address( uint16 addr );
+
 	/**
 	 * \brief Whether or not the device has been opened.
 	 **/
@@ -141,7 +151,6 @@ public:
     void load_firmware( const char *bytes, size_t length );
 
     /**
-     * 
      * @return the firmware version of the open device.
      *  The firmware version is composed of a major and minor version number
      *  stored in a 16 bit field.  The MSB is the major number and the LSB

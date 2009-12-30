@@ -39,6 +39,7 @@ extern PyTypeObject nitro_USBDeviceType;
 
 PyObject* nitro_USBDevice_Open(nitro_USBDeviceObject* self, PyObject* args);
 PyObject* nitro_USBDevice_OpenBySerial(nitro_USBDeviceObject* self, PyObject* args);
+PyObject* nitro_USBDevice_OpenByAddress(nitro_USBDeviceObject* self, PyObject* args);
 PyObject* nitro_USBDevice_IsOpen(nitro_USBDeviceObject* self);
 PyObject* nitro_USBDevice_Renum(nitro_USBDeviceObject* self);
 PyObject* nitro_USBDevice_Reset(nitro_USBDeviceObject* self);

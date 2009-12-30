@@ -226,6 +226,10 @@ void USBDevice::open(uint32 index, bool override_version) {
   
 }
 
+void USBDevice::open_by_address ( uint16 addr ) {
+    m_impl->open_addr ( addr );
+}
+
 bool USBDevice::is_open() { return m_impl->is_open(); }
 
 void USBDevice::_close() {
@@ -370,6 +374,7 @@ uint16 USBDevice::get_firmware_version() const {
 uint16 USBDevice::get_device_address(uint32 vid, uint32 pid, uint32 index) {
     return impl::get_device_address(vid,pid,index);
 }
+
 
 std::string USBDevice::get_device_serial(uint32 vid, uint32 pid, uint32 index ) {
 
