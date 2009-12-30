@@ -41,6 +41,18 @@ public:
     // core methods
     USBDevice(uint32 vid, uint32 pid);
     ~USBDevice() throw();
+    
+    /**
+     * \brief Return the vendor id
+     * \return the vendor id that the object was created with.
+     **/
+    uint32 get_vid();
+    
+    /**
+     * \brief Return the product id
+     * \return the product id that the object was created with.
+     **/
+    uint32 get_pid();
 
     // static methods
     /**

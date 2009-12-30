@@ -39,6 +39,8 @@ PyMethodDef nitro_USBDevice_methods[] = {
     {"open_by_address", (PyCFunction)nitro_USBDevice_OpenByAddress, METH_VARARGS, "open_by_address(addr) -> Open device by usb bus address." },
     {"set_serial", (PyCFunction)nitro_USBDevice_SetSerial, METH_O, "Wrapped C++ API member function" },
     {"get_serial", (PyCFunction)nitro_USBDevice_GetSerial, METH_NOARGS, "Wrapped C++ API member function" },
+    {"get_vid", (PyCFunction)nitro_USBDevice_GetVid, METH_VARARGS, "get_vid() -> The Vendor Id" },
+    {"get_pid", (PyCFunction)nitro_USBDevice_GetPid, METH_VARARGS, "get_pid() -> The Product Id" }, 
     {"get_device_serial", (PyCFunction)nitro_USBDevice_GetDeviceSerial, METH_STATIC|METH_VARARGS, "Wrapped C++ API member function" },
     {"get_device_count", (PyCFunction)nitro_USBDevice_GetDeviceCount, METH_STATIC|METH_VARARGS, "Wrapped C++ API member function" },
     {"get_device_address", (PyCFunction)nitro_USBDevice_GetDeviceAddress, METH_STATIC|METH_VARARGS, "get_device_address(vid,pid,index) -> Static method for retrieving device address." },
@@ -360,3 +362,20 @@ PyObject* nitro_USBDevice_GetAddress(nitro_USBDeviceObject* self, PyObject* args
 
 }
 
+PyObject* nitro_USBDevice_GetVid(nitro_USBDeviceObject* self, PyObject* args) {
+   try {
+       uint32 v =((USBDevice*)self->dev_base.nitro_device)->get_vid();
+       return Py_BuildValue("I",v);
+    } catch ( const Exception &e) {
+        NITRO_EXC(e,NULL);
+    }
+}
+
+PyObject* nitro_USBDevice_GetPid(nitro_USBDeviceObject* self, PyObject* args) {
+   try {
+       uint32 v =((USBDevice*)self->dev_base.nitro_device)->get_pid();
+       return Py_BuildValue("I",v);
+    } catch ( const Exception &e) {
+        NITRO_EXC(e,NULL);
+    }
+}

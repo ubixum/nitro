@@ -78,10 +78,13 @@ typedef enum {
 
 struct usbdev_impl_core {
 
+    uint32 m_vid;
+    uint32 m_pid;
+
     int last_transfer_status;
     int last_transfer_checksum;
 
-    usbdev_impl_core() : last_transfer_status(0) {}
+    usbdev_impl_core(uint32 vid, uint32 pid) : m_vid(vid), m_pid(pid), last_transfer_status(0) {}
     virtual ~usbdev_impl_core() {}
 
     virtual int control_transfer ( NITRO_DIR, NITRO_VC, uint16 value, uint16 index, uint8* data, size_t length, uint32 timeout )=0;
@@ -177,6 +180,14 @@ struct usbdev_impl_core {
 #else
 #include "libusb0_impl.cpp"
 #endif
+
+
+uint32 USBDevice::get_vid() {
+    return m_impl->m_vid;
+}
+uint32 USBDevice::get_pid() {
+    return m_impl->m_pid;
+}
 
 void USBDevice::load_firmware(const char* bytes,size_t length) {
 

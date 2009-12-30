@@ -48,6 +48,8 @@ PyObject* nitro_USBDevice_GetFirmwareVersion(nitro_USBDeviceObject* self);
 PyObject* nitro_USBDevice_SetSerial(nitro_USBDeviceObject* self, PyObject *arg);
 PyObject* nitro_USBDevice_GetSerial(nitro_USBDeviceObject* self, PyObject* args);
 PyObject* nitro_USBDevice_GetAddress(nitro_USBDeviceObject* self, PyObject* args);
+PyObject* nitro_USBDevice_GetVid(nitro_USBDeviceObject* self, PyObject* args);
+PyObject* nitro_USBDevice_GetPid(nitro_USBDeviceObject* self, PyObject* args);
 
 //*********** static functions ****************
 

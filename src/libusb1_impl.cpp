@@ -28,8 +28,6 @@ struct USBDevice::impl : public usbdev_impl_core {
      **/
 
     private:
-        uint32 m_vid;
-        uint32 m_pid;
         static int m_ref_count;
         static bool m_initialized; 
         uint16 m_ver;
@@ -192,7 +190,7 @@ struct USBDevice::impl : public usbdev_impl_core {
         static void iter_devices ( uint32 vid, uint32 pid, DevItr& itr);
     public:
 
-        impl(uint32 vid, uint32 pid): m_vid(vid),m_pid(pid),m_dev(NULL) { ++m_ref_count; }
+        impl(uint32 vid, uint32 pid): usbdev_impl_core(vid,pid), m_dev(NULL) { ++m_ref_count; }
         ~impl() { close(); 
             --m_ref_count;
             if (m_initialized && !m_ref_count ) { 

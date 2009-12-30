@@ -39,8 +39,7 @@ struct USBDevice::impl : public usbdev_impl_core {
 
     private:
         static bool initialized;
-        uint32 m_vid;
-        uint32 m_pid;
+
         uint16 m_ver; // firmware version
         usb_dev_handle* m_dev;
         static void check_init(); 
@@ -50,7 +49,7 @@ struct USBDevice::impl : public usbdev_impl_core {
         static uint16 get_addr ( struct usb_device* dev);
     public:
 
-        impl(uint32 vid, uint32 pid): m_vid(vid),m_pid(pid),m_dev(NULL){}
+        impl(uint32 vid, uint32 pid): usbdev_impl_core(vid,pid),m_dev(NULL){}
         void open ( uint32 index, bool override_version );
         void open ( const std::string& serial );
         void open_addr ( uint16 addr );
