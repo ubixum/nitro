@@ -28,6 +28,8 @@ class DeviceInterfacePanel(XrcPanel):
         XrcPanel.__init__(self)
         
     def _PostInit(self):
+
+        self.log.debug ( "_PostInit" )
     
         self.info=dict()
         for id in ['TERMINAL', 'NAME', 'ADDR', 'INIT', 'MODE', 'TYPE', 'WIDTH', 'COMMENT', 'ARRAY' ]:
