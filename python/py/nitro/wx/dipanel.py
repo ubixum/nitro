@@ -64,6 +64,12 @@ class DeviceInterfacePanel(XrcPanel):
     def set_device(self, dev):
         self.log.debug ( "Setting Device" )
         self.dev = dev
+
+        if not hasattr(self,'epTree'):
+            # in this case, _PostInit hasn't been called yet.
+            self.initial_device = dev
+            return
+
         root = self.epTree.GetRootItem()
         self.epTree.DeleteChildren(root) # clear any old data out
 
