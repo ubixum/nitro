@@ -375,6 +375,10 @@ uint16 USBDevice::get_device_address(uint32 vid, uint32 pid, uint32 index) {
     return impl::get_device_address(vid,pid,index);
 }
 
+uint16 USBDevice::get_device_address() {
+    return m_impl->get_device_address();
+}
+
 
 std::string USBDevice::get_device_serial(uint32 vid, uint32 pid, uint32 index ) {
 

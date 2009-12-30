@@ -60,6 +60,7 @@ struct USBDevice::impl : public usbdev_impl_core {
         static uint32 get_device_count ( uint32 vid, uint32 pid );
         static std::string get_device_serial(uint32 vid, uint32 pid, uint32 index );
         static uint16 get_device_address(uint32,uint32,uint32);
+        uint16 get_device_address();
    
         int control_transfer ( NITRO_DIR, NITRO_VC, uint16 value, uint16 index, uint8* data, size_t length, uint32 timeout );
         int bulk_transfer ( NITRO_DIR, uint8 ep, uint8* data, size_t length, uint32 timeout ); 
@@ -300,6 +301,13 @@ uint16 USBDevice::impl::get_device_address(uint32 vid,uint32 pid, uint32 index) 
    }
    struct usb_device *dev = list.at(index);
    return get_addr(dev);
+}
+
+uint16 USBDevice::impl::get_device_address() {
+   check_open(); 
+
+    struct usb_device* dev = usb_device( m_dev );
+    return get_addr(dev);
 }
 
 std::string USBDevice::impl::get_device_serial(uint32 vid, uint32 pid, uint32 index ) {

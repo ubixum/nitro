@@ -40,6 +40,11 @@ struct USBDevice::impl : public usbdev_impl_core {
         void config_device();
         void check_open() const;
 
+        static uint16 get_addr(libusb_device* dev) {
+            uint8 bn = libusb_get_bus_number ( dev );
+            uint8 dn = libusb_get_device_address ( dev );
+            return (uint16(bn)<<8) | dn;
+        }
 
         class DevItr {
             public:
@@ -64,9 +69,7 @@ struct USBDevice::impl : public usbdev_impl_core {
                 DevAddress(uint32 idx) : m_curidx(0), m_idx(idx), addr(0) {}
                 bool process(libusb_device* dev, libusb_device_descriptor &) {
                    if ( m_idx == m_curidx++ ) {
-                      uint8 bn = libusb_get_bus_number ( dev );
-                      uint8 dn = libusb_get_device_address ( dev );
-                      addr = (uint16(bn)<<8) | dn;
+                     addr = get_addr(dev); 
                       return false;
                    }
                    return true;
@@ -108,9 +111,7 @@ struct USBDevice::impl : public usbdev_impl_core {
                 uint16 m_ver;
                 AddrOpener( uint16 addr ) : m_addr(addr), m_dev(NULL) {}
                 bool process(libusb_device* dev, libusb_device_descriptor &dscr) {
-                    uint8 bn = libusb_get_bus_number ( dev );
-                    uint8 dn = libusb_get_device_address ( dev );
-                    uint16 addr = (bn<<8) | dn;
+                    uint16 addr = get_addr(dev); 
                     if (m_addr == addr) {
                         int ret = libusb_open(dev, &m_dev);
                         if (ret) {
@@ -208,6 +209,7 @@ struct USBDevice::impl : public usbdev_impl_core {
         static uint32 get_device_count ( uint32 vid, uint32 pid );
         static std::string get_device_serial(uint32 vid, uint32 pid, uint32 index );
         static uint16 get_device_address (uint32, uint32, uint32 );
+        uint16 get_device_address();
    
         int control_transfer ( NITRO_DIR, NITRO_VC, uint16 value, uint16 index, uint8* data, size_t length, uint32 timeout );
         int bulk_transfer ( NITRO_DIR, uint8 ep, uint8* data, size_t length, uint32 timeout ); 
@@ -384,4 +386,13 @@ uint16 USBDevice::impl::get_device_address(uint32 vid, uint32 pid, uint32 index)
     if (!d.addr) { throw Exception ( USB_COMM, "Invalid device index", index ); }
     return d.addr;
 
+}
+
+uint16 USBDevice::impl::get_device_address() {
+    check_open();
+
+    libusb_device* dev = libusb_get_device(m_dev);
+
+    return get_addr(dev);
+    
 }

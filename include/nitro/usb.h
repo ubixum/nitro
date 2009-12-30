@@ -102,6 +102,15 @@ public:
      **/
     static uint16 get_device_address(uint32 vid, uint32 pid, uint32 index) ;
 
+
+    /**
+     * \brief Get the device address.
+     *
+     *  Member function that can return the device address from an already
+     *  opened device.
+     **/
+    uint16 get_device_address();
+
     // open methods
     /**
      * Open the nth connected device.
