@@ -19,3 +19,47 @@ from _nitro import Device, USBDevice, UserDevice, XmlReader, XmlWriter, _NITRO_A
     version, str_version, load_di
 from di import * 
 
+import logging
+log = logging.getLogger(__name__)
+
+
+###############################################################################
+# The below set of functions implement an atomic decorator. Use this to
+# wrap a function whose first argument is a nitro.Device with a lock()
+# and unlock() mechanism. This decorator can be used on a class that extends
+# nitro.Device or on a function whose first argument is a nitro.Device.
+#
+# Example:
+#
+# @nitro.atomic
+# def myfunction(dev, **kw):
+#     pass
+#
+def _lock(f, dev,*args,**kw):
+    log.debug("Locking dev")
+    dev.lock()
+    try:
+        return f(dev,*args, **kw)
+    finally:
+        log.debug("Unlocking dev")
+        dev.unlock()
+
+try:
+    """
+    Try to use the decorator package if possible.  This way the 
+    function parameters etc are preserved
+    """
+    from decorator import decorator
+    @decorator
+    def atomic(f,dev,*args,**kw):
+        return _lock(f, dev, *args, **kw)
+
+except ImportError:
+    def atomic(f):
+        def wrapped(dev, *args, **kw):
+            return _lock(f, dev, *args, **kw)
+        wrapped.__doc__ = f.__doc__
+        return wrapped
+    print "HERE2"
+###############################################################################
+
