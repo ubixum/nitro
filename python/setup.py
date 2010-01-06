@@ -50,7 +50,7 @@ if __name__=='__main__':
      package_dir={'nitro':'py/nitro'},
      package_data ={'nitro': [ 'include/python_nitro.h' ],
                     'nitro.wx': ['*.xrc']},
-     scripts=['di'],
+     scripts=['di', 'diconv'],
      ext_modules=[get_ext()]
     )
 
