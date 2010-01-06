@@ -60,6 +60,5 @@ except ImportError:
             return _lock(f, dev, *args, **kw)
         wrapped.__doc__ = f.__doc__
         return wrapped
-    print "HERE2"
 ###############################################################################
 
