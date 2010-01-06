@@ -22,6 +22,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <cctype> // isalnum
 
 #include <nitro/node.h>
 #include <nitro/error.h>
@@ -72,6 +73,20 @@ NodeRef load_di( const std::string &path, NodeRef dst ) {
     return dst;
 }
 
+
+
+// name helper function for di nodes
+
+bool valid_name(const std::string& name) {
+   
+   if (name.size()<1) return false;
+   for (std::string::const_iterator i=name.begin(); i != name.end(); ++i ) {
+      if ( !isalnum(*i) && *i != '_' ) return false;
+   }
+   if (isdigit(name.at(0))) return false;
+
+   return true;
+}
 
 //********** Node::impl **************
 
@@ -336,13 +351,26 @@ std::ostream& operator << ( std::ostream& out, const Node& n ) {
     return out;
 }
 
+// for di nodes, this can check the children names
+void check_name(const std::string &name) {
+    if (!valid_name(name)) throw Exception ( NODE_NAME_ERROR, name );
+}
 
 
 //*********************** Device Interface ***********************
 
+DeviceInterface::DeviceInterface( const std::string& name ) : Node (name ) {
+  check_name(name);
+}
+
 NodeRef DeviceInterface::create ( const std::string& name ) {
     node_debug ( "Create Device Interface: " << name );
     return NodeRef ( new DeviceInterface ( name ) );
+}
+
+void DeviceInterface::set_name ( const std::string& name ) {
+    check_name(name);
+    Node::set_name(name);
 }
 
 void DeviceInterface::add_child ( const NodeRef& node ) {

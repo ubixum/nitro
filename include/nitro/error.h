@@ -54,6 +54,7 @@ enum NITRO_ERROR {
     NODE_SELFREF, ///< Node added itself to children.
     NODE_ATTR_NOT_FOUND, ///< Node attribute not found.
     NODE_ATTR_ERROR, ///< Node attribute error.
+    NODE_NAME_ERROR, ///< Node has invalid name.
 
     DEVICE_MUTEX=-100, ///< Device Mutex Error
     DEVICE_OP_ERROR, ///< Device operation error

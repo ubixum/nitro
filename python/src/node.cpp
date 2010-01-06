@@ -479,7 +479,11 @@ nitro_DI_init ( nitro_DeviceInterfaceObject* self, PyObject *args, PyObject *kwd
 
   if ( PyString_Check(init) ) {
       const char* name = PyString_AsString(init);
+      try {
       *(((nitro_NodeObject*)self)->m_node) = Nitro::DeviceInterface::create( name );
+      } catch ( const Nitro::Exception &e) {
+        NITRO_EXC(e,-1);
+      }
   } // else it was a CObject and base node got it.
  
 
@@ -543,7 +547,11 @@ nitro_Term_init ( nitro_TerminalObject* self, PyObject *args, PyObject *kwds ) {
 
   if ( PyString_Check(init) ) {
       const char* name = PyString_AsString(init);
-      *(((nitro_NodeObject*)self)->m_node) = Nitro::Terminal::create( name );
+      try {
+          *(((nitro_NodeObject*)self)->m_node) = Nitro::Terminal::create( name );
+      } catch ( const Nitro::Exception &e) {
+        NITRO_EXC(e,-1);
+      }
   } // else it was a CObject and base node got it.
  
 
@@ -607,7 +615,11 @@ nitro_Register_init ( nitro_RegisterObject* self, PyObject *args, PyObject *kwds
 
   if ( PyString_Check(init) ) {
       const char* name = PyString_AsString(init);
-      *(((nitro_NodeObject*)self)->m_node) = Nitro::Register::create( name );
+      try {
+          *(((nitro_NodeObject*)self)->m_node) = Nitro::Register::create( name );
+      } catch ( const Nitro::Exception &e) {
+          NITRO_EXC(e,-1);
+      }
   } // else it was a CObject and base node got it.
  
 
@@ -671,7 +683,11 @@ nitro_Subregister_init ( nitro_SubregisterObject* self, PyObject *args, PyObject
 
   if ( PyString_Check(init) ) {
       const char* name = PyString_AsString(init);
-      *(((nitro_NodeObject*)self)->m_node) = Nitro::Subregister::create( name );
+      try {
+          *(((nitro_NodeObject*)self)->m_node) = Nitro::Subregister::create( name );
+      } catch ( const Nitro::Exception &e) {
+          NITRO_EXC(e,-1);
+      }
   } // else it was a CObject and base node got it.
  
 
@@ -735,7 +751,11 @@ nitro_Valuemap_init( nitro_ValuemapObject* self, PyObject *args, PyObject *kwds 
 
   if ( PyString_Check(init) ) {
       const char* name = PyString_AsString(init);
-      *(((nitro_NodeObject*)self)->m_node) = Nitro::Valuemap::create( name );
+      try {
+          *(((nitro_NodeObject*)self)->m_node) = Nitro::Valuemap::create( name );
+      } catch ( const Nitro::Exception &e) {
+          NITRO_EXC(e,-1);
+      }
   } // else it was a CObject and base node got it.
  
 

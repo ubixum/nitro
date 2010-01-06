@@ -250,7 +250,7 @@ class DLL_API Node {
         /**
          * \brief Rename node
          **/
-        void set_name( const std::string& name );
+        virtual void set_name( const std::string& name );
 
         
         // children methods
@@ -385,13 +385,22 @@ DLL_API std::ostream& operator << ( std::ostream&, const Node& node );
  **/
 class DLL_API DeviceInterface : public Node {
    private:
-        DeviceInterface( const std::string& name) : Node(name) {}
         NODE_CALL_CREATE; 
+   protected:
+        DeviceInterface( const std::string& name);
    public:
         ~DeviceInterface() throw() {} 
         static NodeRef create ( const std::string& name );
         virtual NODE_TYPE get_type () const { return DEVIF; }
-        void add_child ( const NodeRef& node );
+        virtual void add_child ( const NodeRef& node );
+        /**
+         * Device Interface nodes check name for compatibility
+         * with exporting the device interface to various languages.
+         *
+         * The name must conform to the following:
+         *  letters, digits or _.  The first character must not be a digit.
+         **/
+        void set_name (const std::string& name);
 };
 
 /**
@@ -402,9 +411,9 @@ class DLL_API DeviceInterface : public Node {
  *
  *
  **/
-class DLL_API Terminal : public Node {
+class DLL_API Terminal : public DeviceInterface {
     private:
-        Terminal ( const std::string& name , uint32 regAddrWidth=16, uint32 regDataWidth=16 ) : Node ( name ) {
+        Terminal ( const std::string& name , uint32 regAddrWidth=16, uint32 regDataWidth=16 ) : DeviceInterface ( name ) {
             set_attr("regAddrWidth", regAddrWidth );
             set_attr("regDataWidth", regDataWidth );
         }
@@ -423,9 +432,9 @@ class DLL_API Terminal : public Node {
  * be read from or written to.
  *
  **/
-class DLL_API Register: public Node {
+class DLL_API Register: public DeviceInterface {
     private:
-        Register ( const std::string& name, const std::string& type = "int" ) : Node ( name ) {
+        Register ( const std::string& name, const std::string& type = "int" ) : DeviceInterface( name ) {
             set_attr("type", type );
         }
         NODE_CALL_CREATE; 
@@ -445,9 +454,9 @@ class DLL_API Register: public Node {
  * the subregisters can be written to or read from without worrying about the
  * entire register value.
  **/
-class DLL_API Subregister: public Node {
+class DLL_API Subregister: public DeviceInterface {
     private:
-        Subregister ( const std::string& name ) : Node ( name ) {}
+        Subregister ( const std::string& name ) : DeviceInterface ( name ) {}
         NODE_CALL_CREATE; 
     public:
         ~Subregister() throw() {}
@@ -462,9 +471,9 @@ class DLL_API Subregister: public Node {
  * 
  * Valuemaps are supported by Registers and Subregisters.
  **/
-class DLL_API Valuemap : public Node {
+class DLL_API Valuemap : public DeviceInterface {
     private:
-        Valuemap ( const std::string& name ) : Node ( name ) {}
+        Valuemap ( const std::string& name ) : DeviceInterface ( name ) {}
         NODE_CALL_CREATE; 
     public:
         ~Valuemap () throw() {}

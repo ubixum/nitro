@@ -100,6 +100,8 @@ string make_str( int32 m_err, const string* m_str, DataType m_userdata ) {
                 return MAKESTR("Cannot add incorrect child type to device interface.");
             case NODE_ATTR_ERROR:
                 return MAKESTR("Node attribute error.");
+            case NODE_NAME_ERROR:
+                return MAKESTR("Invalid node name." );
 
 
             case DEVICE_MUTEX:

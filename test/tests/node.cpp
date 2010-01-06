@@ -17,6 +17,7 @@ class NodeTest : public CppUnit::TestFixture {
     CPPUNIT_TEST ( testErase );
     CPPUNIT_TEST ( testNameChange );
     CPPUNIT_TEST ( testClone );
+    CPPUNIT_TEST ( testValidName );
 
 
     CPPUNIT_TEST_SUITE_END();
@@ -138,6 +139,7 @@ class NodeTest : public CppUnit::TestFixture {
             for (int i=10;i>=0;--i) {
                 std::stringstream io;
                 std::string name;
+                io << '_';
                 io << i;
                 io >> name;
                 NodeRef child = Terminal::create(name);
@@ -149,6 +151,7 @@ class NodeTest : public CppUnit::TestFixture {
                NodeRef c =*itr; 
                std::stringstream io;
                std::string name;      
+               io << '_';
                io << i--;
                io >> name;
                CPPUNIT_ASSERT_EQUAL ( name, c->get_name() ); 
@@ -236,6 +239,23 @@ class NodeTest : public CppUnit::TestFixture {
             term2->set_name("term2");
             term2->del_attr("addr"); // so we get a new one
             CPPUNIT_ASSERT_NO_THROW( di->add_child(term2) ); 
+        }
+
+        void testValidName() {
+            try {
+                NodeRef di = Terminal::create("test 1" ); // space in name
+                CPPUNIT_FAIL ( "invalid name creation didn't throw." );
+            } catch ( const Exception &e ) {
+                CPPUNIT_ASSERT_EQUAL ( Nitro::NODE_NAME_ERROR, (NITRO_ERROR)e.code() );
+            }
+
+            NodeRef di = Terminal::create("valid_name");
+            CPPUNIT_ASSERT_THROW ( di->set_name(" invalid name"), Exception );
+            CPPUNIT_ASSERT_THROW ( di->set_name("1invalid_name"), Exception );
+            CPPUNIT_ASSERT_THROW ( di->set_name("invalid&name"), Exception );
+            CPPUNIT_ASSERT_EQUAL ( std::string ( "valid_name" ), di->get_name() );
+            CPPUNIT_ASSERT_NO_THROW ( di->set_name("something_else_valid") );
+
         }
 
 };
