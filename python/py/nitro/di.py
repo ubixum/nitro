@@ -18,7 +18,7 @@ import types
 import _nitro
 
 __all__ = [ 'DeviceInterface', 'Terminal', 'Register', 'SubReg', 'Valuemap' ,
-'printVerilogInstance', 'printVerilogDefs', 'printVerilogModule']
+'printVerilogInstance', 'printVerilogDefs', 'printVerilogModule', 'printCDefs', ]
 
 
 class EasyNode:
@@ -367,6 +367,49 @@ def printVerilogDefs(di, module, filename):
                 f.write("`define     "+term.name+"_"+reg.name+"_"+subreg.name+ " %d:%d\n" % (subreg.addr+subreg.width-1,subreg.addr))
         f.write("\n\n")
     f.write("`endif\n")
+    f.close()
+
+
+def printCDefs(di, filename):
+    f = open(filename, "w");
+    f.write("// This file is auto-generated. Do not edit.\n");
+    defname = "_" + filename.upper().replace(".","_") + "_"
+    f.write("#ifndef %s\n" % defname)
+    f.write("#define %s\n\n" % defname)
+
+    for term in di.values():
+        term_name = term.name.upper()
+        f.write(("/"*75) + "\n")
+        f.write("#define TERM_" + term_name + " " + str(term.addr) + "\n");
+        f.write("#define   TERM_" + term_name + "_ADDR_WIDTH " + str(term.regAddrWidth) + "\n")
+        for reg in term.values():
+            reg_name = term_name + "_" + reg.name.upper()
+           
+            w = (reg.width-1)/term.regDataWidth
+            for array in range(reg.array):
+                n = w
+                i = w
+                while(i>=0):
+                    if(reg.array > 1):
+                        f.write("#define   " + reg_name + str(array))
+                        if(w > 0):
+                            f.write("_" + str(i))
+                        f.write(" " + str(i+reg.addr+(w+1)*array) + "\n")
+                    else:
+                        f.write("#define   " + reg_name)
+                        if(w>0):
+                            f.write("_" + str(i))
+                        f.write(" " + str(i+reg.addr) + "\n")
+                        if(w>0 and i==0):
+                            f.write("#define   " + reg_name)
+                            f.write(" " + str(i+reg.addr) + "\n")
+                    i=i-1
+#                f.write("#define    WIDTH_"+term_name+"_"+reg.name+" %d\n" % reg.width)
+
+#            for subreg in reg.values():
+#                f.write("#define     "+term_name+"_"+reg.name+"_"+subreg.name+ " %d:%d\n" % (subreg.addr+subreg.width-1,subreg.addr))
+        f.write("\n\n")
+    f.write("#endif\n")
     f.close()
 
 

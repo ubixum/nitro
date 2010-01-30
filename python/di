@@ -26,11 +26,13 @@ from nitro import *
 
 parser = OptionParser()
 parser.add_option("-o", "--outdir", dest="outdir",
-                  help="write data to DIR", metavar="DIR", default=".")
+                  help="write data to DIR", metavar="DIR")
 parser.add_option("-v", "--verilog", dest="verilog",
-                  help="dump verilog data for the comma-seperate LIST of terminals, default is to dump all terminals.", metavar="LIST")
+                  help="dump verilog data for the comma-seperate LIST of terminals, use keyword 'all' to dump all terminals.", metavar="LIST")
 parser.add_option("-d", "--verilog-defs", dest="verilog_defs", metavar='filename',
                   help="Give a custom filename to the defs file dumped for the di terminals.  Defaults to the name of the di file + '_defs.v'" )
+parser.add_option("-c", "--header", dest="c_header", metavar='filename',
+                  help="Create a C header file of the terminal information with the provided filename." )
 
 (options, args) = parser.parse_args(sys.argv[1:])
 if(len(args) != 1):
@@ -54,12 +56,29 @@ elif filename.endswith(".xml"):
 else:
     raise Exception("No DI handler implimented for "+ filename)
 
-terms = options.verilog and options.verilog.split(",") or di.keys()
-for term in terms:
-    module = term + "Terminal";
-    printVerilogModule(  di[term], module, options.outdir + "/" + module + ".v")
-    printVerilogInstance(di[term], module, options.outdir + "/" + module + "Instance.v")
-defs_name = options.verilog_defs is not None and options.verilog_defs or \
-    "%s_defs.v" % ( os.path.splitext(os.path.basename(filename))[0] )
-printVerilogDefs( di, os.path.splitext(defs_name)[0].replace('.','_').replace(' ','_').upper(), options.outdir + "/" + defs_name )
+if options.verilog is not None:
+    if(options.outdir is None):
+        outdir = "."
+    else:
+        outdir = options.outdir
 
+    if(options.verilog == "all"):
+        terms = di.keys()
+    else:
+        terms = options.verilog.split(",")
+
+    for term in terms:
+        module = term + "Terminal";
+        printVerilogModule(  di[term], module, outdir + "/" + module + ".v")
+        printVerilogInstance(di[term], module, outdir + "/" + module + "Instance.v")
+
+    defs_name = options.verilog_defs is not None and options.verilog_defs or \
+        "%s_defs.v" % ( os.path.splitext(os.path.basename(filename))[0] )
+    printVerilogDefs( di, os.path.splitext(defs_name)[0].replace('.','_').replace(' ','_').upper(), outdir + "/" + defs_name )
+
+if options.c_header is not None:
+    if(options.outdir is None):
+        filename = options.c_header
+    else:
+        filename = outdir + "/" + options.c_header
+    printCDefs(di, filename)
