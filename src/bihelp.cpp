@@ -45,11 +45,11 @@ mpz_class bi_from_dt ( const DataType &data ) {
 DataType dt_from_bi ( const mpz_class &bi ) {
     if (bi.fits_sint_p()) {
         long si = bi.get_si();
-        assert ( sizeof(si) == 8 ? ((uint64)si & 0xffffffff00000000ul) == 0 : true);
+        assert ( sizeof(si) == 8 ? ((uint64)si & 0xffffffff00000000ull) == 0 : true);
         return (int32) si;
     } else if ( bi.fits_uint_p()) {
         unsigned long ui = bi.get_ui();
-        assert ( sizeof(ui) == 8 ? (ui & 0xffffffff00000000ul) == 0 : true );
+        assert ( sizeof(ui) == 8 ? (ui & 0xffffffff00000000ull) == 0 : true );
         return (uint32) ui;
     } else {
         if ( sgn ( bi ) < 0) throw Exception ( INVALID_TYPE, "Unsupported negative large integer.", bi.get_str() );
