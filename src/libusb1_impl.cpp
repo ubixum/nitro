@@ -127,19 +127,23 @@ struct USBDevice::impl : public usbdev_impl_core {
         /**
          * Gets the serial number from an opened (not necessarily configured) device.
          **/
-        static std::string get_serial(libusb_device_handle* dev) {
+        static std::wstring get_serial(libusb_device_handle* dev) {
             unsigned char *buf = new unsigned char[1025]; // 1k buffer + 1 NULL
             memset(buf,1025,0);
             libusb_device* d = libusb_get_device(dev);
             libusb_device_descriptor dscr;
             int ret = libusb_get_device_descriptor ( d, &dscr );
-            std::string res;
+            std::wstring res;
             int str_ok=-1;
             if ( !ret ) {
-                str_ok = libusb_get_string_descriptor_ascii ( dev, dscr.iSerialNumber, buf, 1024 );
-                if ( str_ok >= 0 ) {
-                    res = std::string((const char*)buf, str_ok);
-                } 
+                str_ok = libusb_get_string_descriptor( dev, dscr.iSerialNumber, 0x0409, buf, 1024 );
+                for (int i=0;i<8;++i) {
+                    res.append ( 1, (wchar_t)(((uint16*)buf + 1)[i])) ;
+                }
+                //if ( str_ok >= 0 ) {
+                //    for (int i=0;i<str_ok;++i)
+                //        res.append ( 1, ((uint16*)buf)[i] );
+                //} 
             }
             delete [] buf; 
             if (str_ok >= 0) return res;
@@ -148,18 +152,18 @@ struct USBDevice::impl : public usbdev_impl_core {
 
         class SerialOpener : public DevItr {
             private:
-                const std::string &m_serial;
+                const std::wstring &m_serial;
             public:
                 uint16 m_ver;
                 libusb_device_handle* m_dev; 
-                SerialOpener ( const std::string &serial ) : m_serial ( serial ), m_dev(NULL) {} 
+                SerialOpener ( const std::wstring &serial ) : m_serial ( serial ), m_dev(NULL) {} 
                 bool process(libusb_device* dev, libusb_device_descriptor& dscr) {
 
                     int ret = libusb_open(dev,&m_dev);
                     if ( ret ) throw Exception ( USB_PROTO, "Failed opening device while checking serial number." );
 
                     try {
-                        std::string ser = get_serial ( m_dev );
+                        std::wstring ser = get_serial ( m_dev );
                         m_ver=dscr.bcdDevice;
                         if (ser == m_serial) {
                            check_ver(m_ver); 
@@ -201,11 +205,12 @@ struct USBDevice::impl : public usbdev_impl_core {
         }
         void open ( uint32 index, bool override_version=false );
         void open ( const std::string& serial );
+        void open ( const std::wstring& serial );
         void open_addr ( uint16 addr );
         bool is_open() { return m_dev != NULL; }
         uint16 firmware_version() { check_open(); return m_ver; }
         static uint32 get_device_count ( uint32 vid, uint32 pid );
-        static std::string get_device_serial(uint32 vid, uint32 pid, uint32 index );
+        static std::wstring get_device_serial(uint32 vid, uint32 pid, uint32 index );
         static uint16 get_device_address (uint32, uint32, uint32 );
         uint16 get_device_address();
    
@@ -231,6 +236,9 @@ void USBDevice::impl::check_init() {
         }
         m_initialized=true;
 		usb_debug ( "Initialized Lib USB1" );
+        #ifdef DEBUG_USB
+        libusb_set_debug(NULL,1);
+        #endif
     }
 }
 
@@ -293,6 +301,12 @@ void USBDevice::impl::open_addr(uint16 addr) {
 }
 
 void USBDevice::impl::open(const std::string& serial) {
+    std::wstring ser;
+    ser.assign( serial.begin(), serial.end() );
+    open(ser);
+}
+
+void USBDevice::impl::open(const std::wstring& serial) {
 
  CHECK_ALREADY_OPENED();
 
@@ -303,7 +317,7 @@ void USBDevice::impl::open(const std::string& serial) {
  m_ver = d.m_ver;
 
  config_device();
-
+ 
 }
 
 void USBDevice::impl::check_open() const {
@@ -360,11 +374,11 @@ void USBDevice::impl::close() {
     }
 }
 
-std::string USBDevice::impl::get_device_serial(uint32 vid, uint32 pid, uint32 index ) {
+std::wstring USBDevice::impl::get_device_serial(uint32 vid, uint32 pid, uint32 index ) {
     IndexOpener d ( index );
     iter_devices( vid, pid, d );
     if (!d.m_dev) throw Exception ( USB_PROTO, "Insufficient devices connected." );
-    std::string serial;
+    std::wstring serial;
     try {
         serial=get_serial(d.m_dev); 
     } catch ( const Exception &e) {

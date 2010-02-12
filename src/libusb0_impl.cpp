@@ -45,19 +45,20 @@ struct USBDevice::impl : public usbdev_impl_core {
         static void check_init(); 
         void check_open() const;
         void config_device(struct usb_device* dev, bool override_version=false);
-        static std::string device_serial ( struct usb_device* dev);
+        static std::wstring device_serial ( struct usb_device* dev);
         static uint16 get_addr ( struct usb_device* dev);
     public:
 
         impl(uint32 vid, uint32 pid): usbdev_impl_core(vid,pid),m_dev(NULL){}
         void open ( uint32 index, bool override_version );
+        void open ( const std::wstring& serial );
         void open ( const std::string& serial );
         void open_addr ( uint16 addr );
         uint16 firmware_version();
 		bool is_open() { return m_dev != NULL; }
         static void get_device_list(uint32 vid, uint32 pid, DeviceList& list) ;
         static uint32 get_device_count ( uint32 vid, uint32 pid );
-        static std::string get_device_serial(uint32 vid, uint32 pid, uint32 index );
+        static std::wstring get_device_serial(uint32 vid, uint32 pid, uint32 index );
         static uint16 get_device_address(uint32,uint32,uint32);
         uint16 get_device_address();
    
@@ -106,12 +107,12 @@ void USBDevice::impl::open(uint32 index, bool override_version) {
   config_device(devlist.at(index), override_version);
 }
 
-void USBDevice::impl::open(const std::string& serial) {
+void USBDevice::impl::open(const std::wstring& serial) {
    DeviceList list;
    get_device_list(m_vid,m_pid,list);
 
    for (DeviceListItr itr=list.begin(); itr != list.end(); ++itr ) {
-         std::string test_serial = impl::device_serial(*itr);
+         std::wstring test_serial = impl::device_serial(*itr);
          if ( serial == impl::device_serial ( *itr ) ) {
             config_device(*itr);
             return;
@@ -119,6 +120,12 @@ void USBDevice::impl::open(const std::string& serial) {
    }
 
    throw Exception ( USB_COMM, "No connected device with serial found." );
+}
+
+void USBDevice::impl::open(const std::string& serial) {
+    std::wstring ser;
+    ser.assign(serial.begin(), serial.end());
+    open(ser);
 }
 
 uint16 USBDevice::impl::get_addr( struct usb_device* dev ) {
@@ -268,7 +275,7 @@ class DevCloser {
         ~DevCloser() { usb_close(m_dev); }
 };
 
-std::string USBDevice::impl::device_serial ( struct usb_device* dev) {
+std::wstring USBDevice::impl::device_serial ( struct usb_device* dev) {
 
     struct usb_dev_handle* usbdev = usb_open(dev);
     if (!usbdev) {
@@ -279,14 +286,17 @@ std::string USBDevice::impl::device_serial ( struct usb_device* dev) {
 
     int ret=0;
     if (!dev->descriptor.iSerialNumber) {
-        return "";
+        return std::wstring();
     } else {
         char buffer[20]; 
-        ret = usb_get_string_simple( usbdev, dev->descriptor.iSerialNumber , buffer, 20); 
-        if (ret<0) {
-            throw Exception ( USB_PROTO, "Failed to query device serial number." );
+        ret = usb_get_string( usbdev, dev->descriptor.iSerialNumber , 0x0409, buffer, 20); 
+        if (ret!=18) {
+            throw Exception ( USB_PROTO, "Failed to query device serial number.",ret );
         }
-        return std::string(buffer, ret); 
+        std::wstring ser;
+        for (int i=0;i<8;++i)
+            ser.append ( 1, (wchar_t)(((uint16*)buffer)[i+1]) ); // 1st byte is unicode marker 
+        return ser;
     }
 }
 
@@ -309,7 +319,7 @@ uint16 USBDevice::impl::get_device_address() {
     return get_addr(dev);
 }
 
-std::string USBDevice::impl::get_device_serial(uint32 vid, uint32 pid, uint32 index ) {
+std::wstring USBDevice::impl::get_device_serial(uint32 vid, uint32 pid, uint32 index ) {
 
     DeviceList list;
     get_device_list(vid,pid,list);

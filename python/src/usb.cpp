@@ -35,7 +35,7 @@ using namespace Nitro;
 
 PyMethodDef nitro_USBDevice_methods[] = {
     {"open", (PyCFunction)nitro_USBDevice_Open, METH_VARARGS, "Wrapped C++ API member function" },
-    {"open_by_serial", (PyCFunction)nitro_USBDevice_OpenBySerial, METH_VARARGS, "Wrapped C++ API member function" },
+    {"open_by_serial", (PyCFunction)nitro_USBDevice_OpenBySerial, METH_O, "Wrapped C++ API member function" },
     {"open_by_address", (PyCFunction)nitro_USBDevice_OpenByAddress, METH_VARARGS, "open_by_address(addr) -> Open device by usb bus address." },
     {"set_serial", (PyCFunction)nitro_USBDevice_SetSerial, METH_O, "Wrapped C++ API member function" },
     {"get_serial", (PyCFunction)nitro_USBDevice_GetSerial, METH_NOARGS, "Wrapped C++ API member function" },
@@ -114,10 +114,10 @@ nitro_USBDevice_init(nitro_USBDeviceObject* self, PyObject *args, PyObject *kwds
             ((nitro_DeviceObject*)arg)->nitro_device;
 
 
-    } else {
-        PyErr_SetString ( PyExc_Exception, "USBDevice (vid,pid) | USBDevice(Device)" );
-        return -1;
     }
+    PyErr_SetString ( PyExc_Exception, "USBDevice (vid,pid) | USBDevice(Device)" );
+    return -1;
+    
 }
 
 PyTypeObject nitro_USBDeviceType = {
@@ -181,13 +181,24 @@ PyObject* nitro_USBDevice_Open(nitro_USBDeviceObject* self, PyObject* args) {
 }
 
 
-PyObject* nitro_USBDevice_OpenBySerial(nitro_USBDeviceObject* self, PyObject* args) {
-    const char* serial;
-    if (!PyArg_ParseTuple( args, "s", &serial )) {
-        return NULL;
-    }
+PyObject* nitro_USBDevice_OpenBySerial(nitro_USBDeviceObject* self, PyObject* arg) {
+
     try {
-        ((USBDevice*)self->dev_base.nitro_device)->open(string(serial));
+
+        if (PyString_Check(arg)) {
+             Py_ssize_t length;
+             char *buffer;
+             if (-1==PyString_AsStringAndSize( arg, &buffer, &length ) ) return NULL; // type error raised by function
+             std::string serial;
+             serial.assign ( buffer, length );
+             ((USBDevice*)self->dev_base.nitro_device)->open(serial);
+        } else if (PyUnicode_Check(arg)) {
+             wchar_t buf[8];
+             if (-1==PyUnicode_AsWideChar ( (PyUnicodeObject*)arg, buf, 8 )) return NULL;
+             std::wstring serial ( buf, 8 );
+             ((USBDevice*)self->dev_base.nitro_device)->open(serial);
+        }
+
     } catch (const Exception &e) {
         NITRO_EXC(e,NULL);
     }
@@ -275,33 +286,43 @@ PyObject* nitro_USBDevice_GetDeviceCount(nitro_USBDeviceObject* self, PyObject* 
 }
 
 #define RETURN_NITRO_SERIAL(s) \
-    return PyString_FromStringAndSize(s.c_str(), s.size());
+    return PyUnicode_FromWideChar(s.c_str(), s.size());
 
 PyObject* nitro_USBDevice_GetSerial(nitro_USBDeviceObject* self, PyObject* args) {
 
     try {
-       string s=((USBDevice*)self->dev_base.nitro_device)->get_device_serial();
+       wstring s=((USBDevice*)self->dev_base.nitro_device)->get_device_serial();
        RETURN_NITRO_SERIAL(s);
     } catch ( const Exception &e) {
         NITRO_EXC(e,NULL);
     }
 }
 PyObject* nitro_USBDevice_SetSerial(nitro_USBDeviceObject* self, PyObject *arg) {
-   if (!PyString_Check(arg)) {
-        PyErr_SetString(PyExc_Exception, "Method requires string argument.");
-        return NULL;
-   }
    try {
-      Py_ssize_t length;
-      char *buffer;
-      if (-1==PyString_AsStringAndSize( arg, &buffer, &length ) ) return NULL; // type error raised by function
-      std::string serial;
-      serial.assign ( buffer, length );
-      ((USBDevice*)self->dev_base.nitro_device)->set_device_serial(serial);
-      Py_RETURN_NONE;
+       if (PyString_Check(arg)) {
+           Py_ssize_t length;
+           char *buffer;
+           if (-1==PyString_AsStringAndSize( arg, &buffer, &length ) ) return NULL; // type error raised by function
+           std::string serial;
+           serial.assign ( buffer, length );
+           ((USBDevice*)self->dev_base.nitro_device)->set_device_serial(serial);
+    
+              Py_RETURN_NONE;
+       } else if (PyUnicode_Check(arg)) {
+            wchar_t buf[8];
+            if (-1==PyUnicode_AsWideChar ( (PyUnicodeObject*)arg, buf, 8 )) return NULL;
+            std::wstring serial ( buf, 8 );
+            ((USBDevice*)self->dev_base.nitro_device)->set_device_serial(serial);          
+    
+            Py_RETURN_NONE;
+       }
+
    } catch ( const Exception &e) {
        NITRO_EXC(e,NULL);
    }
+
+   PyErr_SetString(PyExc_Exception, "Serial number should be string or unicode.");
+   return NULL;
 }
 
 PyObject* nitro_USBDevice_GetDeviceSerial(nitro_USBDeviceObject* self, PyObject* args) {
@@ -310,26 +331,11 @@ PyObject* nitro_USBDevice_GetDeviceSerial(nitro_USBDeviceObject* self, PyObject*
         return NULL;
     }
     try {
-       string s=USBDevice::get_device_serial(vid,pid,idx);
+       wstring s=USBDevice::get_device_serial(vid,pid,idx);
        RETURN_NITRO_SERIAL(s);
     } catch ( const Exception &e) {
         NITRO_EXC(e,NULL);
     }
-}
-
-PyObject* nitro_USBDevice_SetDeviceSerial(nitro_USBDeviceObject* self, PyObject *arg) {
-   if (!PyString_Check(arg)) {
-        PyErr_SetString(PyExc_Exception, "Method requires string argument.");
-        return NULL;
-   }
-
-   try {
-      
-      ((USBDevice*)self->dev_base.nitro_device)->set_device_serial(PyString_AsString(arg));
-      Py_RETURN_NONE;
-   } catch ( const Exception &e) {
-       NITRO_EXC(e,NULL);
-   }
 }
 
 PyObject* nitro_USBDevice_GetFirmwareVersion(nitro_USBDeviceObject* self) {

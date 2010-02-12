@@ -148,7 +148,7 @@ struct usbdev_impl_core {
                 throw Exception ( USB_COMM, "Unable to write data to device.", ret);//, usb_strerror() );
             }
     
-            usb_debug ( "bytes read/written: " << ret );
+            usb_debug ( "bytes read/written: " << ret << " (total: " << (transferred+ret) << ")" );
             
             if (!ret) {
                ++tmp_zcount;
@@ -365,17 +365,33 @@ uint16 USBDevice::_transfer_checksum() {
 }
 
 void USBDevice::set_device_serial ( const std::string serial ) {
-    if ((m_impl->firmware_version() >> 8) < 2) throw Exception ( DEVICE_OP_ERROR, "Firmware version older than 2.0 does not support this method." );
-    if ( serial.size() != 8 ) throw Exception ( DEVICE_OP_ERROR, "Invalid serial number length", (uint32)serial.size() ); 
-    const char* buf = serial.c_str();
-    m_impl->control_transfer ( NITRO_OUT, VC_SERIAL, 0, 0, reinterpret_cast<uint8*>(const_cast<char*>(buf)), 8, 1000 ); 
+    std::wstring ser;
+    ser.assign(serial.begin(),serial.end());
+    set_device_serial(ser);
 }
 
-std::string USBDevice::get_device_serial ( ) {
+void USBDevice::set_device_serial ( const std::wstring serial ) {
     if ((m_impl->firmware_version() >> 8) < 2) throw Exception ( DEVICE_OP_ERROR, "Firmware version older than 2.0 does not support this method." );
-    uint8 buf[8];
-    m_impl->control_transfer ( NITRO_IN, VC_SERIAL, 0, 0, buf, 8, 1000 );
-    return std::string(reinterpret_cast<const char*>(buf),8);
+    if ( serial.size() != 8 ) throw Exception ( DEVICE_OP_ERROR, "Invalid serial number length", (uint32)serial.size() ); 
+    uint16 buf[8];
+    for (int i=0;i<8;++i) { // have to copy because size of wchar_t might be 4 instead of 2
+        buf[i] = serial[i];
+    }
+    int ret = m_impl->control_transfer ( NITRO_OUT, VC_SERIAL, 0, 0, reinterpret_cast<uint8*>(buf), 16, 1000 );
+    if (ret < 0) throw Exception ( USB_COMM, "Set Serial Failed." );
+}
+
+std::wstring USBDevice::get_device_serial ( ) {
+    if ((m_impl->firmware_version() >> 8) < 2) throw Exception ( DEVICE_OP_ERROR, "Firmware version older than 2.0 does not support this method." );
+    uint8 buf[16];
+    int ret = m_impl->control_transfer ( NITRO_IN, VC_SERIAL, 0, 0, buf, 16, 1000 );
+    if (ret<0) throw Exception ( USB_COMM, "Get Serial Failed." );
+    std::wstring serial;
+    // use copy intead because wchar_t is 32 instead of 16 on some platforms
+    for (int i=0;i<8;++i) {
+        serial.append ( 1, ((uint16*)buf)[i] );
+    }
+    return serial;
 }
 
 uint16 USBDevice::get_firmware_version() const {
@@ -391,7 +407,7 @@ uint16 USBDevice::get_device_address() {
 }
 
 
-std::string USBDevice::get_device_serial(uint32 vid, uint32 pid, uint32 index ) {
+std::wstring USBDevice::get_device_serial(uint32 vid, uint32 pid, uint32 index ) {
 
     return impl::get_device_serial(vid,pid,index);
 
@@ -400,5 +416,9 @@ void USBDevice::open(const std::string& serial) {
    
    m_impl->open(serial);
 }	
+
+void USBDevice::open(const std::wstring& serial) {
+   m_impl->open(serial);
+}
 
 } // end namespace

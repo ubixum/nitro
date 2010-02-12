@@ -77,7 +77,7 @@ public:
      * @return The serial number of the nth connected usb device.
      * @throw Exception
      **/
-    static std::string get_device_serial(uint32 vid, uint32 pid, uint32 index ) ;
+    static std::wstring get_device_serial(uint32 vid, uint32 pid, uint32 index ) ;
 
 
     /**
@@ -87,7 +87,7 @@ public:
      * This function returns the serial number as stored by the device.  It can be out
      * of sync with the static get_device_serial until the device is reset.
      **/
-    std::string get_device_serial();
+    std::wstring get_device_serial();
 
 
     /**
@@ -96,8 +96,17 @@ public:
      * After setting the serial number, if you want the corresponding get_device_serial 
      * to match what you set, you must call reset
      *
-     * \param serial must be an string of length 8
+     * \param serial must be an wstring of length 8 (utf16)
      *
+     **/
+    void set_device_serial(const std::wstring serial);
+    /**
+     * \brief set the device serial number.
+     *
+     * Convinience/compatibility method for setting the serial number with
+     * ascii string instead of unicode string.  String is cast up to utf16
+     *
+     * \param serial must be string of length 8
      **/
     void set_device_serial(const std::string serial);
 
@@ -143,6 +152,13 @@ public:
      * \throw Exception
      **/
     void open(const std::string& serial);
+
+    /**
+     * Opens the device with the specified unicode serial number.
+     * \param serial Serial number of device to open.
+     * \throw Exception
+    **/
+    void open(const std::wstring& serial);
 
 
     /**
