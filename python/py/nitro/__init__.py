@@ -36,12 +36,12 @@ log = logging.getLogger(__name__)
 #     pass
 #
 def _lock(f, dev,*args,**kw):
-    log.debug("Locking dev")
+    log.debug("Locking dev for %s" % f)
     dev.lock()
     try:
         return f(dev,*args, **kw)
     finally:
-        log.debug("Unlocking dev")
+        log.debug("Unlocking dev for %s" % f)
         dev.unlock()
 
 try:
