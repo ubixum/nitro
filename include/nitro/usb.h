@@ -188,12 +188,12 @@ public:
     void load_firmware( const char *bytes, size_t length );
 
     /**
-     * @return the firmware version of the open device.
-     *  The firmware version is composed of a major and minor version number
+     * @return the firmware protocol version of the open device.
+     *  The firmware protocol version is composed of a major and minor version number
      *  stored in a 16 bit field.  The MSB is the major number and the LSB
      *  is the minor number.
      **/
-    uint16 get_firmware_version() const ;
+    uint16 get_ver() const ;
 
     /**
      * This call causes the device to re-enumberate.  The USBDevice is no longer valid and 

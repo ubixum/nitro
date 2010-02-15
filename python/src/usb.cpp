@@ -49,7 +49,7 @@ PyMethodDef nitro_USBDevice_methods[] = {
     {"renum", (PyCFunction)nitro_USBDevice_Renum, METH_NOARGS, "Wrapped C++ API member function" },
     {"reset", (PyCFunction)nitro_USBDevice_Reset, METH_NOARGS, "Wrapped C++ API member function" },
     {"load_firmware", (PyCFunction)nitro_USBDevice_LoadFirmware, METH_VARARGS, "Wrapped C++ API member function" },
-    {"get_firmware_version", (PyCFunction)nitro_USBDevice_GetFirmwareVersion, METH_NOARGS, "Wrapped C++ API member function" },
+    {"get_ver", (PyCFunction)nitro_USBDevice_GetFirmwareVersion, METH_NOARGS, "Wrapped C++ API member function" },
     {NULL}
 };
 
@@ -340,7 +340,7 @@ PyObject* nitro_USBDevice_GetDeviceSerial(nitro_USBDeviceObject* self, PyObject*
 
 PyObject* nitro_USBDevice_GetFirmwareVersion(nitro_USBDeviceObject* self) {
    try {
-       uint16 v =((USBDevice*)self->dev_base.nitro_device)->get_firmware_version();
+       uint16 v =((USBDevice*)self->dev_base.nitro_device)->get_ver();
        return Py_BuildValue("I",v);
     } catch ( const Exception &e) {
         NITRO_EXC(e,NULL);

@@ -365,13 +365,24 @@ uint16 USBDevice::_transfer_checksum() {
 }
 
 void USBDevice::set_device_serial ( const std::string serial ) {
-    std::wstring ser;
-    ser.assign(serial.begin(),serial.end());
-    set_device_serial(ser);
+
+    if ((m_impl->firmware_version() >> 8) < 2) throw Exception ( DEVICE_OP_ERROR, "Firmware version older than 3.0 does not support this method." );
+    if ( serial.size() != 8 ) throw Exception ( DEVICE_OP_ERROR, "Invalid serial number length", (uint32)serial.size() ); 
+
+    if ((m_impl->firmware_version() >> 8) > 2) {
+        std::wstring ser;
+        ser.assign(serial.begin(),serial.end());
+        set_device_serial(ser);
+    } else {
+        const char* buf=serial.c_str();
+        int ret = m_impl->control_transfer ( NITRO_OUT, VC_SERIAL, 0, 0, reinterpret_cast<uint8*>(const_cast<char*>(buf)), 8, 1000 );
+        if (ret < 0) throw Exception ( USB_COMM, "Set Serial Failed." );
+    } 
+
 }
 
 void USBDevice::set_device_serial ( const std::wstring serial ) {
-    if ((m_impl->firmware_version() >> 8) < 2) throw Exception ( DEVICE_OP_ERROR, "Firmware version older than 2.0 does not support this method." );
+    if ((m_impl->firmware_version() >> 8) < 3) throw Exception ( DEVICE_OP_ERROR, "Firmware version older than 3.0 does not support this method." );
     if ( serial.size() != 8 ) throw Exception ( DEVICE_OP_ERROR, "Invalid serial number length", (uint32)serial.size() ); 
     uint16 buf[8];
     for (int i=0;i<8;++i) { // have to copy because size of wchar_t might be 4 instead of 2
@@ -383,18 +394,25 @@ void USBDevice::set_device_serial ( const std::wstring serial ) {
 
 std::wstring USBDevice::get_device_serial ( ) {
     if ((m_impl->firmware_version() >> 8) < 2) throw Exception ( DEVICE_OP_ERROR, "Firmware version older than 2.0 does not support this method." );
-    uint8 buf[16];
-    int ret = m_impl->control_transfer ( NITRO_IN, VC_SERIAL, 0, 0, buf, 16, 1000 );
+    int buflen = (m_impl->firmware_version() >> 8) > 2 ?
+                 16 : // unicode for version 3+
+                 8; // ascii before that
+    uint8 buf[16]; // the max
+    int ret = m_impl->control_transfer ( NITRO_IN, VC_SERIAL, 0, 0, buf, buflen, 1000 );
     if (ret<0) throw Exception ( USB_COMM, "Get Serial Failed." );
     std::wstring serial;
-    // use copy intead because wchar_t is 32 instead of 16 on some platforms
+    // use copy instead because wchar_t is 32 instead of 16 on some platforms
     for (int i=0;i<8;++i) {
-        serial.append ( 1, ((uint16*)buf)[i] );
+        if (8==buflen) {
+            serial.append ( 1, buf[i] );
+        } else {
+            serial.append ( 1, ((uint16*)buf)[i] );
+        }
     }
     return serial;
 }
 
-uint16 USBDevice::get_firmware_version() const {
+uint16 USBDevice::get_ver() const {
     return m_impl->firmware_version();
 }
 
