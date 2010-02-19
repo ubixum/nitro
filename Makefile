@@ -87,13 +87,10 @@ docs: $(DOCDIR) $(BINDIR)/nitro_version
 		$(BUILDDIR)/tmp/docs.conf
 	doxygen $(BUILDDIR)/tmp/docs.conf
 
-specs: $(BINDIR)/nitro_version linux/nitro-drivers.spec python/python-nitro.spec
+spec: $(BINDIR)/nitro_version linux/nitro-drivers.spec
 	cat linux/nitro-drivers.spec | sed \
 		-e "s/XXVERSIONXX/`$(BINDIR)/nitro_version`/" > \
 		$(BUILDDIR)/nitro-drivers.spec
-	cat python/python-nitro.spec | sed \
-		-e "s/XXVERSIONXX/`$(BINDIR)/nitro_version`/" > \
-		$(BUILDDIR)/python-nitro.spec
 
 TAG=HEAD
 

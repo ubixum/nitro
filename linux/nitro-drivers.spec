@@ -4,7 +4,7 @@
 
 Name:		nitro-drivers
 Version:    XXVERSIONXX 
-Release:	1%{?dist}
+Release:	2%{?dist}
 Summary:	Nitro core USB driver
 
 Group:	    Development/Libraries
@@ -15,7 +15,7 @@ BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 BuildRequires: libusb1-devel xerces-c-devel doxygen python-devel gmp-devel
 Requires: libusb1 xerces-c gmp
-Conflicts: python-nitro < %{version} python-nitro > %{version}
+Conflicts: python-nitro nitro-core
 ExclusiveArch: i386 x86_64
 
 prefix:     /usr
@@ -49,19 +49,23 @@ Nitro-core USB driver.
 
 
 %build
-make BUILDDIR=$RPM_BUILD_ROOT PREFIX=%{prefix} LIBDIR=%{libdir} dist=%{dist}
-make docs DOCDIR=$RPM_BUILD_ROOT/%{_docdir}/nitro/
-%{__cp} README CHANGELOG $RPM_BUILD_ROOT/%{_docdir}/nitro/
-rm -rf $RPM_BUILD_ROOT/tmp
-
+make PREFIX=%{prefix} LIBDIR=%{libdir} dist=%{dist}
+make docs DOCDIR=build/%{_docdir}/nitro/ LIBDIR=%{libdir}
+%{__cp} README CHANGELOG build/%{_docdir}/nitro/
+rm -rf build/tmp
+cd python
+CFLAGS="$RPM_OPT_FLAGS" %{__python} setup.py build
 
 
 %install
-# rm -rf $RPM_BUILD_ROOT
-# make install DESTDIR=$RPM_BUILD_ROOT
-# cp -r * $RPM_BUILD_ROOT/
+test -d $RPM_BUILD_ROOT || mkdir $RPM_BUILD_ROOT
+cp -a build/* $RPM_BUILD_ROOT/
+cd python
+%{__python} setup.py install -O1 --skip-build --root $RPM_BUILD_ROOT --prefix %{prefix}
 
 %clean
+make clean
+make -C python clean
 rm -rf $RPM_BUILD_ROOT
 
 %post
@@ -72,6 +76,8 @@ rm -rf $RPM_BUILD_ROOT
 /%{prefix}/bin/*
 /%{prefix}%{libdir}/*
 /etc/udev/rules.d/60-ubixum.rules
+#%{python_sitearch}/*
+
 %doc
 %{_docdir}/nitro
 

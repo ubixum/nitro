@@ -17,8 +17,7 @@
 import sys
 from distutils.core import setup, Extension 
 
-words = open('python-nitro.spec').read().split()
-version=words[words.index('Version:')+1]
+version='1.0.0.1'
 
 def get_ext():
     if sys.platform == 'win32':
@@ -27,7 +26,7 @@ def get_ext():
         plat_define_macros = [('WIN32',None)]
         plat_export_symbols = ['init_nitro_d']
     else:
-        plat_library_dirs = ['../build/usr/lib']
+        plat_library_dirs = ['../build/usr/lib', '../build/usr/lib64' ]
         plat_extra_compile_args =[]
         plat_define_macros = []
         plat_export_symbols = []
