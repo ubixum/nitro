@@ -13,8 +13,8 @@ URL:	    http://ubixum.com
 Source0:    %{name}-%{version}.tgz
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-BuildRequires: libusb-devel xerces-c-devel doxygen python-devel gmp-devel
-Requires: libusb xerces-c gmp
+BuildRequires: libusb1-devel xerces-c-devel doxygen python-devel gmp-devel
+Requires: libusb1 xerces-c gmp
 Conflicts: python-nitro < %{version} python-nitro > %{version}
 ExclusiveArch: i386 x86_64
 
@@ -49,10 +49,8 @@ Nitro-core USB driver.
 
 
 %build
-cd drivers
-# until libusb1 is out of rawhide.
-USB_BACKEND=libusb0 make BUILDDIR=$RPM_BUILD_ROOT PREFIX=%{prefix} LIBDIR=%{libdir} dist=%{dist}
-USB_BACKEND=libusb0 make docs DOCDIR=$RPM_BUILD_ROOT/%{_docdir}/nitro/
+make BUILDDIR=$RPM_BUILD_ROOT PREFIX=%{prefix} LIBDIR=%{libdir} dist=%{dist}
+make docs DOCDIR=$RPM_BUILD_ROOT/%{_docdir}/nitro/
 %{__cp} README CHANGELOG $RPM_BUILD_ROOT/%{_docdir}/nitro/
 rm -rf $RPM_BUILD_ROOT/tmp
 

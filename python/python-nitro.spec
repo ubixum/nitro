@@ -9,30 +9,30 @@ Summary:    Python bindings for the Nitrogen Data Acquisition drivers.
 Group:		Development/Languages
 License:    Ubixum, Software	
 URL:	    http://ubixum.com	
-Source0:    nitro-core-%{version}.tgz
+Source0:    nitro-drivers-%{version}.tgz
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 ExclusiveArch:  i386 x86_64 
-BuildRequires:	python-devel nitro-core-devel >= %{version}
-Requires:   nitro-core >= %{version}
+BuildRequires:	python-devel nitro-drivers-devel >= %{version}
+Requires:   nitro-drivers >= %{version}
 
 %description
 Python bindings for the Nitrogen Data Acquisition drivers.
 
 
 %prep
-%setup -q -n nitro-core-%{version}
+%setup -q -n nitro-drivers-%{version}
 
 
 %build
 # Remove CFLAGS=... for noarch packages (unneeded)
-cd drivers/python
+cd python
 CFLAGS="$RPM_OPT_FLAGS" %{__python} setup.py build
 
 
 %install
 rm -rf $RPM_BUILD_ROOT
-cd drivers/python
+cd python
 %{__python} setup.py install -O1 --skip-build --root $RPM_BUILD_ROOT
 
  
@@ -46,6 +46,7 @@ rm -rf $RPM_BUILD_ROOT
 # For arch-specific packages: sitearch
 %{python_sitearch}/*
 /usr/bin/di
+/usr/bin/diconv
 
 
 %changelog

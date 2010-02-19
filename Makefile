@@ -37,7 +37,7 @@ endif
 
 
 
-.PHONY: all test docs INCLUDES clean udev specs
+.PHONY: all test docs INCLUDES clean udev specs tgz
 
 all: $(SOFILE) $(ARFILE) $(PROGS) INCLUDES udev
 
@@ -87,13 +87,19 @@ docs: $(DOCDIR) $(BINDIR)/nitro_version
 		$(BUILDDIR)/tmp/docs.conf
 	doxygen $(BUILDDIR)/tmp/docs.conf
 
-specs: $(BINDIR)/nitro_version linux/nitro-core.spec python/python-nitro.spec
-	cat linux/nitro-core.spec | sed \
+specs: $(BINDIR)/nitro_version linux/nitro-drivers.spec python/python-nitro.spec
+	cat linux/nitro-drivers.spec | sed \
 		-e "s/XXVERSIONXX/`$(BINDIR)/nitro_version`/" > \
-		$(BUILDDIR)/nitro-core.spec
+		$(BUILDDIR)/nitro-drivers.spec
 	cat python/python-nitro.spec | sed \
 		-e "s/XXVERSIONXX/`$(BINDIR)/nitro_version`/" > \
 		$(BUILDDIR)/python-nitro.spec
+
+TAG=HEAD
+
+tgz:
+	git archive --prefix=nitro-drivers-$(TAG)/ $(TAG) | gzip > nitro-drivers-$(TAG).tgz
+    
 
 clean:
 	rm -rf src/*.o
