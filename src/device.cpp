@@ -159,8 +159,10 @@ struct Device::impl{
     NodeRef di;
     uint32 m_modes;
     map<uint32,uint32> m_term_modes;
+    Device::RetryFunc *m_retry_func;
+    bool m_retry_bit;
 
-    impl(): m_timeout(1000), di(DeviceInterface::create("di")), m_modes(STATUS_VERIFY)  {}
+    impl(): m_timeout(1000), di(DeviceInterface::create("di")), m_modes(STATUS_VERIFY), m_retry_func(NULL), m_retry_bit(false) {}
 
     uint32 get_timeout(int32 timeout);
     uint32 term_addr( const DataType& term );
@@ -169,10 +171,10 @@ struct Device::impl{
     DataType valmap_or_const_val ( NodeRef node, const DataType& val );
     auto_ptr<AddressData> resolve_addrs ( const DataType& term, const DataType& reg ) ;
     void get_set_subreg ( bitset<1024> &bits, uint32 term_addr, uint32 reg_addr, bitset<1024> &value, uint32 offset, uint32 width, uint32 dwidth, vector<uint32> &clean_regs, int32 timeout , Device &dev);
-    DataType do_get(Device &dev, uint32 term_addr, uint32 reg_addr, AddressData &a, int32 timeout, bool retry_ok=true); 
-    void do_set(Device &dev, uint32 term_addr, uint32 reg_addr, DataType &value, AddressData &a, int32 timeout, bool retry_ok=true);
-    void do_read(Device &dev, uint32 term_addr, uint32 reg_addr, uint8* data, size_t length, int32 timeout, bool retry_ok=true);
-    void do_write(Device &dev, uint32 term_addr, uint32 reg_addr, const uint8* data, size_t length, int32 timeout, bool retry_ok=true);
+    DataType do_get(Device &dev, uint32 term_addr, uint32 reg_addr, AddressData &a, int32 timeout, bool retry_ok=true, int retries=0); 
+    void do_set(Device &dev, uint32 term_addr, uint32 reg_addr, DataType &value, AddressData &a, int32 timeout, bool retry_ok=true, int retries=0);
+    void do_read(Device &dev, uint32 term_addr, uint32 reg_addr, uint8* data, size_t length, int32 timeout, bool retry_ok=true, int retries=0);
+    void do_write(Device &dev, uint32 term_addr, uint32 reg_addr, const uint8* data, size_t length, int32 timeout, bool retry_ok=true, int retries=0);
     private:
     DataType raw_get( Device &dev, uint32 term_addr, uint32 reg_addr, AddressData &a, uint32 timeout ); // only called by do_get
     void raw_set ( Device &dev, uint32 term_addr, uint32 reg_addr, DataType &value, AddressData &a, uint32 timeout );
@@ -274,18 +276,39 @@ DataType Device::impl::raw_get ( Device &dev, uint32 term_addr, uint32 reg_addr,
     return res;
 }
 
-DataType Device::impl::do_get (Device &dev, uint32 term_addr, uint32 reg_addr, AddressData &a, int32 timeout, bool retry_ok) {
+#define IMPL_RETRY(do_xxx) \
+    if ( e.code() == DEVICE_OP_ERROR && (m_term_modes[term_addr] & RETRY_ON_FAILURE || \
+            m_modes & RETRY_ON_FAILURE ))  { \
+            dev_debug ( "do_get::Mode Failure " << term_addr << ", " << reg_addr << " - Retry?" ); \
+            bool retry = retry_ok; \
+            if (m_retry_func) { \
+                if (m_retry_bit) { throw Exception ( e.code(), e.str_error() + " -  Already in retry" ); } \
+                m_retry_bit=true; \
+                try { \
+                    retry = (*m_retry_func)(dev, term_addr, reg_addr, retries, e ); \
+                    m_retry_bit=false; \
+                } catch (const Exception &ee) { \
+                    m_retry_bit=false; \
+                    throw Exception ( e.code(), e.str_error() + " - Callback Exception: " + ee.str_error() ); \
+                } \
+                dev_debug ( "retry_func for" << term_addr << ", " << reg_addr << " Retry: " << retry ); \
+            } \
+            if (retry) { \
+                return do_xxx; \
+            } else { \
+                throw e; \
+            } \
+    } else { \
+        throw e;  \
+    }
+
+DataType Device::impl::do_get (Device &dev, uint32 term_addr, uint32 reg_addr, AddressData &a, int32 timeout, bool retry_ok, int retries) {
 
    try {
        return raw_get ( dev, term_addr, reg_addr, a, get_timeout(timeout) );
    } catch ( const Exception &e ) {
-       if ( e.code() == DEVICE_OP_ERROR && (m_term_modes[term_addr] & RETRY_ON_FAILURE || 
-            m_modes & RETRY_ON_FAILURE ) && retry_ok ) {
-            dev_debug ( "do_get::Mode Failure " << term_addr << ", " << reg_addr << " - Retrying" );
-            return do_get ( dev, term_addr, reg_addr, a, timeout, false ); // retry
-       } else {
-            throw e; 
-       }
+        IMPL_RETRY(
+            do_get(dev, term_addr, reg_addr, a, timeout, false, retries+1) );
    } 
    
 }
@@ -318,18 +341,12 @@ void Device::impl::raw_set( Device &dev, uint32 term_addr, uint32 reg_addr, Data
 
 }
 
-void Device::impl::do_set (Device &dev, uint32 term_addr, uint32 reg_addr, DataType &value, AddressData &a, int32 timeout, bool retry_ok) {
+void Device::impl::do_set (Device &dev, uint32 term_addr, uint32 reg_addr, DataType &value, AddressData &a, int32 timeout, bool retry_ok, int retries) {
 
    try {
        raw_set ( dev, term_addr, reg_addr, value, a, get_timeout(timeout) );
    } catch ( const Exception &e ) {
-       if ( e.code() == DEVICE_OP_ERROR && (m_term_modes[term_addr] & RETRY_ON_FAILURE || 
-            m_modes & RETRY_ON_FAILURE ) && retry_ok ) {
-            dev_debug ( "do_set::Mode Failure " << term_addr << ", " << reg_addr << " - Retrying" );
-            do_set ( dev, term_addr, reg_addr, value, a, timeout, false ); // retry
-       } else {
-            throw e; 
-       }
+       IMPL_RETRY ( do_set ( dev, term_addr, reg_addr, value, a, timeout, false, retries+1 ) );
    } 
    
 }
@@ -340,16 +357,11 @@ void Device::impl::raw_read(Device &dev, uint32 term_addr, uint32 reg_addr, uint
    check_checksum ( dev, term_addr, data, length );
 }
 
-void Device::impl::do_read(Device &dev, uint32 term_addr, uint32 reg_addr, uint8* data, size_t length, int32 timeout, bool retry_ok) {
+void Device::impl::do_read(Device &dev, uint32 term_addr, uint32 reg_addr, uint8* data, size_t length, int32 timeout, bool retry_ok, int retries) {
    try {
        raw_read ( dev, term_addr, reg_addr, data, length, get_timeout(timeout) );
    } catch ( const Exception &e ) {
-       if ( e.code() == DEVICE_OP_ERROR && (m_term_modes[term_addr] & RETRY_ON_FAILURE || 
-            m_modes & RETRY_ON_FAILURE ) && retry_ok ) {
-            do_read ( dev, term_addr, reg_addr, data, length, timeout, false ); // retry
-       } else {
-            throw e; 
-       }
+       IMPL_RETRY ( do_read ( dev, term_addr, reg_addr, data, length, timeout, false, retries+1 ) );
    } 
 }
 
@@ -359,16 +371,11 @@ void Device::impl::raw_write (Device &dev, uint32 term_addr, uint32 reg_addr, co
    check_checksum ( dev, term_addr, data, length );
 }
 
-void Device::impl::do_write(Device &dev, uint32 term_addr, uint32 reg_addr, const uint8* data, size_t length, int32 timeout, bool retry_ok) {
+void Device::impl::do_write(Device &dev, uint32 term_addr, uint32 reg_addr, const uint8* data, size_t length, int32 timeout, bool retry_ok, int retries) {
    try {
        raw_write ( dev, term_addr, reg_addr, data, length, get_timeout(timeout) );
    } catch ( const Exception &e ) {
-       if ( e.code() == DEVICE_OP_ERROR && (m_term_modes[term_addr] & RETRY_ON_FAILURE || 
-            m_modes & RETRY_ON_FAILURE ) && retry_ok ) {
-            do_write ( dev, term_addr, reg_addr, data, length, timeout, false ); // retry
-       } else {
-            throw e; 
-       }
+       IMPL_RETRY ( do_write ( dev, term_addr, reg_addr, data, length, timeout, false, retries+1 ) );
    } 
 }
 
@@ -618,6 +625,10 @@ uint32 Device::get_modes(const DataType &term) const {
     return m_impl->m_term_modes[m_impl->term_addr(term)];
 }
 
+void Device::set_retry_func( Device::RetryFunc *func) {
+    MutexLock thread_safe_method(m_impl->m_mutex);
+    m_impl->m_retry_func = func;
+}
 
 /**
  * get orig register if part of register is dirty. 

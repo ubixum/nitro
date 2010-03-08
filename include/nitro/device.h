@@ -20,6 +20,7 @@
 #include <map>
 
 #include "types.h"
+#include "error.h"
 
 
 /**
@@ -135,6 +136,20 @@ public:
         RETRY_ON_FAILURE=1<<31 ///< If a mode check failes and this is set, the transfer will be attempted again.
     };
 
+    /**
+     * \brief Retry Callback function.
+     *
+     * Function Class for Device::set_retry_func 
+     * Having this as a class allows the user to save additional info across muliple
+     * retry calls.  User is in charge of memory management for this class.  (User should
+     * allocate and de-allocate it)
+     * */
+    class RetryFunc {
+     public:
+         virtual ~RetryFunc(){}
+         virtual bool operator()(Device& dev, uint32 term_addr, uint32 reg_addr, uint32 count, const Exception &exc )=0;
+    };
+
 
     /**
      * Device is a pure virtual class and cannot be instantiated directly.
@@ -221,6 +236,19 @@ public:
      **/
     void set_modes(const DataType& term, uint32 modes); 
 
+
+    /**
+     * \brief Enable RETRY_ON_FAILURE function
+     *
+     * During RETRY_ON_FAILURE logic, the normal behavior is to retry once.  If
+     * different logic is desired, one can create a retry callback and enable
+     * it by passing it to this function.  Retry logic can be changed at any
+     * time.  This function is thread safe with get/set/read/write.  Retry
+     * logic can be disabled by passing NULL to this function. (But you still
+     * have to disable RETRY_ON_FAILURE if you don't want the default logic to
+     * be executed.)
+     **/
+    void set_retry_func( RetryFunc *func );
 
     /**
      * \ingroup devif

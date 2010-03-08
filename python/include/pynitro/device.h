@@ -24,6 +24,9 @@
 
 #include <nitro.h>
 
+
+class PyRetryFunc; // predef
+
 /**
  * The basic device type
  *
@@ -32,6 +35,7 @@
 typedef struct {
     PyObject_HEAD
     Nitro::Device* nitro_device;
+    PyRetryFunc* retry_func;
 } nitro_DeviceObject;
 
 
@@ -54,7 +58,7 @@ PyObject* nitro_Device_DisableMode(nitro_DeviceObject* self, PyObject *args);
 PyObject* nitro_Device_SetModes(nitro_DeviceObject* self, PyObject *args);
 PyObject* nitro_Device_GetModes(nitro_DeviceObject* self, PyObject *args);
 PyObject* nitro_Device_SetTimeout(nitro_DeviceObject* self, PyObject *arg);
-
+PyObject* nitro_Device_SetRetryFunc(nitro_DeviceObject* self, PyObject *arg);
 #endif
 
 

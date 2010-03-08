@@ -35,6 +35,57 @@ using namespace Nitro;
 
 
 
+class PyRetryFunc : public Device::RetryFunc {
+    private:
+        PyObject* m_pyfunc;
+ 
+    public:
+        PyRetryFunc(PyObject* func) : RetryFunc(), m_pyfunc(func) {
+            Py_INCREF(m_pyfunc);
+        }
+        ~PyRetryFunc() {
+            Py_DECREF(m_pyfunc);
+        }
+
+        bool operator() ( Nitro::Device &dev, uint32 term_addr, uint32 reg_addr, uint32 retries, const Exception &exc ) {
+
+            PyGILState_STATE gstate; // GIL state
+            gstate = PyGILState_Ensure();
+            // safe to call python stuff now
+            
+            DataType devdt(dev);
+            PyObject* pyret = PyObject_CallFunction (
+                m_pyfunc, 
+                "O&IIIs", 
+                from_datatype, &devdt, term_addr, reg_addr,
+                retries, exc.str_error().c_str() );
+
+            bool ret = pyret==Py_True;
+            
+            char* str_error=NULL;
+            if (pyret == NULL) {
+               PyObject *ptype, *pvalue, *ptraceback;
+               PyErr_Fetch(&ptype,&pvalue,&ptraceback);
+               PyObject* str_value = PyObject_Str( pvalue );
+               str_error = PyString_AsString(str_value);
+               Py_XDECREF(ptype);
+               Py_XDECREF(pvalue);
+               Py_XDECREF(ptraceback);
+               Py_XDECREF(str_value);
+            }
+            Py_XDECREF(pyret);
+            PyGILState_Release(gstate); 
+
+            // no more python
+            if (str_error)
+                throw Exception ( SCRIPTS_SCRIPT, str_error );
+            return ret;
+        }
+
+
+};
+
+
 PyMethodDef nitro_Device_methods[] = {
     {"load_xml", (PyCFunction)nitro_Device_LoadXML, METH_VARARGS, "load_xml( xml_path )" },
     {"write_xml", (PyCFunction)nitro_Device_WriteXML, METH_O, "write_xml ( xml_path )" },
@@ -56,6 +107,14 @@ PyMethodDef nitro_Device_methods[] = {
     {"disable_mode",(PyCFunction)nitro_Device_DisableMode, METH_VARARGS, "disable_mode(mode,term=None)" },
     {"set_modes",(PyCFunction)nitro_Device_SetModes, METH_VARARGS, "set_modes(mode,term=None)" },
     {"get_modes",(PyCFunction)nitro_Device_GetModes, METH_VARARGS, "get_modes(term=None)" },
+    {"set_retry_func",(PyCFunction)nitro_Device_SetRetryFunc, METH_O, "set_retry_func(func)\n\n"
+        "The retry funtion should have the following signature:\n"
+        "retry_func(dev,term_addr,reg_addr,retries,exc)\n\n"
+        "dev: The device.\n"
+        "term_addr: Terminal Address.\n"
+        "reg_addr: Register Address.\n"
+        "retries: Number of times retried so far.\n"
+        "exc: The exception that occurred."},
     {"set_timeout",(PyCFunction)nitro_Device_SetTimeout, METH_O, "set_timeout(timeout)" },
     {NULL}
 };
@@ -66,13 +125,20 @@ nitro_Device_new ( PyTypeObject* type, PyObject *args, PyObject *kwds ) {
     nitro_DeviceObject *self = (nitro_DeviceObject*)type->tp_alloc(type,0);
     if (self != NULL) {
         self->nitro_device = NULL;
+        if (self->retry_func) {
+            self->retry_func = NULL;
+        }
     }
     return (PyObject*)self;
 
 }
 
 static void nitro_Device_dealloc (nitro_DeviceObject* self) {
-
+    if (self->retry_func) {
+        delete self->retry_func;
+    }
+    // we never de-allocate the nitro_device.  That is done
+    // by the extending classes.
     self->ob_type->tp_free((PyObject*)self);
 }
 
@@ -553,6 +619,31 @@ PyObject* nitro_Device_GetModes(nitro_DeviceObject* self, PyObject *arg) {
     }
 
     return Py_BuildValue ( "I", ret );
+}
+
+PyObject* nitro_Device_SetRetryFunc(nitro_DeviceObject* self, PyObject *arg) {
+    CHECK_ABSTRACT();
+    
+    // clear any references in the driver before deleting func
+    Py_BEGIN_ALLOW_THREADS
+    self->nitro_device->set_retry_func(NULL);
+    Py_END_ALLOW_THREADS
+
+    if (self->retry_func) {
+        delete self->retry_func;
+        self->retry_func=NULL;
+    }
+    if (arg == Py_None) {
+       Py_RETURN_NONE; // jobs done 
+    }
+
+    self->retry_func = new PyRetryFunc(arg);
+    Py_BEGIN_ALLOW_THREADS
+    self->nitro_device->set_retry_func(self->retry_func);
+    Py_END_ALLOW_THREADS
+
+    Py_RETURN_NONE;
+
 }
 
 PyObject* nitro_Device_SetTimeout(nitro_DeviceObject* self, PyObject *arg) {
