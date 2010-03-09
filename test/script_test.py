@@ -54,3 +54,30 @@ def get_subreg_test(dev):
     " was sigsegv on some platforms "
     dev.get_subregs ( "int_term" , "many_subregs" );
 
+retry_count=0;
+def callback(dev):
+   """
+        Suppose we want to execute a retry 10 times.
+   """  
+   def retry(d, term, reg, count, exc):
+        global retry_count
+        if count < 10:
+            retry_count += 1
+            return True
+        return False
+
+   dev.set_retry_func ( retry )
+   try:
+       try:
+           dev.get(1,1)
+       except Exception, _inst:
+           if retry_count == 10: 
+               return
+   finally:
+       dev.set_retry_func(None)
+
+   # hm, must not have worked
+   print "Retry Count: ", retry_count
+   raise nitro.Exception ( 1, "Code didn't retry 10 times.", retry_count )
+
+    

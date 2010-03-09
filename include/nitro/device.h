@@ -143,10 +143,21 @@ public:
      * Having this as a class allows the user to save additional info across muliple
      * retry calls.  User is in charge of memory management for this class.  (User should
      * allocate and de-allocate it)
+     *
+     * 
      * */
     class RetryFunc {
      public:
          virtual ~RetryFunc(){}
+         /**
+          * \brief Implement this function in your callback.
+          *
+          * \param dev A reference to the device that had the error.
+          * \param term_addr Terminal address
+          * \param reg_addr Register address
+          * \param count Number of retries already performed.
+          * \param exc The Exception that was thrown on the last attempt.
+          **/
          virtual bool operator()(Device& dev, uint32 term_addr, uint32 reg_addr, uint32 count, const Exception &exc )=0;
     };
 

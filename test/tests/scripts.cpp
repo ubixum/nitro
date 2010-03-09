@@ -25,7 +25,7 @@ class ScriptTest : public CppUnit::TestFixture {
             Scripts sc;
             CPPUNIT_ASSERT_NO_THROW( sc.import ( "s", "script_test.py" ) );
             vector<string> funcs = sc.func_list("s");
-            CPPUNIT_ASSERT_EQUAL ( 8, (int) funcs.size() ); 
+            CPPUNIT_ASSERT_EQUAL ( 9, (int) funcs.size() ); 
 
             CPPUNIT_ASSERT_THROW ( sc.get_params ( "s", "non-existent func" ), Exception );
             NodeRef args;
@@ -108,6 +108,11 @@ class ScriptTest : public CppUnit::TestFixture {
 
             CPPUNIT_ASSERT_NO_THROW ( sc.exec ( "s", "get_subreg_test", args ) );
 
+            // callback test
+            dev.set_error_step(0); // makes every get a 1 status
+            dev.set_error_mode(1);
+            dev.enable_mode(Device::RETRY_ON_FAILURE);
+            CPPUNIT_ASSERT_NO_THROW ( sc.exec ( "s", "callback", args ) );
 
         }
 };
