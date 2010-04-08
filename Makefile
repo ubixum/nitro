@@ -92,7 +92,7 @@ spec: $(BINDIR)/nitro_version linux/nitro-drivers.spec
 		-e "s/XXVERSIONXX/`$(BINDIR)/nitro_version`/" > \
 		$(BUILDDIR)/nitro-drivers.spec
 
-TAG=HEAD
+TAG ?= $(shell nitro_version)
 
 tgz:
 	git archive --prefix=nitro-drivers-$(TAG)/ $(TAG) | gzip > nitro-drivers-$(TAG).tgz
