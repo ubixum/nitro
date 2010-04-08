@@ -53,6 +53,7 @@ NodeRef load_di( const std::string &path, NodeRef dst ) {
     if (!file_exists(found_path)) {
         // in this case, try additional
         // paths with the NITRO_DI_PATH var
+        bool found=false;
         char *env = getenv ( "NITRO_DI_PATH" );
         if (env) {
             std::string envpath  ( env ); // don't modify env
@@ -61,11 +62,24 @@ NodeRef load_di( const std::string &path, NodeRef dst ) {
                 std::getline(in, envpath, ':');
                 if (!in.bad()) {
                     found_path = xjoin ( envpath, path );
-                    if (file_exists(found_path)) break;
+                    if (file_exists(found_path)) {
+                        found=true;
+                        break;
+                    }
                 }
             }
 
-        } else throw Exception ( PATH_LOOKUP );
+        } 
+
+        if (!found) { 
+            // one last try for global nitro_parts install
+            found_path = xjoin ( "/usr/share/nitro_parts", path );
+            if ( file_exists ( found_path ) )  {
+                found=true;
+            }
+        } 
+        
+        if (!found) throw Exception ( PATH_LOOKUP );
     }
 
     XmlReader reader ( found_path );

@@ -4,7 +4,7 @@
 
 Name:		nitro-drivers
 Version:    XXVERSIONXX 
-Release:	2%{?dist}
+Release:	1%{?dist}
 Summary:	Nitro core USB driver
 
 Group:	    Development/Libraries
