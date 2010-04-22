@@ -37,9 +37,9 @@ endif
 
 
 
-.PHONY: all test docs INCLUDES clean udev specs tgz
+.PHONY: all test docs INCLUDES clean udev specs tgz python
 
-all: $(SOFILE) $(ARFILE) $(PROGS) INCLUDES udev
+all: $(SOFILE) $(ARFILE) $(PROGS) INCLUDES udev python
 
 test:
 	make -C test run
@@ -78,6 +78,8 @@ $(BINDIR):
 $(DOCDIR):
 	mkdir -p $(DOCDIR)
 
+python: $(SOFILE)
+	make -C python
 
 docs: $(DOCDIR) $(BINDIR)/nitro_version
 	mkdir -p $(BUILDDIR)/tmp
@@ -101,6 +103,7 @@ tgz:
 clean:
 	rm -rf src/*.o
 	rm -rf build
+	rm -rf python/build
 
 install:
 	cp -r $(BUILDDIR)$(PREFIX)/* $(PREFIX)
