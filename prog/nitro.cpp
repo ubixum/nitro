@@ -99,8 +99,8 @@ int main ( int argc, char* argv[] ) {
 		printf ( "Usage: nitro [options]\n"
 				"\tGeneric Options:\n"
 				"\t\t-h This Message\n"
-				"\t\t-V The Vendor Id [default 0x%04x]\n"
-				"\t\t-P The Product Id [default 0x%04x]\n"
+				"\t\t-V The Vendor Id or comma seperated list of VIDs [default 0x%04x].\n\t\t   Accepts wildcards such as '*','?', and '[]'.\n"
+				"\t\t-P The Product Id or comma seperated list of PIDs [default *].\n\t\t   Accepts wildcards such as '*', '?', and '[]'.\n"
                 "\t\t-S Execute shell environment after other commands complete.\n"
 				"\tReset the Firmware (Ignores all other options)\n"
 				"\t\t-R Reset The Firmware (requires path to ihx file)\n"
@@ -114,7 +114,7 @@ int main ( int argc, char* argv[] ) {
                 "\t\t-w <filename> write file data (uses file size by default, override with -n\n"
                 "\t\t-i <timeout> the timeout in milliseconds to wait for operations (default 1000).\n"
                 "\t\t-x <xmlfile> read device interface from xmlfile.  If used, causes terminal and register address to be interpreted as names strings instead of integer addresses.\n"
-                , DEFAULT_VID, DEFAULT_PID
+			 , DEFAULT_VID //, DEFAULT_PID
 				);
 		return 1;
 	}
@@ -138,14 +138,16 @@ int main ( int argc, char* argv[] ) {
     std::vector<std::vector<int> > candidates;
     char *vid_candidate, *pid_candidate;
     char vid1_str[10], pid1_str[10];
+    char *vid_cpy = (char*) malloc(100*sizeof(char));
+    strcpy(vid_cpy, vid_str);
     while(1) {
-	vid_candidate = strsep(&vid_str,",");
+	vid_candidate = strsep(&vid_cpy,",");
 	if(!vid_candidate) { break; }
 	for(unsigned int i=0; i<dev_list.size(); i++) {
 	    if(vid_candidate[0]=='0' && vid_candidate[1]=='x') {
 		vid_candidate = vid_candidate + 2;
 	    }
-	    sprintf(vid1_str, "%x", dev_list[i][0]);
+	    sprintf(vid1_str, "%04x", dev_list[i][0]);
 	    if(fnmatch(vid_candidate, vid1_str, 0) == 0) {
 		// This vid is OK, now check the pid
 		char *pid_cpy = (char*) malloc(100*sizeof(char));
@@ -156,7 +158,7 @@ int main ( int argc, char* argv[] ) {
 		    if(pid_candidate[0]=='0' && pid_candidate[1]=='x') {
 			pid_candidate = pid_candidate + 2;
 		    }
-		    sprintf(pid1_str, "%x", dev_list[i][1]);
+		    sprintf(pid1_str, "%04x", dev_list[i][1]);
 		    if(fnmatch(pid_candidate, pid1_str, 0) == 0) {
 			candidates.push_back(dev_list[i]);
 		    }
@@ -172,11 +174,11 @@ int main ( int argc, char* argv[] ) {
     } else if(candidates.size() > 1) {
 	printf("The following multiple devices matched your specification:\n");
 	for(unsigned int i=0; i<candidates.size(); i++) {
-	    printf("VID=%04x PID=%04x BUS=%04x\n", candidates[i][0], candidates[i][1], candidates[i][2]);
+	    printf("   VID=%04x  PID=%04x  BUS=%04x\n", candidates[i][0], candidates[i][1], candidates[i][2]);
 	}
 	printf("Using the first device.\n");
     } else {
-	printf("Found device VID=%04x PID=%04x BUS=%04x\n", candidates[0][0], candidates[0][1], candidates[0][2]);
+	printf("Found device VID=%04x  PID=%04x  BUS=%04x\n", candidates[0][0], candidates[0][1], candidates[0][2]);
     }
     // take the first candidate in the list
     vid = candidates[0][0];
