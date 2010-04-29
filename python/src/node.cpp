@@ -32,6 +32,8 @@ using namespace Nitro;
 
 // predef
 PyObject* nitro_Node_GetIter ( PyObject* s ); 
+PyObject* nitro_Node_AddChild(nitro_NodeObject* self, PyObject* arg);
+static int nitro_Node_SetAttr(PyObject* s, PyObject* attr, PyObject* v);
 
 // **************** new/delete *********************
 
@@ -52,24 +54,86 @@ static void nitro_Node_dealloc (nitro_NodeObject* self) {
 // ********************** init *****************************
 
 static int
-nitro_Node_init ( nitro_NodeObject* self, PyObject *args, PyObject *kwds ) {
+node_init_help ( nitro_NodeObject* self, PyObject *args, PyObject *kwds, NodeRef target_node ) {
 
   PyObject* init;
-  if (!PyArg_ParseTuple(args,"O",&init)) {
-     PyErr_SetString( PyExc_Exception, "Node(name)");
-     return -1;
+  PyObject* arg2=NULL;
+  PyObject* arg3=NULL; 
+  // one arg is a string for a node name or 
+  // a cobject node ref
+  *(self->m_node) = target_node;
+  if (!PyArg_ParseTuple(args,"O|OO",&init, &arg2, &arg3)) {
+    return -1;
   }
-
+    
   if ( PyString_Check(init) ) {
       const char* name = PyString_AsString(init);
-      *(self->m_node) = Nitro::Node::create( name );
+      target_node->set_name ( name );
   } else if ( PyCObject_Check(init) ) {
       *(self->m_node) = *(Nitro::NodeRef*)PyCObject_AsVoidPtr(init);
   } else {
       PyErr_SetObject ( PyExc_Exception, init );
+      return -1;
   }
 
-    return 0;
+  // two args is the attrs and the children nodes.
+  if (arg2 != NULL && arg3 != NULL) {
+    // ((attr,1)..), [child1, child2,..] 
+    // set the attrs
+    PyObject* iter = PyObject_GetIter(arg2);
+    PyObject* item;
+    if (NULL==iter) {
+      PyErr_SetObject ( PyExc_Exception, init ); 
+      return -1;
+    }
+    while ( (item = PyIter_Next(iter)) ) {
+       // tuple key, value
+       PyObject* key = PySequence_GetItem ( item, 0 );
+       if ( NULL == key ) {
+          PyErr_SetObject ( PyExc_Exception, item );
+          Py_DECREF(iter);
+          return -1;
+       }
+       PyObject* val = PySequence_GetItem ( item, 1 );
+       if (NULL == val) {
+          PyErr_SetObject ( PyExc_Exception, item );
+          Py_DECREF(iter);
+          return -1;
+       }
+       if (nitro_Node_SetAttr((PyObject*)self,key,val)) {
+         Py_DECREF(iter);
+         return -1;
+       }
+    }
+    Py_DECREF(iter);
+    if (PyErr_Occurred()) return -1; 
+
+
+    // ok, now the children
+    //
+    iter = PyObject_GetIter(arg3);
+    if (NULL==iter) {
+        PyErr_SetObject ( PyExc_Exception , arg2 );
+        return -1;
+    }
+
+    while ( (item = PyIter_Next(iter)) ) {
+         if (NULL==nitro_Node_AddChild ( self, item )){
+            Py_DECREF(iter);
+            return -1; 
+         }
+    }
+    Py_DECREF(iter);
+    if (PyErr_Occurred()) return -1;
+  }
+    
+  return 0;
+}
+
+static int
+nitro_Node_init ( nitro_NodeObject* self, PyObject *args, PyObject *kwds ) {
+
+    return node_init_help( self, args, kwds, Node::create("tmp") );
 }
 
 
@@ -218,6 +282,16 @@ PyObject* nitro_Node_Attr_Items(nitro_NodeObject* self) {
     }
 }
 
+PyObject* nitro_Node_reduce (nitro_NodeObject* self) {
+    // list  of attrs
+    // and of children
+    return Py_BuildValue ( "O(sNN)",
+        self->ob_type,
+        (*self->m_node)->get_name().c_str(),
+        nitro_Node_Attr_Items ( self ),
+        nitro_Node_Values ( self ) );
+}
+
 static PyMethodDef nitro_Node_Methods[] = {
     {"keys", (PyCFunction)nitro_Node_Keys, METH_NOARGS, "keys() -> list" },
     {"iterkeys", (PyCFunction)nitro_Node_IterKeys, METH_NOARGS, "iterkeys() -> key iterator" },
@@ -229,6 +303,7 @@ static PyMethodDef nitro_Node_Methods[] = {
     {"attr_values", (PyCFunction)nitro_Node_Attr_Values, METH_NOARGS, "attribute values" },
     {"attr_items", (PyCFunction)nitro_Node_Attr_Items, METH_NOARGS, "attribute items" },
     {"clone", (PyCFunction)nitro_Node_Clone, METH_NOARGS, "create clone of node" },
+    {"__reduce__", (PyCFunction)nitro_Node_reduce, METH_NOARGS, "Reduce for pickling" },
     {NULL}
 };
 
@@ -469,25 +544,7 @@ PyTypeObject nitro_NodeType = {
 
 static int
 nitro_DI_init ( nitro_DeviceInterfaceObject* self, PyObject *args, PyObject *kwds ) {
-   if ( nitro_NodeType.tp_init( (PyObject*)self, args, kwds ) < 0 ) return -1;
-
-  PyObject* init;
-  if (!PyArg_ParseTuple(args,"O",&init)) {
-     PyErr_SetString( PyExc_Exception, "DeviceInterface(name)");
-     return -1;    
-  }
-
-  if ( PyString_Check(init) ) {
-      const char* name = PyString_AsString(init);
-      try {
-      *(((nitro_NodeObject*)self)->m_node) = Nitro::DeviceInterface::create( name );
-      } catch ( const Nitro::Exception &e) {
-        NITRO_EXC(e,-1);
-      }
-  } // else it was a CObject and base node got it.
- 
-
-   return 0;
+  return node_init_help ( (nitro_NodeObject*)self, args, kwds, DeviceInterface::create("tmp") );
 }
 
 PyTypeObject nitro_DeviceInterfaceType = {
@@ -537,25 +594,8 @@ PyTypeObject nitro_DeviceInterfaceType = {
 
 static int
 nitro_Term_init ( nitro_TerminalObject* self, PyObject *args, PyObject *kwds ) {
-   if ( nitro_NodeType.tp_init( (PyObject*)self, args, kwds ) < 0 ) return -1;
 
-  PyObject* init;
-  if (!PyArg_ParseTuple(args,"O",&init)) {
-     PyErr_SetString( PyExc_Exception, "Terminal(name)");
-     return -1;    
-  }
-
-  if ( PyString_Check(init) ) {
-      const char* name = PyString_AsString(init);
-      try {
-          *(((nitro_NodeObject*)self)->m_node) = Nitro::Terminal::create( name );
-      } catch ( const Nitro::Exception &e) {
-        NITRO_EXC(e,-1);
-      }
-  } // else it was a CObject and base node got it.
- 
-
-   return 0;
+   return node_init_help ( (nitro_NodeObject*)self, args, kwds, Terminal::create("tmp") );
 }
 
 PyTypeObject nitro_TerminalType = {
@@ -605,25 +645,9 @@ PyTypeObject nitro_TerminalType = {
 
 static int
 nitro_Register_init ( nitro_RegisterObject* self, PyObject *args, PyObject *kwds ) {
-   if ( nitro_NodeType.tp_init( (PyObject*)self, args, kwds ) < 0 ) return -1;
 
-  PyObject* init;
-  if (!PyArg_ParseTuple(args,"O",&init)) {
-     PyErr_SetString( PyExc_Exception, "Register(name)");
-     return -1;    
-  }
+    return node_init_help ( (nitro_NodeObject*)self, args, kwds, Register::create("tmp") );
 
-  if ( PyString_Check(init) ) {
-      const char* name = PyString_AsString(init);
-      try {
-          *(((nitro_NodeObject*)self)->m_node) = Nitro::Register::create( name );
-      } catch ( const Nitro::Exception &e) {
-          NITRO_EXC(e,-1);
-      }
-  } // else it was a CObject and base node got it.
- 
-
-   return 0;
 }
 
 PyTypeObject nitro_RegisterType = {
@@ -673,25 +697,7 @@ PyTypeObject nitro_RegisterType = {
 
 static int
 nitro_Subregister_init ( nitro_SubregisterObject* self, PyObject *args, PyObject *kwds ) {
-   if ( nitro_NodeType.tp_init( (PyObject*)self, args, kwds ) < 0 ) return -1;
-
-  PyObject* init;
-  if (!PyArg_ParseTuple(args,"O",&init)) {
-     PyErr_SetString( PyExc_Exception, "Subregister(name)");
-     return -1;    
-  }
-
-  if ( PyString_Check(init) ) {
-      const char* name = PyString_AsString(init);
-      try {
-          *(((nitro_NodeObject*)self)->m_node) = Nitro::Subregister::create( name );
-      } catch ( const Nitro::Exception &e) {
-          NITRO_EXC(e,-1);
-      }
-  } // else it was a CObject and base node got it.
- 
-
-   return 0;
+    return node_init_help ( (nitro_NodeObject*)self, args, kwds, Subregister::create("tmp") );
 }
 
 PyTypeObject nitro_SubregisterType = {
@@ -741,25 +747,7 @@ PyTypeObject nitro_SubregisterType = {
 
 static int
 nitro_Valuemap_init( nitro_ValuemapObject* self, PyObject *args, PyObject *kwds ) {
-   if ( nitro_NodeType.tp_init( (PyObject*)self, args, kwds ) < 0 ) return -1;
-
-  PyObject* init;
-  if (!PyArg_ParseTuple(args,"O",&init)) {
-     PyErr_SetString( PyExc_Exception, "Valuemap(name)");
-     return -1;    
-  }
-
-  if ( PyString_Check(init) ) {
-      const char* name = PyString_AsString(init);
-      try {
-          *(((nitro_NodeObject*)self)->m_node) = Nitro::Valuemap::create( name );
-      } catch ( const Nitro::Exception &e) {
-          NITRO_EXC(e,-1);
-      }
-  } // else it was a CObject and base node got it.
- 
-
-   return 0;
+    return node_init_help ( (nitro_NodeObject*)self, args, kwds, Valuemap::create("tmp") );
 }
 
 PyTypeObject nitro_ValuemapType = {
