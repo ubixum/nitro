@@ -210,6 +210,7 @@ struct USBDevice::impl : public usbdev_impl_core {
         bool is_open() { return m_dev != NULL; }
         uint16 firmware_version() { check_open(); return m_ver; }
         static uint32 get_device_count ( uint32 vid, uint32 pid );
+    static std::vector<std::vector<int> > get_device_list (int vid=-1, int pid=-1);
         static std::wstring get_device_serial(uint32 vid, uint32 pid, uint32 index );
         static uint16 get_device_address (uint32, uint32, uint32 );
         uint16 get_device_address();
@@ -272,6 +273,31 @@ uint32 USBDevice::impl::get_device_count(uint32 vid, uint32 pid) {
   iter_devices(vid,pid,c);
   return c.matches;
 
+}
+
+std::vector<std::vector<int> > USBDevice::impl::get_device_list(int vid, int pid) {
+  check_init();
+  libusb_device **list;
+  int devices = libusb_get_device_list( NULL, &list );
+  usb_debug ( "usb devices to check: " << devices );
+  std::vector<std::vector<int> > vec;
+  for (int i=0;i<devices;++i) {
+     libusb_device_descriptor dscr;
+     if (libusb_get_device_descriptor( list[i], &dscr )) {
+        libusb_free_device_list ( list, 1 );
+        throw Exception ( USB_PROTO, "Error reading device information." );
+     }
+     if ((vid<0 || dscr.idVendor  == (uint32) vid) &&
+	 (pid<0 || dscr.idProduct == (uint32) pid)) {
+	 std::vector<int> element(3);
+	 element[0] = dscr.idVendor;
+	 element[1] = dscr.idProduct;
+	 element[2] = get_addr(list[i]);
+	 vec.push_back(element);
+     }
+  }
+  libusb_free_device_list(list,1);
+  return vec;
 }
 
 #define CHECK_ALREADY_OPENED() if (m_dev) throw Exception ( USB_PROTO, "Device Already Opened." )

@@ -57,6 +57,7 @@ struct USBDevice::impl : public usbdev_impl_core {
         uint16 firmware_version();
 		bool is_open() { return m_dev != NULL; }
         static void get_device_list(uint32 vid, uint32 pid, DeviceList& list) ;
+        static std::vector<std::vector<int> > get_device_list(int vid=-1, int pid=-1);
         static uint32 get_device_count ( uint32 vid, uint32 pid );
         static std::wstring get_device_serial(uint32 vid, uint32 pid, uint32 index );
         static uint16 get_device_address(uint32,uint32,uint32);
@@ -91,6 +92,35 @@ uint32 USBDevice::impl::get_device_count(uint32 vid, uint32 pid) {
   impl::get_device_list(vid,pid,list);
   return list.size();
 
+}
+
+std::vector<std::vector<int> > USBDevice::impl::get_device_list(int vid, int pid) {
+
+  check_init();
+
+  struct usb_bus *bus;
+  struct usb_device *dev;
+
+  std::vector<std::vector<int> > vec;
+  // these calls will insure finding the device if 
+  // the number of connected devices has changed
+  // since the last time the call was made.
+  usb_find_busses();
+  usb_find_devices();
+
+  for(bus = usb_get_busses(); bus; bus = bus->next) {
+     for(dev = bus->devices; dev; dev = dev->next) {
+	 if ((vid<0 || dev->descriptor.idVendor  == (uint32) vid) &&
+	     (pid<0 || dev->descriptor.idProduct == (uint32) pid)) {
+	     std::vector<int> element(3);
+	     element[0] = dev->descriptor.idVendor;
+	     element[1] = dev->descriptor.idProduct;
+	     element[2] = get_addr(dev);
+	     vec.push_back(element);
+	 }
+     }
+  }
+  return vec;
 }
 
 void USBDevice::impl::open(uint32 index, bool override_version) {

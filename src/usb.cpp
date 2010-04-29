@@ -231,6 +231,12 @@ uint32 USBDevice::get_device_count(uint32 vid, uint32 pid) {
 
 }
 
+std::vector<std::vector<int> > USBDevice::get_device_list(int vid, int pid) {
+
+  return impl::get_device_list(vid, pid);
+
+}
+
 void USBDevice::open(uint32 index, bool override_version) {
 
   m_impl->open(index,override_version);

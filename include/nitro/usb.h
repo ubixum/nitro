@@ -79,6 +79,19 @@ public:
      **/
     static std::wstring get_device_serial(uint32 vid, uint32 pid, uint32 index ) ;
 
+    /**
+     *  \brief Return a list of all connected USB devices.
+     *  Queries the USB bus for all connected devicesa vector of the
+     *  all connected usb devices. This is a static method and does
+     *  not require an open device before calling.
+     * \param vid Vendor Id filter. Only devices with this vendor ID are returned. If -1, matches any vendor ID.
+     * \param pid Product Id filter. Only devices with this product ID are returned. If -1, matches any product ID.
+     *  @return A vector of all connected usb devices.  The elements
+     *  of the vector are vectors whose first element is the vendor ID and
+     *  second element is the product ID and third element is the bus address.
+     *  @throw Exception
+     **/
+    static std::vector<std::vector<int> > get_device_list(int vid=-1, int pid=-1);
 
     /**
      * \brief Retrieve the device serial

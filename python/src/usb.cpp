@@ -43,6 +43,7 @@ PyMethodDef nitro_USBDevice_methods[] = {
     {"get_pid", (PyCFunction)nitro_USBDevice_GetPid, METH_VARARGS, "get_pid() -> The Product Id" }, 
     {"get_device_serial", (PyCFunction)nitro_USBDevice_GetDeviceSerial, METH_STATIC|METH_VARARGS, "Wrapped C++ API member function" },
     {"get_device_count", (PyCFunction)nitro_USBDevice_GetDeviceCount, METH_STATIC|METH_VARARGS, "Wrapped C++ API member function" },
+    {"get_device_list", (PyCFunction)nitro_USBDevice_GetDeviceList, METH_STATIC|METH_VARARGS, "Wrapped C++ API member function" },
     {"get_device_address", (PyCFunction)nitro_USBDevice_GetDeviceAddress, METH_STATIC|METH_VARARGS, "get_device_address(vid,pid,index) -> Static method for retrieving device address." },
     {"get_address", (PyCFunction)nitro_USBDevice_GetAddress, METH_NOARGS, "get_device_address() -> Member method to retrieve device address." },
     {"is_open", (PyCFunction)nitro_USBDevice_IsOpen, METH_NOARGS, "Wrapped C++ API member function" },
@@ -283,6 +284,28 @@ PyObject* nitro_USBDevice_GetDeviceCount(nitro_USBDeviceObject* self, PyObject* 
         NITRO_EXC(e,NULL);
     }
 
+}
+
+PyObject* nitro_USBDevice_GetDeviceList(nitro_USBDeviceObject* self, PyObject* args) {
+    PyObject *list, *element;
+    int vid=-1,pid=-1;
+    if (!PyArg_ParseTuple( args, "|II", &vid, &pid )) {
+        return NULL;
+    }
+    try {
+       std::vector<std::vector<int> > vec =USBDevice::get_device_list(vid,pid);
+       list = PyList_New(vec.size());
+       for(unsigned int i=0; i<vec.size(); i++) {
+	   element = PyTuple_New(vec[i].size());
+	   for(unsigned int j=0; j<vec[i].size(); j++) {
+	       PyTuple_SET_ITEM(element, j, PyInt_FromLong(vec[i][j]));
+	   }
+	   PyList_SET_ITEM(list, i, element);
+       }
+       return list;
+    } catch ( const Exception &e) {
+        NITRO_EXC(e,NULL);
+    }
 }
 
 #define RETURN_NITRO_SERIAL(s) \
