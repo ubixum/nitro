@@ -35,6 +35,10 @@ struct USBDevice::impl : public usbdev_impl_core {
         static void check_init();
 
         libusb_device_handle* m_dev;
+        uint8 m_read_ep;
+        uint8 m_write_ep;
+        uint8 m_altsetting;
+
         void config_device();
         void check_open() const;
 
@@ -352,6 +356,11 @@ void USBDevice::impl::check_open() const {
 
 
 void USBDevice::impl::config_device() {
+  libusb_device *dev;
+  libusb_config_descriptor *config;
+  const libusb_interface *iface;
+  const libusb_interface_descriptor *idesc;
+  const libusb_endpoint_descriptor *epdesc;
 
   if (libusb_set_configuration(m_dev,1)) {
     libusb_close(m_dev);
@@ -359,18 +368,57 @@ void USBDevice::impl::config_device() {
     throw Exception(USB_PROTO, "Failed to set device configuration."); //, usb_strerror());
   }
 	  
-  // claim interface
+  // Find the altsetting and ep addresses
+  dev = libusb_get_device(m_dev);
+  if(libusb_get_active_config_descriptor(dev, &config)) {
+    libusb_close(m_dev);
+    m_dev=NULL;
+    throw Exception(USB_PROTO, "Failed to get active device configuration.");
+  }
+  m_read_ep = m_write_ep = 0;
+  for(unsigned char i=0; i < config->bNumInterfaces; i++) {
+    iface = config->interface + i;
+    for(int j=0; j < iface->num_altsetting; j++) {
+      idesc = iface->altsetting + j;
+      usb_debug(" Interface=" << (int) i << " altsetting=" << j << " num_ep=" << (int) idesc->bNumEndpoints);
+      if(idesc->bNumEndpoints == 2) {
+	for(unsigned char k=0; k<idesc->bNumEndpoints; k++) {
+	  epdesc = idesc->endpoint + k;
+	  usb_debug("  EP addr = " << (int) epdesc->bEndpointAddress);
+	  if(epdesc->bEndpointAddress & 0x80) {
+	    m_read_ep = epdesc->bEndpointAddress;
+	    usb_debug(" setting m_read_ep=" << (int) epdesc->bEndpointAddress);
+	  } else {
+	    m_write_ep = epdesc->bEndpointAddress;
+	    usb_debug(" setting m_write_ep=" << (int) epdesc->bEndpointAddress);
+	  }
+	  m_altsetting = idesc->bAlternateSetting;
+	}
+      }
+    }
+  }
+  libusb_free_config_descriptor(config);
+  usb_debug("m_read_ep="<< (int) m_read_ep << " m_write_ep="<< (int) m_write_ep << " altsetting=" << (int) m_altsetting);
 
+  if(m_read_ep == 0 || m_write_ep==0) {
+    libusb_close(m_dev);
+    m_dev=NULL;
+    throw Exception(USB_PROTO, "Failed to find the read and write endpoint.");
+  }
+
+  // claim interface
   if (libusb_claim_interface(m_dev,0)) {
 	  libusb_close(m_dev);
       m_dev=NULL;
       throw Exception(USB_PROTO, "Failed to claim device interface."); //, usb_strerror());
   }
 
-  if (libusb_set_interface_alt_setting(m_dev,0,1) ) {
-	  libusb_close(m_dev);
-	  m_dev=NULL;
-	  throw Exception(USB_PROTO, "Failed to set interface alt setting.");
+  if(m_altsetting) {
+    if (libusb_set_interface_alt_setting(m_dev,0,m_altsetting) ) {
+  	  libusb_close(m_dev);
+  	  m_dev=NULL;
+  	  throw Exception(USB_PROTO, "Failed to set interface alt setting.");
+    }
   }
   usb_debug ( "Device configured." );
 
@@ -383,6 +431,7 @@ int USBDevice::impl::control_transfer ( NITRO_DIR d, NITRO_VC c, uint16 value, u
 int USBDevice::impl::bulk_transfer ( NITRO_DIR d, uint8 ep, uint8* data, size_t length, uint32 timeout ) {
    check_open();
    int transferred=0;
+   ep = (ep == READ_EP) ? m_read_ep : m_write_ep;
    int rv=libusb_bulk_transfer ( m_dev, ep, data, length, &transferred, timeout );
    if (rv) {
     usb_debug ( "bulk transfer fail: " << rv );
