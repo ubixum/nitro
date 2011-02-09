@@ -56,7 +56,7 @@ INCLUDES: $(INCDIR) $(DLLHEADERS) include/nitro.h
 	  cp $(HEADER) $(INCDIR)/nitro/;  )
 	cp include/nitro.h $(INCDIR)
 	cp include/nitro/versionno.h $(INCDIR)/nitro/
-	
+
 udev: $(BUILDDIR)/etc/udev/rules.d/60-ubixum.rules
 
 $(BUILDDIR)/etc/udev/rules.d/60-ubixum.rules: linux/*.rules
@@ -65,7 +65,7 @@ $(BUILDDIR)/etc/udev/rules.d/60-ubixum.rules: linux/*.rules
 
 
 $(PROGS): $(BINDIR) $(ARFILE) $(PROG_FILES) include/nitro.h
-	g++ $(CPPFLAGS) -o $@ prog/`basename $@`.cpp -Iinclude -L$(LLIBDIR) -lnitro
+	g++ $(CPPFLAGS) -o $@ prog/`basename $@`.cpp -Iinclude -L$(LLIBDIR) -lnitro $(PYLIB)
 
 $(LLIBDIR):
 	mkdir -p $(LLIBDIR)
