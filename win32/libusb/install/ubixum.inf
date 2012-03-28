@@ -119,17 +119,13 @@ ServiceBinary  = %12%\libusb0.sys
 ;--------------------------------------------------------------------------
 
 [Devices]
-"Nitrogen (Hydro) Data Acquisition Board"=LIBUSB_DEV, USB\VID_1fe1&PID_4830
-"Nitrogen (Hydro) Data Acquisition Board (unconfigured)"=LIBUSB_DEV, USB\VID_04b4&PID_8613
+"UXN1230 Data Acquisition Board"=LIBUSB_DEV, USB\VID_1fe1&PID_1230
 
 [Devices.NT]
-"Nitrogen (Hydro) Data Acquisition Board"=LIBUSB_DEV, USB\VID_1fe1&PID_4830
-"Nitrogen (Hydro) Data Acquisition Board (unconfigured)"=LIBUSB_DEV, USB\VID_04b4&PID_8613
+"UXN1230 Data Acquisition Board"=LIBUSB_DEV, USB\VID_1fe1&PID_1230
 
 [Devices.NTAMD64]
-"Nitrogen (Hydro) Data Acquisition Board"=LIBUSB_DEV, USB\VID_1fe1&PID_4830
-"Nitrogen (Hydro) Data Acquisition Board (unconfigured)"=LIBUSB_DEV, USB\VID_04b4&PID_8613
-
+"UXN1230 Data Acquisition Board"=LIBUSB_DEV, USB\VID_1fe1&PID_1230
 
 ;--------------------------------------------------------------------------
 ; Strings
