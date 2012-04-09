@@ -375,7 +375,7 @@ void USBDevice::impl::config_device() {
     m_dev=NULL;
     throw Exception(USB_PROTO, "Failed to get active device configuration.");
   }
-  m_read_ep = m_write_ep = 0;
+  m_read_ep = m_write_ep = m_altsetting = 0;
   for(unsigned char i=0; i < config->bNumInterfaces; i++) {
     iface = config->interface + i;
     for(int j=0; j < iface->num_altsetting; j++) {
@@ -400,11 +400,11 @@ void USBDevice::impl::config_device() {
   libusb_free_config_descriptor(config);
   usb_debug("m_read_ep="<< (int) m_read_ep << " m_write_ep="<< (int) m_write_ep << " altsetting=" << (int) m_altsetting);
 
-  if(m_read_ep == 0 || m_write_ep==0) {
-    libusb_close(m_dev);
-    m_dev=NULL;
-    throw Exception(USB_PROTO, "Failed to find the read and write endpoint.");
-  }
+  //if(m_read_ep == 0 || m_write_ep==0) {
+  //  libusb_close(m_dev);
+  //  m_dev=NULL;
+  //  throw Exception(USB_PROTO, "Failed to find the read and write endpoint.");
+  //}
 
   // claim interface
   if (libusb_claim_interface(m_dev,0)) {
@@ -431,7 +431,15 @@ int USBDevice::impl::control_transfer ( NITRO_DIR d, NITRO_VC c, uint16 value, u
 int USBDevice::impl::bulk_transfer ( NITRO_DIR d, uint8 ep, uint8* data, size_t length, uint32 timeout ) {
    check_open();
    int transferred=0;
-   ep = (ep == READ_EP) ? m_read_ep : m_write_ep;
+   if(ep == READ_EP) {
+     if(m_read_ep) {
+       ep = m_read_ep;
+     }
+   } else {
+     if(m_write_ep) {
+       ep = m_write_ep;
+     }
+   }
    int rv=libusb_bulk_transfer ( m_dev, ep, data, length, &transferred, timeout );
    if (rv) {
     usb_debug ( "bulk transfer fail: " << rv );
