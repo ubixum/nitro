@@ -22,13 +22,13 @@
 #include <cstring>
 #include <iostream>
 #include <ctime>
+#include <unistd.h>
 
 
 #include <vector>
 
 #include <nitro/usb.h>
 #include <nitro/error.h>
-
 #include "vendor_commands.h"
 
 #include "ihx.h"
@@ -111,14 +111,14 @@ struct usbdev_impl_core {
    void rdwr_setup (uint8 command, size_t length, uint16 terminal_addr, uint32 reg_addr, uint32 timeout) {
         // send usb read command
         if ( (firmware_version() >> 8) < 3) {
-            rdwr_v2 c = { command, length };
+	  rdwr_v2 c = { command, (uint32) length };
             assert (sizeof(c)==5);
             int ret=control_transfer( NITRO_OUT, VC_HI_RDWR, terminal_addr, reg_addr, reinterpret_cast<uint8*>(&c), sizeof(c),  timeout);
             if (ret != sizeof(c)){ 
                 throw Exception ( USB_COMM, "Unable to initiate rdwr process on device.", ret);//, usb_strerror() );
             }
         } else {
-            rdwr_data_header c = { command, terminal_addr, reg_addr, length };
+	  rdwr_data_header c = { command, terminal_addr, reg_addr, (uint32) length };
         	assert (sizeof(c)==11);
             int ret=control_transfer( NITRO_OUT, VC_HI_RDWR, 0, 0, reinterpret_cast<uint8*>(&c), sizeof(c),  timeout);
             if (ret != sizeof(c)){ 
@@ -190,6 +190,11 @@ uint32 USBDevice::get_pid() {
 }
 
 void USBDevice::load_firmware(const char* bytes,size_t length) {
+  if ( strncmp(bytes, "CY", 2)==0) {
+    // check if this is fx3
+    load_fx3_firmware(bytes, length);
+    return;
+  }
 
     IhxFile ihx = parse_ihx ( bytes, length );
 
@@ -346,6 +351,7 @@ void USBDevice::_write( uint32 terminal_addr, uint32 reg_addr, const uint8* data
     m_impl->rdwr_setup(COMMAND_WRITE, length, terminal_addr, reg_addr, timeout);
 	usb_debug ( "Write process initialized." );
 
+	//	usleep(1000);
     m_impl->rdwr_data( NITRO_OUT, WRITE_EP, const_cast<uint8*>(data), length, timeout );
 
     if ((m_impl->firmware_version() >> 8) < 2) {
@@ -443,6 +449,89 @@ void USBDevice::open(const std::string& serial) {
 
 void USBDevice::open(const std::wstring& serial) {
    m_impl->open(serial);
+}
+
+
+
+
+
+size_t USBDevice::write_fx3_ram(uint32 addr, const uint8* data, size_t length, unsigned int timeout ) {
+  size_t transferred = 0;
+  uint32 addr1;
+  // try 4096 bytes at a time.
+  while ( transferred < length ) {
+    int cur_transfer_size = length-transferred > 4096 ? 4096 : length-transferred;
+    addr1 = addr + transferred;
+    int ret = m_impl->control_transfer ( NITRO_OUT, VC_RDWR_RAM, addr1 & 0xFFFF, addr1 >> 16, const_cast<uint8*>(data+transferred), cur_transfer_size, timeout );
+    if (ret>0) {
+      transferred += cur_transfer_size;
+      usb_debug ( "Transfered " << cur_transfer_size << " to device." );
+    } else {
+      throw Exception ( USB_COMM, "Failed to transfer bytes to usb device memory.", ret ); //, usb_strerror() );
+    }
+  }
+  return length;
+}
+
+
+void USBDevice::load_fx3_firmware(const char* bytes, size_t length) {
+  uint8 *buf = (uint8 *) bytes;
+  uint32 dlen, address, program_entry;
+  int r;
+
+  usb_debug("Loading firmware FX3**************");
+
+  /* Check first 2 bytes, must be equal to 'CY'	*/
+  if ( strncmp((char *) buf, "CY", 2) ) {
+    throw Exception ( USB_FIRMWARE, "Image does not have 'CY' at start. Aborting.", -2);
+  }
+  buf += 2; // advance pointer
+
+  /* Read 1 byte. bImageCTL	*/
+  if ( buf[0] & 0x01 ) {
+    throw Exception ( USB_FIRMWARE, "Image does not contain executable code.", -3);
+  }
+  buf += 1;
+
+  /* Read 1 byte. bImageType	*/
+  if ( !(buf[0] == 0xB0) ) {
+    throw Exception (USB_FIRMWARE, "Not a normal FW binary with checksum", -4);
+  }
+  buf += 1;
+
+  while (1) {
+    /* Read Length of section 1,2,3, ...	*/
+    dlen = *((uint32 *) buf);
+    buf += 4;
+    /* Read Address of section 1,2,3,...	*/
+    address = *((uint32 *)buf);   
+    buf += 4;
+    if ( dlen != 0 ) {
+      /* Write data bytes */
+      write_fx3_ram(address, (uint8 *) buf, dlen*4, 1000);
+      buf += dlen*4;
+
+//      for ( j = 0; j < len/4; ++j )
+//	checksum += pint[j];
+
+    } else {
+      program_entry = address;
+      break;
+    }
+  }
+//  /* Read checksum	*/
+//  file_checksum = *((uint32 *)buf);
+//  if ( *pdbuf != checksum ) {
+//    printf("Error in checksum\n");
+//    return -5;
+//  }
+  sleep(1);
+  // write the program entry point
+  r = m_impl->control_transfer(NITRO_OUT, VC_RDWR_RAM, (program_entry & 0x0000ffff ) , program_entry >> 16, NULL, 0, 1000);
+  if ( r ) {
+    throw Exception (USB_COMM, "Error in control_transfer", r);
+  }
+  m_impl->close();
 }
 
 } // end namespace

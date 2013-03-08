@@ -26,7 +26,7 @@ namespace Nitro {
  * \brief Nitrogen USB %Device
  **/
 class DLL_API USBDevice : public Device {
-private:
+protected:
    struct impl;
    impl* m_impl;
 protected:
@@ -221,7 +221,19 @@ public:
      **/
     void reset();
         
-};
+  size_t write_fx3_ram(uint32 addr, const uint8* data, size_t length, unsigned int timeout );
 
+    /**
+     * This call resets the device and loads new firmware.  The device will
+     * automatically re-enumerate.  The USBDevice is no longer valid and close
+     * is automatically called.  It is OK to call open again but the firmware
+     * and OS takes at least a few seconds to finish the enumeration process.
+     * 
+     * @param bytes Firmware Intel hex file (ihx file contents, not the path).
+     * @param length Length of bytes.
+     * @throw Exception
+     **/
+    void load_fx3_firmware( const char *bytes, size_t length );
+};
 } 
 #endif
