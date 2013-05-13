@@ -37,7 +37,7 @@
 #include "hr_time.h"
 
 #ifdef DEBUG_USB
-#define usb_debug(d) (std::cout << d << std::endl)
+#define usb_debug(d) (std::cout << __FILE__ << ':' << __LINE__ << ' ' << d << std::endl)
 #else
 #define usb_debug(d)
 #endif
