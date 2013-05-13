@@ -88,6 +88,7 @@ class MemoryDevice : public Nitro::Device {
 
     public:
        MemoryDevice() : m_err_mode(false), m_err_step(1), m_cur_step(0), status(0) {} 
+       ~MemoryDevice() throw () {}
        void clear() { m_data.clear(); m_err_mode=false; }
        void debug ( ) {
          std::cout << "****" << std::endl;
