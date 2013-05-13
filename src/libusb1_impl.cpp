@@ -440,7 +440,16 @@ int USBDevice::impl::bulk_transfer ( NITRO_DIR d, uint8 ep, uint8* data, size_t 
        ep = m_write_ep;
      }
    }
+   #ifndef WIN32
+   // NOTE tmp workaround linux kernel bug
+   // failing to submit urbs of larger sizes 
+   // errno 12
+   const int linux_bug_max = 1024*1024*10;
+   int rv=libusb_bulk_transfer ( m_dev, ep, data, length > linux_bug_max ? linux_bug_max : length, 
+        &transferred, timeout );
+   #else
    int rv=libusb_bulk_transfer ( m_dev, ep, data, length, &transferred, timeout );
+    #endif
    for(int i=0;i<length&&i<32; i++) {
      usb_debug(i << ": " << (int) data[i]);
    }
