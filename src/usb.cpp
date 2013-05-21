@@ -120,7 +120,9 @@ struct usbdev_impl_core {
         } else {
 	  rdwr_data_header c = { command, terminal_addr, reg_addr, (uint32) length };
         	assert (sizeof(c)==11);
-            int ret=control_transfer( NITRO_OUT, VC_HI_RDWR, 0, 0, reinterpret_cast<uint8*>(&c), sizeof(c),  timeout);
+            // NOTE length will be truncated to 16 bits, but for 
+            // purposes of fx3 we only need if it's divisible by 4.
+            int ret=control_transfer( NITRO_OUT, VC_HI_RDWR, terminal_addr, length, reinterpret_cast<uint8*>(&c), sizeof(c),  timeout);
             if (ret != sizeof(c)){ 
                 throw Exception ( USB_COMM, "Unable to initiate rdwr process on device.", ret);//, usb_strerror() );
             }
