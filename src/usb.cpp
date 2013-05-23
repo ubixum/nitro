@@ -22,8 +22,6 @@
 #include <cstring>
 #include <iostream>
 #include <ctime>
-#include <unistd.h>
-
 
 #include <vector>
 
@@ -527,7 +525,7 @@ void USBDevice::load_fx3_firmware(const char* bytes, size_t length) {
 //    printf("Error in checksum\n");
 //    return -5;
 //  }
-  sleep(1);
+  nitro_sleep(1e6); // 1 second
   // write the program entry point
   r = m_impl->control_transfer(NITRO_OUT, VC_RDWR_RAM, (program_entry & 0x0000ffff ) , program_entry >> 16, NULL, 0, 1000);
   if ( r ) {
