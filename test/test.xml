@@ -84,6 +84,24 @@
  
     </terminal>
 
+    <terminal 
+        name="big_term"
+        regDataWidth="16"
+        regAddrWidth="16"
+        endian="big"
+        >
+        <register name="big">
+            <type>int</type>
+            <mode>write</mode>
+            <width>16</width>
+        </register>
+        <register name="little" endian="little">
+            <type>int</type>
+            <mode>write</mode>
+            <width>32</width>
+        </register>
+    </terminal>
+
     <include src="testinclude.xml">
         <termoverlay name="include_term"
                      addr="76" />

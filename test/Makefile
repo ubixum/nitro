@@ -6,10 +6,10 @@ LDFLAGS=`pkg-config --libs cppunit` -L../build/usr/lib/ -lnitro
 TESTS=tests/node.o tests/error.o tests/types.o tests/xml.o tests/device.o tests/userdevice.o tests/scripts.o
 
 run: test userdevice.so
-	LD_LIBRARY_PATH=../build/usr/lib ./test
+	LD_LIBRARY_PATH=../build/usr/lib64 ./test
 
 mem: test
-	LD_LIBRARY_PATH=../build/usr/lib valgrind --leak-check=full --show-reachable=yes $(SUPP) ./test
+	LD_LIBRARY_PATH=../build/usr/lib64 valgrind --leak-check=full --show-reachable=yes $(SUPP) ./test
 
 test: $(TESTS) test.o
 	g++ -o test test.o $(TESTS) $(LDFLAGS)

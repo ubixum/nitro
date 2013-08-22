@@ -212,7 +212,11 @@ def printVerilogModule(ep, module, filename):
                 n = w
                 i = w
                 while(i>=0):
-                    f.write("      " + str(i+reg.addr+(array*(w+1))) + ": " + reg.name);
+                    curAddr = i
+                    arrayOffset = reg.addr+array*(w+1)
+                    if ep.endian=='big':
+                        curAddr = w-i
+                    f.write("      " + str(curAddr+arrayOffset) + ": " + reg.name);
                     if(reg.width > 1 or reg.array > 1):
                         f.write("[")
                         if(i==n):
@@ -253,7 +257,11 @@ def printVerilogModule(ep, module, filename):
             n = w
             i = w
             while(i>=0):
-                f.write("    " + str(i+reg.addr+(array*(w+1))) + ": datao <= ")
+                curAddr = i
+                arrayOffset = reg.addr+array*(w+1)
+                if ep.endian=='big':
+                    curAddr = w-i
+                f.write("    " + str(curAddr+arrayOffset) + ": datao <= ")
                 if((reg.width > 1) or (reg.array > 1)):
                     if(i==n and ep.regDataWidth-(reg.width-ep.regDataWidth*i) != 0):
                         f.write("{ %d'b0, %s[%d:%d] }" % (ep.regDataWidth-(reg.width-ep.regDataWidth*i), reg.name, reg.width-1+(array*reg.width), ep.regDataWidth*i+(array*reg.width), ))

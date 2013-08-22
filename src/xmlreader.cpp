@@ -251,6 +251,9 @@ void handle_register ( NodeRef direg, DOMNode *reg ) {
     if (has_attr(reg,"addr")) {
        direg->set_attr("addr", get_attr(reg,"addr",UINT_DATA));
     }
+    if (has_attr(reg,"endian")) {
+       direg->set_attr("endian", get_attr(reg,"endian", STR_DATA ));
+    }
     for (DOMNode *regchild = reg->getFirstChild(); NULL != regchild; regchild = regchild->getNextSibling() ) {
           string nodename = to_string ( regchild->getNodeName() );
           if ( nodename == "type" ) {
@@ -311,6 +314,9 @@ void handle_terminal ( NodeRef di, DOMNode *term ) {
     debug("  <terminal name=\"" << diterm->get_name() );
     diterm->set_attr ( "regDataWidth", get_attr(term, "regDataWidth", UINT_DATA ) );
     diterm->set_attr ( "regAddrWidth", get_attr(term, "regAddrWidth", UINT_DATA ) );
+    if (has_attr(term,"endian")) {
+      diterm->set_attr("endian", get_attr(term, "endian", STR_DATA ) );
+    }
     if (has_attr(term,"addr")) {
       diterm->set_attr("addr", get_attr(term, "addr", UINT_DATA ));
     }

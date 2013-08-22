@@ -83,6 +83,9 @@ void XmlWriter::write(const NodeRef& node) {
         out << "      regAddrWidth=\"" << term->get_attr ( "regAddrWidth" ) << '"' << endl;
         out << "      regDataWidth=\"" << term->get_attr ( "regDataWidth" ) << '"' << endl;
         out << "      addr=\"" << term->get_attr("addr") << '"' << endl;
+        if ( term->has_attr("endian") ) {
+            out << "      endian=\"" << term->get_attr("endian") << '"' << endl;
+        }
         if ( term->has_attr("version") ) {
             out << "      version=\"" << term->get_attr("version") << '"' << endl;
         }
@@ -94,6 +97,9 @@ void XmlWriter::write(const NodeRef& node) {
            NodeRef reg = *reg_itr;
            out << "    <register" << endl;
            out << "       name=\"" << reg->get_name() << '"' << endl;
+           if (reg->has_attr("endian")) {
+             out << "       endian=\"" << reg->get_attr("endian") << '"' << endl;
+           }
            out << "       addr=\"" << reg->get_attr("addr") << "\">" << endl;
            COMMENT ( "      ", reg );
            out << "       <type>" << reg->get_attr("type") << "</type>" << endl;

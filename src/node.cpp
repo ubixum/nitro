@@ -426,6 +426,10 @@ void DeviceInterface::add_child ( const NodeRef& node ) {
         node->set_attr("comment", "");
     }
 
+    if ( !node->has_attr("endian") ) {
+        node->set_attr("endian", "little");
+    }
+
     Node::add_child ( node );
 }
 
@@ -435,6 +439,8 @@ NodeRef Terminal::create ( const std::string& name ) {
     node_debug ( "Create Terminal: " << name );
     return NodeRef ( new Terminal ( name ) );
 }
+
+
 
 
 void Terminal::add_child ( const NodeRef& node ) {
@@ -472,6 +478,10 @@ void Terminal::add_child ( const NodeRef& node ) {
     // register addresses are the width of the terminal by default. 
     if ( !node->has_attr("width") ) {
         node->set_attr ( "width" , get_attr ( "regDataWidth" ) );
+    }
+    // same with endian
+    if ( !node->has_attr("endian" ) ) {
+        node->set_attr ( "endian", has_attr("endian")?get_attr ( "endian" ):"little" );
     }
 
     // leaves init out when subregisters present

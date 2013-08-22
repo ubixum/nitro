@@ -37,6 +37,7 @@
       <xs:attribute name="regDataWidth" type="xs:positiveInteger" use="required"/>
       <xs:attribute name="regAddrWidth" type="xs:nonNegativeInteger" use="required"/>
       <xs:attribute name="version" type="xs:string" use="optional" />
+      <xs:attribute name="endian" type="endianType" use="optional" />
     </xs:complexType>
   </xs:element>
   
@@ -101,6 +102,7 @@
 
 
       <xs:attributeGroup ref="nodeAttributes"/>
+      <xs:attribute name="endian" type="endianType" use="optional" />
     </xs:complexType>
   </xs:element>
 
@@ -138,6 +140,14 @@
       </xs:restriction>
     </xs:simpleType>
   </xs:element>
+
+  <xs:simpleType name="endianType">
+    <xs:restriction base="xs:string">
+        <xs:enumeration value="little" />
+        <xs:enumeration value="big" />
+        <xs:whiteSpace value="collapse" />
+    </xs:restriction>
+  </xs:simpleType>
   
   <xs:element name="type">
     <xs:simpleType>

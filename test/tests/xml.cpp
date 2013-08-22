@@ -101,6 +101,18 @@ class XmlTest : public CppUnit::TestFixture {
             CPPUNIT_ASSERT_EQUAL ( 77, (int) tree->get_child ( "include_term1")->get_attr ( "addr" ) );
             CPPUNIT_ASSERT_EQUAL ( 1, (int) tree->get_child("include_term1")->get_child("reg_renamed")->get_attr("addr") );
             CPPUNIT_ASSERT_NO_THROW ( tree->get_child ("include_term1" )->get_child ("new_register") );
+
+            // endian
+            CPPUNIT_ASSERT_NO_THROW ( tree->get_child ( "big_term" ) );
+            NodeRef bt = tree->get_child("big_term");
+            CPPUNIT_ASSERT_EQUAL ( string("big"), (string) bt->get_attr( "endian" ) );  
+            CPPUNIT_ASSERT_EQUAL ( string("little"), (string) tree->get_child("term2")->get_attr("endian") );
+            CPPUNIT_ASSERT_NO_THROW ( bt->get_child( "big" ) ); 
+            CPPUNIT_ASSERT_NO_THROW ( bt->get_child( "big" )->get_attr("endian") ); 
+            CPPUNIT_ASSERT_EQUAL ( string("big"), (string) bt->get_child("big")->get_attr("endian") );
+            CPPUNIT_ASSERT_NO_THROW ( bt->get_child( "little" ) ); 
+            CPPUNIT_ASSERT_NO_THROW ( bt->get_child( "little" )->get_attr("endian") ); 
+            CPPUNIT_ASSERT_EQUAL ( string("little"), (string) bt->get_child("little")->get_attr("endian") );
         }
 
         void testTwice() {
