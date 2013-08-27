@@ -80,6 +80,7 @@ PyObject* nitro_XmlReader_Read ( nitro_XmlReaderObject* self, PyObject* node ) {
 
 static PyMethodDef nitro_XmlReader_Methods[] = {
     {"read", (PyCFunction)nitro_XmlReader_Read, METH_O, "read(Node)" },
+    { NULL }
 };
 
 
@@ -186,6 +187,7 @@ PyObject* nitro_XmlWriter_Write ( nitro_XmlWriterObject* self, PyObject* node ) 
 
 static PyMethodDef nitro_XmlWriter_Methods[] = {
     {"write", (PyCFunction)nitro_XmlWriter_Write, METH_O, "write(Node)" },
+    { NULL }
 };
 
 
