@@ -111,6 +111,13 @@ def printVerilogModule(ep, module, filename):
                     f.write("["+str(subreg.width-1)+":0] ")
                 f.write("%s,\n" % subreg.vlog_name )
 
+            if(reg.mode != "read"):
+                f.write("  output reg ");
+                
+                if(reg.width > 1 or reg.array > 1):
+                    f.write("[" + str(reg.array*reg.width-1) + ":0] ");
+                f.write(reg.name + ",\n");
+
         else:
             if(reg.mode == "read"):
                 f.write("  input      ");
@@ -129,12 +136,15 @@ def printVerilogModule(ep, module, filename):
     for reg in ep.values():
        if reg.num_children()>0:
             if reg.mode == 'write':
-                f.write("reg [%d:0] %s;\n" % ( reg.width-1, reg.name ))
+                #f.write("reg [%d:0] %s;\n" % ( reg.width-1, reg.name ))
                 for subreg in reg.values():
-                    f.write("assign %s = %s[" % ( subreg.vlog_name , reg.name ) )
-                    if subreg.width>1:
-                        f.write("%d:" % (subreg.addr+subreg.width-1))
-                    f.write("%d];\n" % ( subreg.addr))
+                    f.write("assign %s = %s" % ( subreg.vlog_name , reg.name ))
+                    if reg.width > 1:
+                        f.write("[")
+                        if subreg.width>1:
+                            f.write("%d:" % (subreg.addr+subreg.width-1))
+                        f.write("%d]" % ( subreg.addr))
+                    f.write(";\n")
             else:
                 f.write("wire [%d:0] %s = {" % ( reg.width-1, reg.name))
                 subregs = reg.values()
@@ -300,14 +310,13 @@ def printVerilogInstance(ep, module, filename, clk="di_clk", resetb="resetb", we
                         f.write("  wire [%d:0] %s;\n" % (subreg.width-1, subreg.vlog_name))
                     else:
                         f.write("  wire %s;\n" % (subreg.vlog_name))
-            else:
-                f.write("  wire ");
-                if(reg.width > 1 or reg.array > 1):
-                    f.write("[" + str(reg.width*reg.array-1) + ":0] ");
-                f.write(reg.name + ";\n");
-                if(reg.array > 1 and reg.width > 1):
-                    for array in range(reg.array):
-                        f.write("  wire [%d:0] %s%d = %s[%d:%d];\n" % (reg.width-1, reg.name, array, reg.name, reg.width*(array+1)-1,reg.width*array, ))
+            f.write("  wire ");
+            if(reg.width > 1 or reg.array > 1):
+                f.write("[" + str(reg.width*reg.array-1) + ":0] ");
+            f.write(reg.name + ";\n");
+            if(reg.array > 1 and reg.width > 1):
+                for array in range(reg.array):
+                    f.write("  wire [%d:0] %s%d = %s[%d:%d];\n" % (reg.width-1, reg.name, array, reg.name, reg.width*(array+1)-1,reg.width*array, ))
 
 
     f.write("  wire [%d:0] %s_reg_datao;\n" % ( ep.regDataWidth-1, module ) )
@@ -327,9 +336,14 @@ def printVerilogInstance(ep, module, filename, clk="di_clk", resetb="resetb", we
         if reg.num_children()>0:
             for j,r in enumerate(reg.values()):
                 f.write("     ." + r.vlog_name+ "(" + r.vlog_name + ")");
-                if j+1 != len(reg) or i+1 != len(ep):
+                if j+1 != len(reg) or i+1 != len(ep) or reg.mode=="write":
                     f.write(',')
                 f.write('\n')
+            if reg.mode == "write":
+                f.write("     ." + reg.name+ "(" + reg.name + ")");
+                if(i+1 != len(ep)):
+                    f.write(",");
+                f.write("\n");
         else:
             f.write("     ." + reg.name+ "(" + reg.name + ")");
             if(i+1 != len(ep)):
