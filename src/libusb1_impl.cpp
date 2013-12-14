@@ -37,6 +37,7 @@ struct USBDevice::impl : public usbdev_impl_core {
         libusb_device_handle* m_dev;
         uint8 m_read_ep;
         uint8 m_write_ep;
+        uint8 m_interface;
         uint8 m_altsetting;
 
         void config_device();
@@ -392,13 +393,14 @@ void USBDevice::impl::config_device() {
 	    m_write_ep = epdesc->bEndpointAddress;
 	    usb_debug(" setting m_write_ep=" << (int) epdesc->bEndpointAddress);
 	  }
-	  m_altsetting = idesc->bAlternateSetting;
 	}
+      m_interface = idesc->bInterfaceNumber;
+	  m_altsetting = idesc->bAlternateSetting;
       }
     }
   }
   libusb_free_config_descriptor(config);
-  usb_debug("m_read_ep="<< (int) m_read_ep << " m_write_ep="<< (int) m_write_ep << " altsetting=" << (int) m_altsetting);
+  usb_debug("m_interface="<<(int)m_interface<< " m_read_ep="<< (int) m_read_ep << " m_write_ep="<< (int) m_write_ep << " altsetting=" << (int) m_altsetting);
 
   //if(m_read_ep == 0 || m_write_ep==0) {
   //  libusb_close(m_dev);
@@ -407,14 +409,14 @@ void USBDevice::impl::config_device() {
   //}
 
   // claim interface
-  if (libusb_claim_interface(m_dev,0)) {
+  if (libusb_claim_interface(m_dev,m_interface)) {
 	  libusb_close(m_dev);
       m_dev=NULL;
       throw Exception(USB_PROTO, "Failed to claim device interface."); //, usb_strerror());
   }
 
   if(m_altsetting) {
-    if (libusb_set_interface_alt_setting(m_dev,0,m_altsetting) ) {
+    if (libusb_set_interface_alt_setting(m_dev,m_interface,m_altsetting) ) {
   	  libusb_close(m_dev);
   	  m_dev=NULL;
   	  throw Exception(USB_PROTO, "Failed to set interface alt setting.");
