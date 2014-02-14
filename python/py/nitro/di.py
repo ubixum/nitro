@@ -383,7 +383,9 @@ def printVerilogDefs(di, module, filename):
                             f.write("`define   " + term.name + "_" + reg.name)
                             f.write(" " + str(i+reg.addr) + "\n")
                     i=i-1
-                f.write("`define    WIDTH_"+term.name+"_"+reg.name+" %d\n" % reg.width)
+            f.write("`define      WIDTH_"+term.name+"_"+reg.name+" %d\n" % reg.width)
+            if(reg.array > 1):
+                f.write("`define      ARRAY_SIZE_"+term.name+"_"+reg.name+" %d\n" % reg.array)
 
             for subreg in reg.values():
                 f.write("`define     "+term.name+"_"+reg.name+"_"+subreg.name+ " %d:%d\n" % (subreg.addr+subreg.width-1,subreg.addr))
