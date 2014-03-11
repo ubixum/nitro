@@ -28,16 +28,15 @@
 #include <map>
 #include <memory>
 #include <algorithm>
+#include <iostream>
 
 #ifdef DEBUG_DEV
-#include <iostream>
 #define dev_debug(x) cout << x << " (" << __FILE__ << ':' << __LINE__ << ')' << endl;
 #else
 #define dev_debug(x)
 #endif
 
 #ifdef DEBUG_MUTEX
-#include <iostream>
 #define dev_mutex(x) cout << x << " (" << __FILE__ << ':' << __LINE__ << ')' << endl;
 #else
 #define dev_mutex(x)
@@ -264,9 +263,13 @@ void Device::impl::check_checksum(Device& dev, uint32 term_addr, const uint8* da
 }
 
 DataType Device::impl::raw_get ( Device &dev, uint32 term_addr, uint32 reg_addr, AddressData &a, uint32 timeout ) {
- 
+
+
    DataType res = dev._get ( term_addr, reg_addr, timeout );
-   check_status(dev,term_addr);
+   if (m_term_modes[term_addr] & LOG_IO || m_modes&LOG_IO) {
+       std::cout << "get: " << term_addr << " " << reg_addr << ": " << res << endl;
+   }
+    check_status(dev,term_addr);
    if (res.get_type() == UINT_DATA ) { 
        uint32 val = res;
        check_checksum(dev,term_addr, (uint8*)&val, sizeof(val) );
@@ -331,6 +334,9 @@ DataType Device::impl::do_get (Device &dev, uint32 term_addr, uint32 reg_addr, A
 }
 
 void Device::impl::raw_set( Device &dev, uint32 term_addr, uint32 reg_addr, DataType &value, AddressData &a, uint32 timeout ) {
+    if (m_term_modes[term_addr] & LOG_IO || m_modes&LOG_IO) {
+        cout << "set: " << term_addr << " " << reg_addr << ": " << value << endl;
+    }
     dev._set ( term_addr, reg_addr, value, timeout );
     check_status(dev,term_addr);
    if (value.get_type() == UINT_DATA ) { 
@@ -366,7 +372,10 @@ void Device::impl::do_set (Device &dev, uint32 term_addr, uint32 reg_addr, DataT
 }
 
 void Device::impl::raw_read(Device &dev, uint32 term_addr, uint32 reg_addr, uint8* data, size_t length, uint32 timeout ) {
-   dev._read ( term_addr, reg_addr, data, length, timeout ); 
+    if (m_term_modes[term_addr] & LOG_IO || m_modes&LOG_IO) {
+        cout << "read: " << term_addr << " " << reg_addr << "len: " << length << endl;
+    }
+    dev._read ( term_addr, reg_addr, data, length, timeout ); 
    check_status ( dev, term_addr );
    check_checksum ( dev, term_addr, data, length );
 }
@@ -379,7 +388,10 @@ void Device::impl::do_read(Device &dev, uint32 term_addr, uint32 reg_addr, uint8
 }
 
 void Device::impl::raw_write (Device &dev, uint32 term_addr, uint32 reg_addr, const uint8* data, size_t length, uint32 timeout ) {
-   dev._write ( term_addr, reg_addr, data, length, timeout ); 
+    if (m_term_modes[term_addr] & LOG_IO || m_modes&LOG_IO) {
+        cout << "write: " << term_addr << " " << reg_addr << "len: " << length << endl;
+    }
+    dev._write ( term_addr, reg_addr, data, length, timeout ); 
    check_status ( dev, term_addr );
    check_checksum ( dev, term_addr, data, length );
 }
