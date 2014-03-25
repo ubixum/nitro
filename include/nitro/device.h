@@ -27,7 +27,7 @@
  *  \defgroup devimpl Implementing Devices
  *
  *  To implement a new device, one must extend Nitro::Device and
- *  implement a set of core virtual functions.  _get, _set etc, are called
+ *  implement a set of core virtual functions.  _read, _write,  are called
  *  from the Device base class.  Classes extending Device should not 
  *  worry about thread safety.  The Nitro:Device::get etc lock an instance
  *  specific Mutex before making the call to implementing device.
@@ -79,16 +79,6 @@ private:
     struct impl;
     impl* m_impl;
 protected:
-    /**
-     *  \ingroup devimpl
-     *  
-     **/ 
-    virtual DataType _get( uint32 terminal_addr, uint32 reg_addr, uint32 timeout )=0;
-    /**
-     *  \ingroup devimpl
-     *  
-     **/
-    virtual void _set( uint32 terminal_addr, uint32 reg_addr, const DataType& value, uint32 timeout) =0 ;
     /**
      *  \ingroup devimpl
      *  
@@ -266,7 +256,7 @@ public:
      * \ingroup devif
      * \brief Shortcut method to retrieve a node for a specific terminal.
      * If name is a string, this call is equivalent to:
-     * \code get_tree().get_child(name); \endcode
+     * \code get_di().get_child(name); \endcode
      * This function can also handle integer addresses.
      * \param name String terminal name or integer address for terminal to retreive.
      * \throw Nitro::Exception if the terminal does not exist in the device interface.
@@ -277,7 +267,7 @@ public:
      * \ingroup devif
      * \brief Shortcut method to retrieve a register.  Same rules apply for register name
      * as in \ref get_terminal.  If terminal and reg are of string type, this
-     * method is equivalent to: \code get_tree().get_child(term).get_child(reg); \endcode
+     * method is equivalent to: \code get_di().get_child(term).get_child(reg); \endcode
      * \param term String terminal name or integer address for terminal.
      * \param reg String register name or integer address for register.
      * \throw Nitro::Exception if the terminal or register does not exist in the device interface.
@@ -330,10 +320,14 @@ public:
      * \param term Terminal name or address.
      * \param reg Register name or address.      
      * \param value Value to set to the register.
+     * \param data_width Used for hint on number of bytes to set when set is called without
+     *                   a device interface.  If data_width==0 and term/reg are integer data.
+     *                   The default 2 byte width will be used. If a device interface is present
+     *                   the width from the register or terminal is used.
      * \param timeout Timeout for call in milliseconds. -1 = use the default timeout.  0 = no timeout.  
      * \throw Nitro::Exception 
      **/
-    void set ( const DataType& term, const DataType& reg, const DataType& value, int32 timeout=-1 );
+    void set ( const DataType& term, const DataType& reg, const DataType& value, int32 timeout=-1, uint32 data_width=0 );
 
 
     /*
@@ -344,16 +338,20 @@ public:
 
     // NOTE future
     // void set ( const DataType& term, const DataType& reg, const DataDict& dict, uint32 timeout );
+
     /**
      * \ingroup dataac
      * \brief Thread-safe get.
      * \param term String or integer address for terminal.
      * \param reg String or integer address for register.
+     * \param data_width Hint for number of bytes to get if term/reg are integer data.
+     *                   Leaving the default value of 0 will assume a 2 byte get or will
+     *                   use the width from the device interface.
      * \param timeout Timeout in milliseconds. -1 = use the default timeout.  0 = no timeout.
      * \return Nitro::DataType currently, only integer data types are returned.
      * \throw Nitro::Exception on communication error.
      **/
-    DataType get( const DataType& term, const DataType& reg, int32 timeout=-1  ) ;
+    DataType get( const DataType& term, const DataType& reg, int32 timeout=-1, uint32 data_width=0 ) ;
 
     /**
      * \ingroup dataac

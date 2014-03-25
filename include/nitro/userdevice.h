@@ -44,10 +44,10 @@ namespace Nitro {
  *  // user data will be passed to all other methods with this UserData instance.
  *  // The UserDevice class passes it's constructor variables without modification to this method.
  *  UD_API void* ud_init ( const char* args[], void* ); 
- *  UD_API int ud_get ( uint32 terminal_addr, uint32 reg_addr, uint32* value, uint32 timeout, void* ud );
- *  UD_API int ud_set ( uint32 terminal_addr, uint32 reg_addr, uint32 value, uint32 timeout, void* ud ) ;
+ *  // ud_read and ud_write return the number of bytes read/written via the transferred param.  The return value is 0.
+ *  // for success else an error code.
  *  UD_API int ud_read( uint32 terminal_addr, uint32 reg_addr, uint8* data, size_t length, size_t* transferred, uint32 timeout, void* ud );
- *  UD_API ud_write( uint32 terminal_addr, uint32 reg_addr, const uint8* data, size_t length, size_t* transferred uint32 timeout, void* ud ) ;
+ *  UD_API int ud_write( uint32 terminal_addr, uint32 reg_addr, const uint8* data, size_t length, size_t* transferred uint32 timeout, void* ud ) ;
  *  UD_API void ud_close(void* ud);
  * }
  * \endcode
@@ -62,8 +62,6 @@ private:
    struct impl;
    impl* m_impl;
 protected:
-   DataType _get( uint32 terminal_addr, uint32 reg_addr, uint32 timeout );
-   void _set( uint32 terminal_addr, uint32 reg_addr, const DataType& type, uint32 timeout ) ;
    void _read( uint32 terminal_addr, uint32 reg_addr, uint8* data, size_t length, uint32 timeout );
    void _write( uint32 terminal_addr, uint32 reg_addr, const uint8* data, size_t length, uint32 timeout ) ;
    void _close();
@@ -77,7 +75,6 @@ public:
      **/
     UserDevice(const std::string &path, const char* args[], void* ud);
     ~UserDevice() throw();
-
         
 };
 

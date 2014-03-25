@@ -29,44 +29,50 @@ class DeviceTest : public CppUnit::TestFixture {
         void setUp() {
             XmlReader reader ("dev.xml");
             reader.read(dev.get_di());
+            //dev.enable_mode(Device::LOG_IO);
         }
         void tearDown() {
 
         }
         void testGetSet() {
-            dev.set ( 0, 1 , 21 , 0 );
-            CPPUNIT_ASSERT ( dev.get ( 0, 1 , 0 ) == 21 );
+            try {
+                CPPUNIT_ASSERT_NO_THROW( dev.set ( 0, 1 , 21 ) );
+                CPPUNIT_ASSERT ( dev.get ( 0, 1 ) == 21 );
 
-            // reg 1 is 18 bits wide
-            CPPUNIT_ASSERT_NO_THROW ( dev.get ( 0, string("reg1"), 0 ) );
-            CPPUNIT_ASSERT_NO_THROW ( dev.get ( string("Terminal1"), string("reg1"), 0 ) );
-            CPPUNIT_ASSERT_NO_THROW ( dev.get ( string("Terminal1"), 0 , 0 ) );
-            CPPUNIT_ASSERT_NO_THROW ( dev.get ( string("Terminal1"), string("reg1"), 0 ) );
+                // reg 1 is 18 bits wide
+                CPPUNIT_ASSERT_NO_THROW ( dev.get ( 0, string("reg1"), 0 ) );
+                CPPUNIT_ASSERT_NO_THROW ( dev.get ( string("Terminal1"), string("reg1"), 0 ) );
+                CPPUNIT_ASSERT_NO_THROW ( dev.get ( string("Terminal1"), 0 , 0 ) );
+                CPPUNIT_ASSERT_NO_THROW ( dev.get ( string("Terminal1"), string("reg1"), 0 ) );
 
-            // should be 
-            // 1    0
-            // 1010100000 = 672
-            CPPUNIT_ASSERT ( dev.get ( 0, string("reg1") , 0 ) == 672 );
+                // should be 
+                // 1    0
+                // 1010100000 = 672
+                //cout << " -- get -- 672 -- " << endl;
+                CPPUNIT_ASSERT ( dev.get ( 0, string("reg1") ) == 672 );
 
-            // should set a few bits in each register
-            // 00100 00011 00010 0001
-            dev.set ( 0, string("reg1"), 0x20c41, 0 );
-            CPPUNIT_ASSERT_EQUAL ( 1, (int32)dev.get ( 0, 0 ) );
-            CPPUNIT_ASSERT_EQUAL ( 2, (int32)dev.get ( 0, 1 ) );
-            CPPUNIT_ASSERT_EQUAL ( 3, (int32)dev.get ( 0, 2 ) );
-            CPPUNIT_ASSERT_EQUAL ( 4, (int32)dev.get ( 0, 3 ) );
+                // should set a few bits in each register
+                // 00100 00011 00010 0001
+                dev.set ( 0, string("reg1"), 0x20c41, 0 );
+                CPPUNIT_ASSERT_EQUAL ( 1, (int32)dev.get ( 0, 0 ) );
+                CPPUNIT_ASSERT_EQUAL ( 2, (int32)dev.get ( 0, 1 ) );
+                CPPUNIT_ASSERT_EQUAL ( 3, (int32)dev.get ( 0, 2 ) );
+                CPPUNIT_ASSERT_EQUAL ( 4, (int32)dev.get ( 0, 3 ) );
 
-            // 6 bits 101010 (42)
-            CPPUNIT_ASSERT_NO_THROW ( dev.set ( 0, "reg2", 0x2A ) );
-              
-             
-            CPPUNIT_ASSERT_EQUAL(0x02, (int32)dev.get ( 0, "reg2.sub1" ) ) ;
-            CPPUNIT_ASSERT_EQUAL(0x05, (int32)dev.get ( 0, "reg2.sub2" ) ) ;
-            // 111010
-            dev.set ( 0, "reg2.sub2", 0x07 ) ;
-            CPPUNIT_ASSERT_EQUAL(0x3a , (int32)dev.get  ( 0, "reg2" ) ) ;
-            CPPUNIT_ASSERT_EQUAL(0x07, (int32)dev.get ( 0, "reg2.sub2" ) );
-
+                // 6 bits 101010 (42)
+                CPPUNIT_ASSERT_NO_THROW ( dev.set ( 0, "reg2", 0x2A ) );
+                  
+                 
+                CPPUNIT_ASSERT_EQUAL(0x02, (int32)dev.get ( 0, "reg2.sub1" ) ) ;
+                CPPUNIT_ASSERT_EQUAL(0x05, (int32)dev.get ( 0, "reg2.sub2" ) ) ;
+                // 111010
+                dev.set ( 0, "reg2.sub2", 0x07 ) ;
+                CPPUNIT_ASSERT_EQUAL(0x3a , (int32)dev.get  ( 0, "reg2" ) ) ;
+                CPPUNIT_ASSERT_EQUAL(0x07, (int32)dev.get ( 0, "reg2.sub2" ) );
+            } catch ( Exception &e) {
+                //cout << "Unexpected exception in get/set test: " << e << endl;
+                CPPUNIT_FAIL ( "Unexpected exception." );
+            }
         }
 
     void testInt() {
@@ -123,13 +129,16 @@ class DeviceTest : public CppUnit::TestFixture {
 
 
     void testBigReg() {
+        //cout << " -- set big_sub2 -- " << endl;
         dev.set ( "int_term" , "wide_reg.big_sub2", 0xd );
         DataType dt = dev.get ( "int_term", "wide_reg.big_sub2" );
         CPPUNIT_ASSERT_EQUAL ( 0xd, (int32) dt ); //dev.get ( "int_term", "wide_reg.big_sub2" ) );
-
+        //cout << " -- set big_sub3 -- " << endl;
         dev.set ( "int_term", "wide_reg.big_sub3", (uint32)0x12345678 );
         CPPUNIT_ASSERT_EQUAL ( (uint32)0x12345678, (uint32) dev.get("int_term", "wide_reg.big_sub3" ) );
+        //cout << " -- set big_sub2 -- " << endl;
         dev.set ( "int_term", "wide_reg.big_sub2", 1 );
+        //dev.debug();
         CPPUNIT_ASSERT_EQUAL ( (uint32)0x12345678, (uint32) dev.get("int_term", "wide_reg.big_sub3" ) );
         
         // 37 bits, 4 bits, 33 bits = 74 bits
@@ -209,79 +218,86 @@ class DeviceTest : public CppUnit::TestFixture {
 
     void testVerify() {
         
-        dev.clear();
-        dev.set_modes(0); // clear any defaults
-        dev.enable_mode(Device::GETSET_VERIFY);
-        dev.set_error_mode(true);
         try {
-          dev.set ( 0, 0, 1 ); // 1 set, 1 get.. one should throw
-          CPPUNIT_FAIL ( "set didn't throw." );
-        } catch ( const Exception &e ) {          
-            CPPUNIT_ASSERT_EQUAL ( DEVICE_OP_ERROR, (Nitro::NITRO_ERROR)e.code() );
-        }
+            dev.clear();
+            dev.set_modes(0); // clear any defaults
+            dev.enable_mode(Device::GETSET_VERIFY);
+            dev.set_error_mode(true);
+            try {
+              dev.set ( 0, 0, 1 ); // 1 set, 1 get.. one should throw
+              CPPUNIT_FAIL ( "set didn't throw." );
+            } catch ( const Exception &e ) {          
+                //cout << e;
+                CPPUNIT_ASSERT_EQUAL ( DEVICE_OP_ERROR, (Nitro::NITRO_ERROR)e.code() );
+            }
 
-        dev.enable_mode(Device::DOUBLEGET_VERIFY);
-        dev.disable_mode(Device::GETSET_VERIFY);
-        try {
-            CPPUNIT_ASSERT_NO_THROW ( dev.set ( "Terminal1", "reg1", 0xab ) );
-            CPPUNIT_ASSERT_EQUAL ( 0xab, (int) dev.get ( "Terminal1", "reg1" ) ); // two gets, one should throw
-            CPPUNIT_FAIL ( "get didn't throw" );
-        } catch ( const Exception &e ) {
-            CPPUNIT_ASSERT_EQUAL ( DEVICE_OP_ERROR, (Nitro::NITRO_ERROR)e.code() );
-        }
-
-
-        dev.disable_mode(Device::GETSET_VERIFY);
-        dev.disable_mode(Device::DOUBLEGET_VERIFY);
-        dev.enable_mode( "int_term", Device::STATUS_VERIFY);
-        try {
-
-            CPPUNIT_ASSERT_NO_THROW ( dev.get( "Terminal1", 0 ) ); // only int_term should throw
-            CPPUNIT_ASSERT_NO_THROW ( dev.get( "Terminal1", 0 ) );
-
-            dev.get( "int_term", 0 ); // one of these should throw
-            dev.get( "int_term", 0 );
-            CPPUNIT_FAIL ( "status verify didn't throw" );
-        } catch ( const Exception &e ) {
-            CPPUNIT_ASSERT_EQUAL ( DEVICE_OP_ERROR, (Nitro::NITRO_ERROR)e.code() );
-        }
+            dev.enable_mode(Device::DOUBLEGET_VERIFY);
+            dev.disable_mode(Device::GETSET_VERIFY);
+            try {
+                CPPUNIT_ASSERT_NO_THROW ( dev.set ( "Terminal1", "reg1", 0xab ) );
+                CPPUNIT_ASSERT_EQUAL ( 0xab, (int) dev.get ( "Terminal1", "reg1" ) ); // two gets, one should throw
+                CPPUNIT_FAIL ( "get didn't throw" );
+            } catch ( const Exception &e ) {
+                CPPUNIT_ASSERT_EQUAL ( DEVICE_OP_ERROR, (Nitro::NITRO_ERROR)e.code() );
+            }
 
 
-        dev.enable_mode ( Device::DOUBLEGET_VERIFY );
-        dev.enable_mode ( Device::GETSET_VERIFY );        
-        dev.enable_mode ( Device::STATUS_VERIFY );
-        CPPUNIT_ASSERT_EQUAL ( (uint32) (Device::DOUBLEGET_VERIFY|Device::GETSET_VERIFY|Device::STATUS_VERIFY), dev.get_modes() );
+            dev.disable_mode(Device::GETSET_VERIFY);
+            dev.disable_mode(Device::DOUBLEGET_VERIFY);
+            dev.enable_mode( "int_term", Device::STATUS_VERIFY);
+            try {
 
-        dev.enable_mode ( 10, Device::GETSET_VERIFY );
-        CPPUNIT_ASSERT_EQUAL ( (uint32) Device::GETSET_VERIFY , dev.get_modes ( 10 ) );
+                CPPUNIT_ASSERT_NO_THROW ( dev.get( "Terminal1", 0 ) ); // only int_term should throw
+                CPPUNIT_ASSERT_NO_THROW ( dev.get( "Terminal1", 0 ) );
 
-
-        dev.enable_mode( "int_term", Device::RETRY_ON_FAILURE );
-        dev.set_error_step(3);
-        try {
-            dev.set ( "int_term" , "int", (uint32) 0xabcdef );
-            CPPUNIT_ASSERT_EQUAL ( 0xcdef , (int) dev.get("int_term", "int.lw" ) ); 
-            CPPUNIT_ASSERT_EQUAL ( 0xab , (int) dev.get("int_term", "int.hw" ) );
-        } catch ( const Exception &e ) {
-            cout << e << endl;
-            CPPUNIT_FAIL ( "modes didn't retry." );
-        }
-        // make sure it would have failed without the retry
-        dev.disable_mode ("int_term", Device::RETRY_ON_FAILURE );
-        CPPUNIT_ASSERT_THROW ( dev.set ( "int_term" , "int", (uint32) 0xabcdef ), Exception );
+                dev.get( "int_term", 0 ); // one of these should throw
+                dev.get( "int_term", 0 );
+                CPPUNIT_FAIL ( "status verify didn't throw" );
+            } catch ( const Exception &e ) {
+                CPPUNIT_ASSERT_EQUAL ( DEVICE_OP_ERROR, (Nitro::NITRO_ERROR)e.code() );
+            }
 
 
-        try {
-            dev.set_modes(0);
-            dev.set_modes("int_term", 0);
-            dev.enable_mode( "int_term", Device::CHECKSUM_VERIFY);
-            dev.set_error_mode(false);
-            dev.get("int_term", "int");
-            dev.set("int_term", "int", 7 );
-            uint8 buf[100];
-            dev.read( "Terminal1", 0, buf, 100 );
+            dev.enable_mode ( Device::DOUBLEGET_VERIFY );
+            dev.enable_mode ( Device::GETSET_VERIFY );        
+            dev.enable_mode ( Device::STATUS_VERIFY );
+            CPPUNIT_ASSERT_EQUAL ( (uint32) (Device::DOUBLEGET_VERIFY|Device::GETSET_VERIFY|Device::STATUS_VERIFY), dev.get_modes() );
+
+            dev.enable_mode ( 10, Device::GETSET_VERIFY );
+            CPPUNIT_ASSERT_EQUAL ( (uint32) Device::GETSET_VERIFY , dev.get_modes ( 10 ) );
+
+
+            dev.enable_mode( "int_term", Device::RETRY_ON_FAILURE );
+            //cout << " -- retry failure -- " << endl;
+            dev.set_error_step(3);
+            try {
+                dev.set ( "int_term" , "int", (uint32) 0xabcdef );
+                CPPUNIT_ASSERT_EQUAL ( 0xcdef , (int) dev.get("int_term", "int.lw" ) ); 
+                CPPUNIT_ASSERT_EQUAL ( 0xab , (int) dev.get("int_term", "int.hw" ) );
+            } catch ( const Exception &e ) {
+                //cout << "Fail retry test: " << e << endl;
+                CPPUNIT_FAIL ( "modes didn't retry." );
+            }
+            // make sure it would have failed without the retry
+            dev.disable_mode ("int_term", Device::RETRY_ON_FAILURE );
+            CPPUNIT_ASSERT_THROW ( dev.set ( "int_term" , "int", (uint32) 0xabcdef ), Exception );
+
+
+            try {
+                dev.set_modes(0);
+                dev.set_modes("int_term", 0);
+                dev.enable_mode( "int_term", Device::CHECKSUM_VERIFY);
+                dev.set_error_mode(false);
+                dev.get("int_term", "int");
+                dev.set("int_term", "int", 7 );
+                uint8 buf[100];
+                dev.read( "Terminal1", 0, buf, 100 );
+            } catch ( Exception &e ) {
+                CPPUNIT_FAIL ( "checksum problem" );
+            }
         } catch ( Exception &e ) {
-            CPPUNIT_FAIL ( "checksum problem" );
+            cout << e << endl;
+            CPPUNIT_FAIL ( "Unexpected Exception" );
         }
 
     }

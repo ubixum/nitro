@@ -222,7 +222,8 @@ PyObject* nitro_Device_Get(nitro_DeviceObject* self, PyObject* args) {
       DataType term(0);
       DataType reg(0);
       int32 timeout=-1;
-      if (!PyArg_ParseTuple ( args, "O&O&|I", to_datatype, &term, to_datatype, &reg, &timeout ) ) {
+      uint32 width=0;
+      if (!PyArg_ParseTuple ( args, "O&O&|II", to_datatype, &term, to_datatype, &reg, &timeout, &width ) ) {
         return NULL;
       }
 
@@ -230,7 +231,7 @@ PyObject* nitro_Device_Get(nitro_DeviceObject* self, PyObject* args) {
       Exception* saveme=NULL;
       Py_BEGIN_ALLOW_THREADS
       try {
-        ret = self->nitro_device->get (term,reg,timeout);
+        ret = self->nitro_device->get (term,reg,timeout, width);
       } catch (const Exception& e) {
 	   // can't use NITRO_EXC here.
        saveme=new Exception(e);
@@ -285,14 +286,15 @@ PyObject* nitro_Device_Set(nitro_DeviceObject* self, PyObject *args) {
     DataType reg(0);
     DataType val(0);
     int32 timeout=-1;
-    if (!PyArg_ParseTuple ( args, "O&O&O&|I", to_datatype, &term, to_datatype, &reg, to_datatype, &val, &timeout ) ) {
+    int32 width=0;
+    if (!PyArg_ParseTuple ( args, "O&O&O&|II", to_datatype, &term, to_datatype, &reg, to_datatype, &val, &timeout, &width ) ) {
         return NULL;
     }
     
     Exception* saveme=NULL;
     Py_BEGIN_ALLOW_THREADS
     try {
-      self->nitro_device->set(term,reg,val,timeout);
+      self->nitro_device->set(term,reg,val,timeout,width);
 
     } catch (const Exception& e) {
         saveme=new Exception(e);

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009 Ubixum, Inc. 
+ * Copyright (C) 2014 Ubixum, Inc. 
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -24,11 +24,12 @@
 
 #include <bitset>
 #include <string>
-#include "stdio.h"
+#include <cstdio>
 #include <map>
 #include <memory>
 #include <algorithm>
 #include <iostream>
+#include <cstring>
 
 #ifdef DEBUG_DEV
 #define dev_debug(x) cout << x << " (" << __FILE__ << ':' << __LINE__ << ')' << endl;
@@ -146,6 +147,7 @@ struct AddressData {
         };
         ADDR_TYPE type;
         vector<uint32> addrs; 
+        vector<uint32> widths; ///< data width of addr
         NodeRef term_node; ///< only valid if type is != RAW
         NodeRef reg_node; ///< same
         NodeRef subreg_node; ///< only valid if type == SUBREG
@@ -182,15 +184,15 @@ struct Device::impl{
     NodeRef find_name_or_addr( NodeRef& parent, const DataType& find);
     uint32 reg_addr( const DataType& term, const DataType& reg );
     DataType valmap_or_const_val ( NodeRef node, const DataType& val );
-    auto_ptr<AddressData> resolve_addrs ( const DataType& term, const DataType& reg ) ;
+    auto_ptr<AddressData> resolve_addrs ( const DataType& term, const DataType& reg, uint32 width ) ;
     void get_set_subreg ( bitset<1024> &bits, uint32 term_addr, uint32 reg_addr, bitset<1024> &value, uint32 offset, uint32 width, uint32 dwidth, vector<uint32> &clean_regs, int32 timeout , Device &dev);
-    DataType do_get(Device &dev, uint32 term_addr, uint32 reg_addr, AddressData &a, int32 timeout ); 
-    void do_set(Device &dev, uint32 term_addr, uint32 reg_addr, DataType &value, AddressData &a, int32 timeout);
+    DataType do_get(Device &dev, uint32 term_addr, uint32 reg_addr, AddressData &a, uint32 width, int32 timeout ); 
+    void do_set(Device &dev, uint32 term_addr, uint32 reg_addr, DataType &value, uint32 width, AddressData &a, int32 timeout);
     void do_read(Device &dev, uint32 term_addr, uint32 reg_addr, uint8* data, size_t length, int32 timeout);
     void do_write(Device &dev, uint32 term_addr, uint32 reg_addr, const uint8* data, size_t length, int32 timeout);
     private:
-    DataType raw_get( Device &dev, uint32 term_addr, uint32 reg_addr, AddressData &a, uint32 timeout ); // only called by do_get
-    void raw_set ( Device &dev, uint32 term_addr, uint32 reg_addr, DataType &value, AddressData &a, uint32 timeout );
+    DataType raw_get( Device &dev, uint32 term_addr, uint32 reg_addr, AddressData &a, uint32 width, uint32 timeout ); // only called by do_get
+    void raw_set ( Device &dev, uint32 term_addr, uint32 reg_addr, DataType &value, uint32 width, AddressData &a, uint32 timeout );
     void raw_write(Device &dev, uint32 term_addr, uint32 reg_addr, const uint8* data, size_t length, uint32 timeout);
     void raw_read(Device &dev, uint32 term_addr, uint32 reg_addr, uint8* data, size_t length, uint32 timeout);
     void check_status(Device &dev, uint32 term_addr);
@@ -262,24 +264,36 @@ void Device::impl::check_checksum(Device& dev, uint32 term_addr, const uint8* da
     }
 }
 
-DataType Device::impl::raw_get ( Device &dev, uint32 term_addr, uint32 reg_addr, AddressData &a, uint32 timeout ) {
+DataType Device::impl::raw_get ( Device &dev, uint32 term_addr, uint32 reg_addr, AddressData &a, uint32 width, uint32 timeout ) {
 
 
-   DataType res = dev._get ( term_addr, reg_addr, timeout );
+   uint8 bytes[width];
+   //if (width>4) throw Exception ( DEVICE_OP_ERROR, "Raw device width > 4 currently unsupported." );
+   // width>4?
+   dev._read( term_addr, reg_addr, bytes, width, get_timeout( timeout ) );
+    
+
    if (m_term_modes[term_addr] & LOG_IO || m_modes&LOG_IO) {
-       std::cout << "get: " << term_addr << " " << reg_addr << ": " << res << endl;
+       std::cout << "get: " << term_addr << " " << reg_addr << ":"; 
+       for (int i=0;i<width;++i)
+           printf ( " %02x", (uint32)bytes[i] );
+       std::cout << endl;
    }
-    check_status(dev,term_addr);
-   if (res.get_type() == UINT_DATA ) { 
-       uint32 val = res;
-       check_checksum(dev,term_addr, (uint8*)&val, sizeof(val) );
-   }
+   uint32 v=0;
+   memcpy(&v,bytes,width>4?4:width); // TODO fix bigger register widths.
+   DataType res = v; 
+
+   check_status(dev,term_addr);
+   check_checksum(dev,term_addr, bytes, width);
 
    if ( (m_term_modes[term_addr] & DOUBLEGET_VERIFY ||
          m_modes & DOUBLEGET_VERIFY) && 
         (a.type == AddressData::RAW || 
          a.reg_node->get_attr("mode") == "write" ) ) { 
-         DataType res2 = dev._get ( term_addr, reg_addr, get_timeout ( timeout ) );
+         uint8 check[width];
+         dev._read ( term_addr, reg_addr, check, width, timeout );
+         uint32 res2 = 0;
+         memcpy(&res2,check,width>4?4:width);
          if ( res != res2 ) { 
             NodeRef exc_info = Node::create("exc_info");
             exc_info->set_attr("term",term_addr);
@@ -325,24 +339,36 @@ DataType Device::impl::raw_get ( Device &dev, uint32 term_addr, uint32 reg_addr,
         break; \
    } while (true);
 
-DataType Device::impl::do_get (Device &dev, uint32 term_addr, uint32 reg_addr, AddressData &a, int32 timeout) {
+DataType Device::impl::do_get (Device &dev, uint32 term_addr, uint32 reg_addr, AddressData &a, uint32 width, int32 timeout) {
 
     RETRY_LOGIC_START
-    return raw_get ( dev, term_addr, reg_addr, a, get_timeout(timeout) );
+    return raw_get ( dev, term_addr, reg_addr, a, width, get_timeout(timeout) );
     RETRY_LOGIC_END
    
 }
 
-void Device::impl::raw_set( Device &dev, uint32 term_addr, uint32 reg_addr, DataType &value, AddressData &a, uint32 timeout ) {
+void Device::impl::raw_set( Device &dev, uint32 term_addr, uint32 reg_addr, DataType &value, uint32 width, AddressData &a, uint32 timeout ) {
+    // TODO 
+    // support _get/_set of other data types?
+    uint8 buf[width];
+    //if (width>4)
+    //    throw Exception ( DEVICE_OP_ERROR, "Sets larger than 32 bits unsupported." );
+    uint32 val=(uint32)value;
+    memcpy(buf,&val,width); // width > 4?
+
+
     if (m_term_modes[term_addr] & LOG_IO || m_modes&LOG_IO) {
-        cout << "set: " << term_addr << " " << reg_addr << ": " << value << endl;
+        cout << "set: " << term_addr << " " << reg_addr << ":";
+        for (int i=0;i<width;++i)
+            printf( " %02x", (uint32)buf[i] );
+        std::cout << endl;
     }
-    dev._set ( term_addr, reg_addr, value, timeout );
+    dev._write ( term_addr, reg_addr, buf, width, timeout );
     check_status(dev,term_addr);
-   if (value.get_type() == UINT_DATA ) { 
-       uint32 val = value;
-       check_checksum(dev,term_addr, (uint8*)&val, sizeof(val) );
-   }
+   //if (value.get_type() == UINT_DATA ) { 
+   //    uint32 val = value;
+    check_checksum(dev,term_addr, buf, width );
+   //}
     if (
         (m_term_modes[term_addr] & GETSET_VERIFY || 
          m_modes & GETSET_VERIFY) && 
@@ -351,7 +377,7 @@ void Device::impl::raw_set( Device &dev, uint32 term_addr, uint32 reg_addr, Data
           a.reg_node->get_attr("mode") == string("write" ))
         )
        ) {
-         DataType v = raw_get ( dev, term_addr, reg_addr, a, timeout); 
+         DataType v = raw_get ( dev, term_addr, reg_addr, a, width, timeout); 
          if (v != value ) {
             NodeRef exc_info = Node::create("exc_info");
             exc_info->set_attr("term",term_addr);
@@ -364,10 +390,10 @@ void Device::impl::raw_set( Device &dev, uint32 term_addr, uint32 reg_addr, Data
 
 }
 
-void Device::impl::do_set (Device &dev, uint32 term_addr, uint32 reg_addr, DataType &value, AddressData &a, int32 timeout) {
+void Device::impl::do_set (Device &dev, uint32 term_addr, uint32 reg_addr, DataType &value, uint32 width, AddressData &a, int32 timeout) {
 
    RETRY_LOGIC_START
-   raw_set ( dev, term_addr, reg_addr, value, a, get_timeout(timeout) );
+   raw_set ( dev, term_addr, reg_addr, value, width, a, get_timeout(timeout) );
    RETRY_LOGIC_END   
 }
 
@@ -402,13 +428,16 @@ void Device::impl::do_write(Device &dev, uint32 term_addr, uint32 reg_addr, cons
    RETRY_LOGIC_END
 }
 
-auto_ptr<AddressData> Device::impl::resolve_addrs ( const DataType& term, const DataType& reg ) {
+auto_ptr<AddressData> Device::impl::resolve_addrs ( const DataType& term, const DataType& reg, uint32 data_width ) {
 
     auto_ptr<AddressData> addrs ( new AddressData() ); 
 
+    // TODO - couldn't we reverse look up a 
+    // register address if there is a di present?
     if ( STR_DATA != reg.get_type() ) {
         addrs->type = AddressData::RAW;
         addrs->addrs.push_back ( reg );
+        addrs->widths.push_back ( data_width == 0 ? 2 : data_width );
         return addrs;
     }
     
@@ -441,6 +470,7 @@ auto_ptr<AddressData> Device::impl::resolve_addrs ( const DataType& term, const 
             // how many bits fit in this address
             uint32 cur_bits = term_data_width - offset;
             addrs->addrs.push_back(addr++);
+            addrs->widths.push_back(term_data_width/8+(term_data_width%8?1:0));
             width -= cur_bits; 
             offset = 0;
         } while ( width > 0 );
@@ -476,6 +506,7 @@ auto_ptr<AddressData> Device::impl::resolve_addrs ( const DataType& term, const 
 
         do {
             addrs->addrs.push_back(addr++);
+            addrs->widths.push_back(term_data_width/8+(term_data_width%8?1:0));
         } while ( --item_width );
         
     } else {
@@ -490,6 +521,7 @@ auto_ptr<AddressData> Device::impl::resolve_addrs ( const DataType& term, const 
                int32 awidth = width; 
                do {
                  addrs->addrs.push_back(addr++);
+                 addrs->widths.push_back(term_data_width/8+(term_data_width%8?1:0));
                  awidth -= term_data_width; 
                } while ( awidth > 0 );
             } while ( --array_len > 0 );
@@ -500,6 +532,7 @@ auto_ptr<AddressData> Device::impl::resolve_addrs ( const DataType& term, const 
             addrs->type = AddressData::SINGLE; 
             do {
                 addrs->addrs.push_back(addr++);
+                addrs->widths.push_back(term_data_width/8+(term_data_width%8?1:0));
                 width -= term_data_width;
             } while ( width > 0 );
         }
@@ -593,7 +626,7 @@ DataType from_bitset(bitset<1024> &bits ) {
 
 
     vector<DataType> ints;
-    bitset<1024> mask = 0xffffffff;    
+    //bitset<1024> mask = 0xffffffff;    
     do {
         uint32 lsd = lsint(bits);
         ints.push_back(lsd);
@@ -673,7 +706,7 @@ void Device::impl::get_set_subreg ( bitset<1024> &bits, uint32 term_addr, uint32
 
     for (uint32 addr = subreg_start; addr < subreg_end; ++addr ) { 
         if ( count ( clean_regs.begin(), clean_regs.end(), addr ) == 0 ) {
-            bitset<1024> dirty_reg ( (uint32) dev.get ( term_addr, addr, timeout ) );
+            bitset<1024> dirty_reg ( (uint32) dev.get ( term_addr, addr, timeout, dwidth ) );
             dirty_reg <<= (addr-subreg_start + offset/dwidth) * dwidth;
             bits |= dirty_reg;
             clean_regs.push_back(addr);
@@ -689,13 +722,16 @@ void Device::impl::get_set_subreg ( bitset<1024> &bits, uint32 term_addr, uint32
 
 }
 
+//void Device::set ( const DataType& term, const DataType& reg, const DataType& value, int32 timeout ) {
+//   set(term,reg,value,16,timeout);
+//}
 
-void Device::set ( const DataType& term, const DataType& reg, const DataType& value, int32 timeout ) {
+void Device::set ( const DataType& term, const DataType& reg, const DataType& value, int32 timeout, uint32 data_width ) {
     MutexLock thread_safe_method(m_impl->m_mutex);
 
     dev_debug ( "Set: " << term << " " << reg << ": " << value );
 
-    auto_ptr<AddressData> addrs = m_impl->resolve_addrs( term, reg );
+    auto_ptr<AddressData> addrs = m_impl->resolve_addrs( term, reg, data_width );
 
     vector<DataType> set_vals;
     // val setters
@@ -795,6 +831,7 @@ void Device::set ( const DataType& term, const DataType& reg, const DataType& va
     for (uint32 i=0;i<set_vals.size();++i) {
         DataType set = set_vals.at(i);
         uint32 addr = addrs->addrs.at(i);
+        uint32 width = addrs->widths.at(i);
 
         if ( addrs->type == AddressData::SUBREG || 
              (addrs->type == AddressData::SINGLE && value.get_type()==NODE_DATA) ) {
@@ -807,33 +844,40 @@ void Device::set ( const DataType& term, const DataType& reg, const DataType& va
 
 
         uint32 term_addr = addrs->type == AddressData::RAW ? m_impl->term_addr(term) : (uint32) addrs->term_node->get_attr("addr");
-        m_impl->do_set ( *this, term_addr, addr, set, *addrs, timeout); 
+        m_impl->do_set ( *this, term_addr, addr, set, width, *addrs, timeout); 
     }
 }
 
 
 
+//DataType Device::get( const DataType& term, const DataType& reg, int32 timeout  ) {
+//    return get(term,reg,16,timeout);
+//}
+
 /**
  * Basic Get 
  **/
-DataType Device::get( const DataType& term, const DataType& reg, int32 timeout  ) {
+DataType Device::get( const DataType& term, const DataType& reg, int32 timeout, uint32 data_width ) {
     MutexLock thread_safe_method(m_impl->m_mutex);
 
-    auto_ptr<AddressData> addrs = m_impl->resolve_addrs( term, reg );
+    auto_ptr<AddressData> addrs = m_impl->resolve_addrs( term, reg, data_width );
 
     vector<DataType> results;
-    for ( vector<uint32>::iterator itr = addrs->addrs.begin();
-          itr != addrs->addrs.end(); ++itr ) {
-          uint32 addr = *itr;
+    //uint8 read_bytes = addrs->bytes / addrs->addrs.size();
+    for (int i=0; i<addrs->addrs.size(); ++i ) {
+    //for ( vector<uint32>::iterator itr = addrs->addrs.begin();
+    //      itr != addrs->addrs.end(); ++itr ) {
+          uint32 addr = addrs->addrs.at(i);
+          uint32 width = addrs->widths.at(i);
           uint32 term_addr = addrs->type == AddressData::RAW ? m_impl->term_addr(term) : (uint32) addrs->term_node->get_attr("addr");
-          DataType res = m_impl->do_get ( *this, term_addr, addr, *addrs, timeout ); 
+          DataType res = m_impl->do_get ( *this, term_addr, addr, *addrs, width, timeout ); 
           results.push_back(res);
     }
 
     // val builder
     switch ( addrs->type ) {
         case AddressData::RAW:
-            return results.front(); // only one in this case
+            return results.front();
         case AddressData::SINGLE:
             {
                 uint32 width = addrs->term_node->get_attr("regDataWidth");

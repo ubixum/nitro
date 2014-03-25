@@ -30,8 +30,10 @@ def buffer_function(buf):
     """
         Tests reading and writing to a buffer (nitro.Buffer)
     """
+    print "Buffer function called."
     for i in range(len(buf)):
         buf[i] = buf[i]+1
+    print "Buffer function returning buf", buf
 
 
 def buffer_function2(dev,buf):

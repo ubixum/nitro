@@ -37,8 +37,6 @@ namespace Nitro {
 
 
 typedef void* (*ud_init_func)(const char* [],void*);
-typedef int (*ud_get_func)(uint32, uint32, uint32*, uint32, void*);
-typedef int (*ud_set_func)(uint32, uint32, uint32, uint32,void*);
 typedef int (*ud_rdwr_func)(uint32, uint32, uint8*, size_t, size_t*, uint32,void*);
 typedef void (*ud_close_func)(void*);
 
@@ -47,8 +45,6 @@ struct UserDevice::impl {
     dll_handle m_handle;
     void* m_ud_userdat;
     ud_init_func ud_init;
-    ud_get_func ud_get;
-    ud_set_func ud_set;
     ud_rdwr_func ud_read;
     ud_rdwr_func ud_write;
     ud_close_func ud_close;
@@ -99,10 +95,6 @@ UserDevice::impl::impl(const std::string& path, const char* args[], void* ud)  {
      
     ud_init = (ud_init_func)GetProcAddress ( m_handle, "ud_init" );	
     CHECK_SYM_ERR(ud_init);
-    ud_get = (ud_get_func)GetProcAddress ( m_handle, "ud_get" );
-    CHECK_SYM_ERR(ud_get);
-    ud_set = (ud_set_func)GetProcAddress ( m_handle, "ud_set" );
-    CHECK_SYM_ERR(ud_set);
     ud_read = (ud_rdwr_func)GetProcAddress ( m_handle, "ud_read" );
     CHECK_SYM_ERR(ud_read);
     ud_write = (ud_rdwr_func)GetProcAddress ( m_handle, "ud_write" );
@@ -138,10 +130,6 @@ UserDevice::impl::impl(const std::string& path, const char* args[],void* ud)  {
      
     *(void**)(&ud_init) = dlsym ( m_handle, "ud_init" );
     CHECK_SYM_ERR("ud_init");
-    *(void**)(&ud_get) = dlsym ( m_handle, "ud_get" );
-    CHECK_SYM_ERR("ud_get");
-    *(void**)(&ud_set) = dlsym ( m_handle, "ud_set" );
-    CHECK_SYM_ERR("ud_set");
     *(void**)(&ud_read) = dlsym ( m_handle, "ud_read" );
     CHECK_SYM_ERR("ud_read");
     *(void**)(&ud_write) = dlsym ( m_handle, "ud_write" );
@@ -166,18 +154,6 @@ UserDevice::UserDevice( const std::string &path, const char* args[],void* ud ) :
 
 UserDevice::~UserDevice() throw() {
     delete m_impl;
-}
-
-DataType UserDevice::_get( uint32 terminal_addr, uint32 reg_addr, uint32 timeout ) {
-    uint32 val;
-    int ret=m_impl->ud_get(terminal_addr, reg_addr, &val, timeout, m_impl->m_ud_userdat );
-    if (ret) throw Exception ( ret, "UserDevice Get Error." );
-    return val; 
-}
-
-void UserDevice::_set( uint32 terminal_addr, uint32 reg_addr, const DataType& type, uint32 timeout ) {
-    int ret=m_impl->ud_set ( terminal_addr, reg_addr, (uint32)type, timeout, m_impl->m_ud_userdat ); 
-    if (ret) throw Exception ( ret, "UserDevice Set Error." );
 }
 
 void UserDevice::_read( uint32 terminal_addr, uint32 reg_addr, uint8* data, size_t length, uint32 timeout ) {

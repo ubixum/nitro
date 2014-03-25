@@ -259,43 +259,6 @@ void USBDevice::_close() {
 }
 
 
-DataType USBDevice::_get( uint32 terminal_addr, uint32 reg_addr, uint32 timeout ) {
-    
-	usb_debug ( "Get term: " << terminal_addr << " reg: " << reg_addr );
-    uint16 value=0;
-    if ((m_impl->firmware_version() >> 8) < 2) {
-        int ret=m_impl->control_transfer( NITRO_IN, VC_HI_REGVAL, reg_addr, terminal_addr, reinterpret_cast<uint8*>(&value), 2, timeout );
-        if (ret<0) {
-            throw Exception ( USB_COMM, "_get: transfer failed", ret );
-        } 
-    } else {
-        //_read ( terminal_addr, reg_addr, reinterpret_cast<uint8*>(&value), sizeof(value), timeout );
-        m_impl->rdwr_setup ( COMMAND_GET, sizeof(value), terminal_addr, reg_addr, timeout );
-        m_impl->rdwr_data ( NITRO_IN, READ_EP, reinterpret_cast<uint8*>(&value), sizeof(value), timeout );
-        m_impl->read_ack(timeout);
-    } 
-    usb_debug ( "Value: " << value );
-    return DataType( static_cast<uint32>(value) );
-}
-
-void USBDevice::_set( uint32 terminal_addr, uint32 reg_addr, const DataType& value, uint32 timeout ) {
-
-	usb_debug ( "Set term: " << terminal_addr << " reg: " << reg_addr << " val: " << value);
-    uint16 val = static_cast<uint32>(value);
-    if ((m_impl->firmware_version() >> 8) < 2) {
-        int ret=m_impl->control_transfer( NITRO_OUT, VC_HI_REGVAL, reg_addr, terminal_addr, reinterpret_cast<uint8*>(&val), 2, timeout );
-        if (ret<0) {
-            usb_debug ( "Control transfer ret: " << ret );
-            throw Exception ( USB_COMM, "_set: transfer failed.", ret );
-        }
-    } else {
-        //_write ( terminal_addr, reg_addr, reinterpret_cast<uint8*>(&val), sizeof(val), timeout );
-        m_impl->rdwr_setup ( COMMAND_SET, sizeof(val), terminal_addr, reg_addr, timeout );
-        m_impl->rdwr_data ( NITRO_OUT, WRITE_EP, reinterpret_cast<uint8*>(&val), sizeof(val), timeout );
-        m_impl->read_ack(timeout);
-    }
-}
-
 void USBDevice::_read( uint32 terminal_addr, uint32 reg_addr, uint8* data, size_t length, uint32 timeout ) {
 
     // send usb read command

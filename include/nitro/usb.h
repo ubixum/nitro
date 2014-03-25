@@ -30,8 +30,6 @@ protected:
    struct impl;
    impl* m_impl;
 protected:
-   DataType _get( uint32 terminal_addr, uint32 reg_addr, uint32 timeout );
-   void _set( uint32 terminal_addr, uint32 reg_addr, const DataType& type, uint32 timeout ) ;
    void _read( uint32 terminal_addr, uint32 reg_addr, uint8* data, size_t length, uint32 timeout );
    void _write( uint32 terminal_addr, uint32 reg_addr, const uint8* data, size_t length, uint32 timeout ) ;
    void _close();

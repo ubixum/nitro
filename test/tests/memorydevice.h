@@ -32,32 +32,10 @@ class MemoryDevice : public Nitro::Device {
     protected:
        int _transfer_status() { return status; }
        uint16 _transfer_checksum() { return checksum; };
-       Nitro::DataType _get( uint32 term_addr, uint32 reg_addr, uint32 timeout ) {
-            if (m_err_mode) {
-                if (!inc_error_step()) {
-                    status=1;
-                    return (uint32) (rand() % 100);
-                }
-            }
-            status=0;
-            checksum = m_data[reg_addr];
-            return m_data[reg_addr];
-       }
-       void _set(uint32 term_addr, uint32 reg_addr, const Nitro::DataType& val, uint32 timeout ) {
-           if (m_err_mode) {
-              if (!inc_error_step()) {
-                status=1;
-                m_data[reg_addr] = rand() % 100;
-                return; // set didn't work.
-              }
-           }
-           status=0;
-           checksum=val;
-           m_data[reg_addr] = (uint32)val; 
-       }
-       // read and write just happen to pack things in 16 bit data 
        void _read ( uint32 term_addr, uint32 reg_addr, uint8* data, size_t length, uint32 timeout ) {
+            status=0;
             if (m_err_mode) {
+                //std::cout << "error step: " << m_cur_step << std::endl;
                 if (!inc_error_step()) {
                     status=1; // read didn't work
                     return;
@@ -69,9 +47,15 @@ class MemoryDevice : public Nitro::Device {
                 data2[i] = (uint16)m_data[reg_addr++];
                 checksum+=data2[i];
             }
+            if (length & 1) {
+                data[length-1] = m_data[reg_addr++];
+                checksum+=data[length-1];
+            }
         }
        void _write ( uint32 term_addr, uint32 reg_addr, const uint8* data, size_t length, uint32 timeout ) {
+            status=0;
             if (m_err_mode) {
+                //std::cout << "error step: " << m_cur_step << std::endl;
                 if (!inc_error_step()) {
                     status=1; // write didn't work
                     return;
@@ -82,6 +66,10 @@ class MemoryDevice : public Nitro::Device {
             for (uint32 i=0;i<length/2;++i) {
                 m_data[reg_addr++] = data2[i];
                 checksum += data2[i];
+            }
+            if (length&1) {
+                m_data[reg_addr++] = data[length-1];
+                checksum += data[length-1];
             }
         }
        void _close () throw() {}
