@@ -199,7 +199,7 @@ bool NodeRef::operator==( const NodeRef& other ) {
 
 
 std::ostream& operator << ( std::ostream& out, const NodeRef& n ) {
-    out << "NodeRef<NodePtr:" << n.m_node ;
+    out << "NodeRef<NodePtr>(" << *n.m_node << ")"; 
     return out;
 }
 

@@ -164,7 +164,11 @@ string make_str( int32 m_err, const string* m_str, DataType m_userdata ) {
 std::ostream& operator << ( std::ostream& stream, const Exception& e) {
 
 
-    stream << e.str_error() << " (" << e.code() << ')';
+    stream << e.str_error() << " (" << e.code(); 
+    if (e.m_userdata != 0) {
+        stream << ": " << e.m_userdata; 
+    }
+    stream << ")";
     return stream;
 }
 
