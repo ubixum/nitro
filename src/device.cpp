@@ -274,7 +274,7 @@ DataType Device::impl::raw_get ( Device &dev, uint32 term_addr, uint32 reg_addr,
     
 
    if (m_term_modes[term_addr] & LOG_IO || m_modes&LOG_IO) {
-       std::cout << "get: " << term_addr << " " << reg_addr << ":"; 
+       std::cout << "get: " << term_addr << " " << reg_addr << " (Width: " << width << "):"; 
        for (int i=0;i<width;++i)
            printf ( " %02x", (uint32)bytes[i] );
        std::cout << endl;
@@ -358,7 +358,7 @@ void Device::impl::raw_set( Device &dev, uint32 term_addr, uint32 reg_addr, Data
 
 
     if (m_term_modes[term_addr] & LOG_IO || m_modes&LOG_IO) {
-        cout << "set: " << term_addr << " " << reg_addr << ":";
+        cout << "set: " << term_addr << " " << reg_addr << " (Width: " << width << "):";
         for (int i=0;i<width;++i)
             printf( " %02x", (uint32)buf[i] );
         std::cout << endl;
@@ -706,7 +706,7 @@ void Device::impl::get_set_subreg ( bitset<1024> &bits, uint32 term_addr, uint32
 
     for (uint32 addr = subreg_start; addr < subreg_end; ++addr ) { 
         if ( count ( clean_regs.begin(), clean_regs.end(), addr ) == 0 ) {
-            bitset<1024> dirty_reg ( (uint32) dev.get ( term_addr, addr, timeout, dwidth ) );
+            bitset<1024> dirty_reg ( (uint32) dev.get ( term_addr, addr, timeout, dwidth/8 ) );
             dirty_reg <<= (addr-subreg_start + offset/dwidth) * dwidth;
             bits |= dirty_reg;
             clean_regs.push_back(addr);
