@@ -377,6 +377,8 @@ void USBDevice::impl::config_device() {
     throw Exception(USB_PROTO, "Failed to get active device configuration.");
   }
   m_read_ep = m_write_ep = m_altsetting = 0;
+  m_interface = 0; // claim the first if there isn't any that match w/ 2 endpoints 
+                   // useful for programming firmware etc.
   for(unsigned char i=0; i < config->bNumInterfaces; i++) {
     iface = config->interface + i;
     for(int j=0; j < iface->num_altsetting; j++) {
