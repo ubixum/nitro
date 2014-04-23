@@ -267,7 +267,7 @@ void Device::impl::check_checksum(Device& dev, uint32 term_addr, const uint8* da
 DataType Device::impl::raw_get ( Device &dev, uint32 term_addr, uint32 reg_addr, AddressData &a, uint32 width, uint32 timeout ) {
 
 
-   uint8 bytes[width];
+   uint8 bytes[4]; // NOTE width not ready to compile on old vs2008
    //if (width>4) throw Exception ( DEVICE_OP_ERROR, "Raw device width > 4 currently unsupported." );
    // width>4?
    dev._read( term_addr, reg_addr, bytes, width, get_timeout( timeout ) );
@@ -290,7 +290,7 @@ DataType Device::impl::raw_get ( Device &dev, uint32 term_addr, uint32 reg_addr,
          m_modes & DOUBLEGET_VERIFY) && 
         (a.type == AddressData::RAW || 
          a.reg_node->get_attr("mode") == "write" ) ) { 
-         uint8 check[width];
+         uint8 check[4]; // NOTE fix win32 again
          dev._read ( term_addr, reg_addr, check, width, timeout );
          uint32 res2 = 0;
          memcpy(&res2,check,width>4?4:width);
@@ -350,7 +350,7 @@ DataType Device::impl::do_get (Device &dev, uint32 term_addr, uint32 reg_addr, A
 void Device::impl::raw_set( Device &dev, uint32 term_addr, uint32 reg_addr, DataType &value, uint32 width, AddressData &a, uint32 timeout ) {
     // TODO 
     // support _get/_set of other data types?
-    uint8 buf[width];
+    uint8 buf[4];
     //if (width>4)
     //    throw Exception ( DEVICE_OP_ERROR, "Sets larger than 32 bits unsupported." );
     uint32 val=(uint32)value;

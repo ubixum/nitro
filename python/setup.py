@@ -17,7 +17,7 @@
 import sys
 from distutils.core import setup, Extension 
 
-version='1.0.0.1'
+version='1.1.0.0'
 
 def get_ext():
     if sys.platform == 'win32':
