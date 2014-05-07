@@ -444,7 +444,7 @@ int USBDevice::impl::bulk_transfer ( NITRO_DIR d, uint8 ep, uint8* data, size_t 
        ep = m_write_ep;
      }
    }
-   int rv=libusb_bulk_transfer ( m_dev, ep, data, length, &transferred, timeout );
+   int rv=libusb_bulk_transfer ( m_dev, ep, data, length>1024*256?1024*256:length, &transferred, timeout );
    for(int i=0;i<length&&i<32; i++) {
      usb_debug(i << ": " << (int) data[i]);
    }
