@@ -399,7 +399,7 @@ void Device::impl::do_set (Device &dev, uint32 term_addr, uint32 reg_addr, DataT
 
 void Device::impl::raw_read(Device &dev, uint32 term_addr, uint32 reg_addr, uint8* data, size_t length, uint32 timeout ) {
     if (m_term_modes[term_addr] & LOG_IO || m_modes&LOG_IO) {
-        cout << "read: " << term_addr << " " << reg_addr << "len: " << length << endl;
+        cout << "read: " << term_addr << " " << reg_addr << " len: " << length << endl;
     }
     dev._read ( term_addr, reg_addr, data, length, timeout ); 
    check_status ( dev, term_addr );
@@ -954,7 +954,7 @@ NodeRef Device::get_subregs ( const DataType& term, const DataType& reg , int32 
     if ( !rnode->has_children()) {
         throw Exception ( DEVICE_OP_ERROR, "Register must have subregisters to use this method.", reg );
     }
-    DataType ret = get ( term, reg, timeout );
+    DataType ret = get ( term, reg, timeout ); // TODO rnode->get_attr("addr"), timeout, rnode->get_attr("width") );
     bitset<1024> data = to_bitset(ret); 
     NodeRef subreg_vals = Node::create(rnode->get_name());
     for (DITreeIter itr = rnode->child_begin(); itr != rnode->child_end(); ++itr ) {
