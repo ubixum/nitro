@@ -110,6 +110,7 @@ void XmlWriter::write(const NodeRef& node) {
                     out << "      <subregister" << endl;
                     out << "        name=\"" << subreg->get_name() << "\">" << endl;
                     COMMENT ( "        ", subreg );
+                    out << "        <vlog_name>" << subreg->get_attr ( "vlog_name" ) << "</vlog_name>" << endl;
                     out << "        <width>" << subreg->get_attr("width") << "</width>" << endl;
                     out << "        <init>" << subreg->get_attr("init") << "</init>" << endl;
                     VALUEMAP ( "        " , subreg );

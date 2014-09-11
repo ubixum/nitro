@@ -238,6 +238,8 @@ void handle_subreg( NodeRef disubreg, DOMNode *subreg ) {
             disubreg->set_attr("width", get_node_text ( subchild, UINT_DATA ) ); 
         } else if (node_name == "init" ) {
             handle_init ( disubreg, get_node_text ( subchild, STR_DATA ) );
+        } else if (node_name == "vlog_name") {
+            disubreg->set_attr("vlog_name", get_node_text ( subchild, STR_DATA ) );
         } else {
               if (subchild->getNodeType() != DOMNode::TEXT_NODE )
                 throw Exception ( XML_INVALID, "Unexpected child of subregister: " + node_name );
