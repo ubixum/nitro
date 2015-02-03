@@ -16,6 +16,15 @@ def RstWriter(di, out):
     """
         Write terminals and registers to text file.
     """
+
+    # register, address, width, initial value, comment
+    table_bars = ('='*30+' ')*5
+    def write_header():
+        out.write('\n' + table_bars + '\n' )
+        out.write( ('{:<31}' *5 ).format ( 'register', 'address', 'width', 'initial', 'comment' ) )
+        out.write('\n' + table_bars + '\n' ) 
+        
+
     for t in di.keys():
         term=di[t]
         title = '%s (Address %s)' % (t, hex(term.addr))
@@ -23,15 +32,37 @@ def RstWriter(di, out):
         out.write('+'*len(title)+'\n\n') 
         if len(term.comment):
             out.write('\n%s\n\n' % term.comment )
+
+        need_close=False
         if len(term.keys()):
-            out.write(('='*30 + ' ') * 4)
-            out.write('\n')
-            out.write( ('{:<31}' *4 ).format ( 'register', 'address', 'width', 'comment' ) )
-            out.write('\n' + ('='*30 + ' ') * 4 + '\n' )
-            for r in term.keys():
-                out.write( ('{:<31}' *4 ).format ( r, hex(term[r].addr), term[r].width, 
+            write_header()
+            for i,r in enumerate(term.keys()):
+                out.write( ('{:<31}' *5 ).format ( r, hex(term[r].addr), term[r].width, hex(term[r].init),
                                                    term[r].comment.replace('\n',' ') ) + '\n' )
-            out.write(('='*30 + ' ') * 4)
+                need_close=True
+                if term[r].num_children(): # subregisters
+                    out.write(table_bars+'\n\n')
+                    need_close=False
+                    subreg_bars = (' '*4 + '='*30+' ') * 4 + '\n'
+                    out.write ('    **%s bits**\n\n' % r )
+                    out.write ( subreg_bars ) 
+                    out.write ( ('    {:<31}' * 4 + '\n' ).format ( 'name', 'bits', 'initial', 'comment' ) )
+                    out.write ( subreg_bars ) 
+                    for k in term[r].iterkeys():
+                        s=term[r][k]
+                        bits = '[%d:%d]' % ( 
+                            s.width+s.addr-1,
+                            s.addr )
+                        out.write(('    {:<31}'*4 + '\n').format ( s.name, bits, s.init, s.comment ) )
+                    out.write(subreg_bars)
+
+                    # re-open register table if not the last register 
+                    if i<term.num_children()-1:
+                        out.write ( '\n' ) 
+                        write_header()
+                    
+            if need_close:
+                out.write(table_bars + '\n')
 
     out.write('\n')
 
