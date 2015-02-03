@@ -8,32 +8,61 @@ def print_usage():
     print "Usage: diconv <input filename> <output filename>"
     exit()
 
-if len(sys.argv) != 3:
-    print_usage()
-
 def get_extension(filename):
     return filename.split(os.path.extsep)[-1]
 
-ifile = sys.argv[1]
-ofile = sys.argv[2]
+def RstWriter(di, out):
 
-itype = get_extension(ifile)
-otype = get_extension(ofile)
+    """
+        Write terminals and registers to text file.
+    """
+    for t in di.keys():
+        term=di[t]
+        title = '%s (Address %s)' % (t, hex(term.addr))
+        out.write('\n\n'+title+'\n')
+        out.write('+'*len(title)+'\n\n') 
+        if len(term.comment):
+            out.write('\n%s\n\n' % term.comment )
+        if len(term.keys()):
+            out.write(('='*30 + ' ') * 4)
+            out.write('\n')
+            out.write( ('{:<31}' *4 ).format ( 'register', 'address', 'width', 'comment' ) )
+            out.write('\n' + ('='*30 + ' ') * 4 + '\n' )
+            for r in term.keys():
+                out.write( ('{:<31}' *4 ).format ( r, hex(term[r].addr), term[r].width, 
+                                                   term[r].comment.replace('\n',' ') ) + '\n' )
+            out.write(('='*30 + ' ') * 4)
 
+    out.write('\n')
 
-if itype == "py":
-    d=dict()
-    execfile(ifile, d)
-    di = d["di"]
-elif itype == "xml":
-    x = nitro.XmlReader(ifile)
-    di = nitro.DeviceInterface("DI")
-    x.read(di)
-else:
-    raise Exception("Don't know how to convert input file type '%s'" % itype)
+if __name__ == '__main__':
 
-if otype == "xml":
-    x = nitro.XmlWriter(ofile)
-    x.write(di)
-else:
-    raise Exception("Don't know how to convert output file type '%s'" % otype)
+    if len(sys.argv) != 3:
+        print_usage()
+
+    ifile = sys.argv[1]
+    ofile = sys.argv[2]
+    
+    itype = get_extension(ifile)
+    otype = get_extension(ofile)
+    
+    
+    if itype == "py":
+        d=dict()
+        execfile(ifile, d)
+        di = d["di"]
+    elif itype == "xml":
+        x = nitro.XmlReader(ifile)
+        di = nitro.DeviceInterface("DI")
+        x.read(di)
+    else:
+        raise Exception("Don't know how to convert input file type '%s'" % itype)
+    
+    if otype == "xml":
+        x = nitro.XmlWriter(ofile)
+        x.write(di)
+    elif otype in ['txt','rst']:
+        out=open(ofile,'w')
+        RstWriter(di,out)            
+    else:
+        raise Exception("Don't know how to convert output file type '%s'" % otype)
