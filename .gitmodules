@@ -1,0 +1,3 @@
+[submodule "win32/xerces-c"]
+	path = win32/xerces-c
+	url = git://git.apache.org/xerces-c.git
