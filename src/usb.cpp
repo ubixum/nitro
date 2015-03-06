@@ -175,12 +175,16 @@ struct usbdev_impl_core {
 
 };
 
+} // tmp end nitro namespace
+// impl should put namespace around appropriate classes
+
 #ifdef USB_CORE_LIBUSB1
 #include "libusb1_impl.cpp"
 #else
 #include "libusb0_impl.cpp"
 #endif
 
+namespace Nitro {
 
 uint32 USBDevice::get_vid() {
     return m_impl->m_vid;

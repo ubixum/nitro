@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009 Ubixum, Inc. 
+ * Copyright (C) 2015 BrooksEE, Inc. 
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -17,10 +17,12 @@
  **/
 
 #include <libusb-1.0/libusb.h>
+#include <queue>
 
 //typedef std::vector<struct usb_device*> DeviceList;
 //typedef std::vector<struct usb_device*>::iterator DeviceListItr;
 
+namespace Nitro {
 
 struct USBDevice::impl : public usbdev_impl_core {
     /**
@@ -432,9 +434,95 @@ int USBDevice::impl::control_transfer ( NITRO_DIR d, NITRO_VC c, uint16 value, u
    int type = d == NITRO_OUT ? 0x40 : 0xc0;
    return libusb_control_transfer( m_dev, type, c, value, index, data, length, timeout ); 
 }
+
+#define NITRO_TX_SIZE  (64*1024) // seemed to be the fastest buffer size
+#define NITRO_TX_QUEUE_DEPTH 32 
+
+typedef struct {
+   libusb_device_handle *dev;
+   uint8_t ep;
+   std::vector<libusb_transfer*> transfers;
+   int length;
+   uint8_t* data;
+   int queued;
+   int transferred;
+   int timeout;
+   int err;
+
+} usb_async_tx_struct;
+
+
+void usb_tx_submit_helper(usb_async_tx_struct *tx_struct, libusb_transfer *tx);
+
+void usb_tx_callback(libusb_transfer *tx) {
+    
+    usb_async_tx_struct * tx_struct = (usb_async_tx_struct*)tx->user_data;
+
+    if (tx_struct->transfers.size()<1) {
+        usb_debug ( "bad logic no tranfers in transfer queue." ); 
+        tx_struct->err = USB_PROTO;
+        libusb_free_transfer(tx);
+        return;
+    }
+
+    libusb_transfer *f = tx_struct->transfers.front();
+    tx_struct->transfers.erase(tx_struct->transfers.begin());
+
+    if (f != tx) {
+        // this should never happen
+        usb_debug ( "bad async request order, callback tx not first in queue." );
+        usb_debug ( "front " << f << " tx " << tx );
+        tx_struct->err = USB_PROTO; 
+        // possible memory leak here but who to free? 
+        // fix submission or libusb error instead.
+    } else {
+        if (tx->status != LIBUSB_TRANSFER_COMPLETED) {
+            tx_struct->err = tx->status;
+            usb_debug ( "tx packet failed " << tx->status );
+        } else if (tx->actual_length < tx->length) {
+            tx_struct->err = USB_COMM; 
+            usb_debug ( "tx packet transferred less than requested. " );
+        }
+    }
+
+    if (tx_struct->err) {
+        libusb_free_transfer( tx );
+    } else {
+        tx_struct->transferred += tx->actual_length;
+        usb_tx_submit_helper(tx_struct, tx); // resubmit or free
+    }
+
+}
+
+void usb_tx_submit_helper(usb_async_tx_struct *tx_struct, libusb_transfer *tx) {
+
+    if (tx_struct->queued >= tx_struct->length) {
+        // in this case, we're done queuing, free the tx
+        if (tx) libusb_free_transfer(tx);
+        return;
+    }
+
+    //libusb_transfer *tx = tx ? libusb_alloc_transfer(0) : 
+    if (!tx) tx = libusb_alloc_transfer(0);
+    int this_len = tx_struct->queued + NITRO_TX_SIZE > tx_struct->length ? tx_struct->length-tx_struct->queued : NITRO_TX_SIZE;
+    libusb_fill_bulk_transfer(
+       tx,
+       tx_struct->dev,
+       tx_struct->ep,
+       (tx_struct->data + tx_struct->queued),
+       this_len, 
+       usb_tx_callback,
+       tx_struct, 
+       tx_struct->timeout );
+    tx_struct->transfers.push_back(tx);
+    tx_struct->queued += this_len;
+    libusb_submit_transfer(tx);
+}
+
+
 int USBDevice::impl::bulk_transfer ( NITRO_DIR d, uint8 ep, uint8* data, size_t length, uint32 timeout ) {
    check_open();
-   int transferred=0;
+   //int transferred=0;
    if(ep == READ_EP) {
      if(m_read_ep) {
        ep = m_read_ep;
@@ -444,15 +532,51 @@ int USBDevice::impl::bulk_transfer ( NITRO_DIR d, uint8 ep, uint8* data, size_t 
        ep = m_write_ep;
      }
    }
-   int rv=libusb_bulk_transfer ( m_dev, ep, data, length>1024*256?1024*256:length, &transferred, timeout );
-   for(int i=0;i<length&&i<32; i++) {
-     usb_debug(i << ": " << (int) data[i]);
+
+   usb_async_tx_struct tx_struct;
+   tx_struct.dev = m_dev;
+   tx_struct.ep = ep;
+   tx_struct.length = length;
+   tx_struct.data = data;
+   tx_struct.queued = 0;
+   tx_struct.transferred = 0;
+   tx_struct.err=0;
+   tx_struct.timeout=timeout;
+
+   while (tx_struct.transfers.size() < NITRO_TX_QUEUE_DEPTH && tx_struct.queued < length ) {
+       usb_tx_submit_helper(&tx_struct,NULL);
    }
-   if (rv) {
-    usb_debug ( "bulk transfer fail: " << rv );
-    throw Exception ( USB_COMM, "bulk transfer fail",rv );
+ 
+   while (tx_struct.transferred < length && !tx_struct.err) {
+       timeval tv;
+       // TODO only wait the remining portion of the time... 
+       // need to use gettimeofday to subtract delta of 
+       // current ellapsed time.
+       tv.tv_sec = timeout / 1e3;
+       tv.tv_usec = (timeout % 1000) * 1e3;
+       int ret;
+       if (ret=libusb_handle_events_timeout(NULL, &tv )) {
+          tx_struct.err=ret;
+          break; 
+       }
    }
-   return transferred;
+
+   for (std::vector<libusb_transfer*>::iterator itr = tx_struct.transfers.begin();
+        itr != tx_struct.transfers.end(); 
+        ++itr ) {
+        libusb_cancel_transfer(*itr);
+   }
+
+   while ( tx_struct.transfers.size() ) {
+       usb_debug ( "handling usb completion events." );
+       libusb_handle_events_completed(NULL,NULL);
+   }
+
+   if (tx_struct.err || tx_struct.transferred < length ) {
+     throw Exception ( USB_COMM, "bulk transfer fail", tx_struct.err );       
+   }
+
+   return length;
 }
 
 void USBDevice::impl::close() {
@@ -498,3 +622,5 @@ uint16 USBDevice::impl::get_device_address() {
     return get_addr(dev);
     
 }
+
+} // end nitro namespace
