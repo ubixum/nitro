@@ -181,6 +181,10 @@
         </register>
 
     </terminal>
-
+    <terminal
+        name="narrow_term"
+        regAddrWidth="8"
+        regDataWidth="8">
+    </terminal>
 
 </deviceinterface>

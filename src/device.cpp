@@ -275,7 +275,7 @@ DataType Device::impl::raw_get ( Device &dev, uint32 term_addr, uint32 reg_addr,
 
    if (m_term_modes[term_addr] & LOG_IO || m_modes&LOG_IO) {
        std::cout << "get: " << term_addr << " " << reg_addr << " (Width: " << width << "):"; 
-       for (int i=0;i<width;++i)
+       for (unsigned i=0;i<width;++i)
            printf ( " %02x", (uint32)bytes[i] );
        std::cout << endl;
    }
@@ -359,7 +359,7 @@ void Device::impl::raw_set( Device &dev, uint32 term_addr, uint32 reg_addr, Data
 
     if (m_term_modes[term_addr] & LOG_IO || m_modes&LOG_IO) {
         cout << "set: " << term_addr << " " << reg_addr << " (Width: " << width << "):";
-        for (int i=0;i<width;++i)
+        for (unsigned i=0;i<width;++i)
             printf( " %02x", (uint32)buf[i] );
         std::cout << endl;
     }
@@ -432,12 +432,23 @@ auto_ptr<AddressData> Device::impl::resolve_addrs ( const DataType& term, const 
 
     auto_ptr<AddressData> addrs ( new AddressData() ); 
 
-    // TODO - couldn't we reverse look up a 
-    // register address if there is a di present?
     if ( STR_DATA != reg.get_type() ) {
         addrs->type = AddressData::RAW;
         addrs->addrs.push_back ( reg );
-        addrs->widths.push_back ( data_width == 0 ? 2 : data_width );
+        if ( data_width == 0 ) {
+            // if there is a di, use the regDataWidth from the terminal
+            // otherwise use the old default of 2
+            try {
+                NodeRef term_node = find_name_or_addr ( di, term );
+                uint32 term_data_width = term_node->get_attr("regDataWidth");
+                addrs->widths.push_back ( term_data_width/8 + (term_data_width%8?1:0) );
+                // term resolved
+            } catch ( Exception &e ) {
+                addrs->widths.push_back ( 2 ); 
+            }
+        } else {
+            addrs->widths.push_back ( data_width );
+        }
         return addrs;
     }
     
@@ -864,7 +875,7 @@ DataType Device::get( const DataType& term, const DataType& reg, int32 timeout, 
 
     vector<DataType> results;
     //uint8 read_bytes = addrs->bytes / addrs->addrs.size();
-    for (int i=0; i<addrs->addrs.size(); ++i ) {
+    for (unsigned i=0; i<addrs->addrs.size(); ++i ) {
     //for ( vector<uint32>::iterator itr = addrs->addrs.begin();
     //      itr != addrs->addrs.end(); ++itr ) {
           uint32 addr = addrs->addrs.at(i);

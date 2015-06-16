@@ -14,6 +14,7 @@ class DeviceTest : public CppUnit::TestFixture {
     CPPUNIT_TEST_SUITE ( DeviceTest );
     CPPUNIT_TEST ( testGetSet );
     CPPUNIT_TEST ( testInt );
+    CPPUNIT_TEST ( testNarrow);
     CPPUNIT_TEST ( testValuemap );
     CPPUNIT_TEST ( testDictSet );
     CPPUNIT_TEST ( testBigReg );
@@ -49,7 +50,7 @@ class DeviceTest : public CppUnit::TestFixture {
                 // 1    0
                 // 1010100000 = 672
                 //cout << " -- get -- 672 -- " << endl;
-                CPPUNIT_ASSERT ( dev.get ( 0, string("reg1") ) == 672 );
+                CPPUNIT_ASSERT ( dev.get ( 0, "reg1" ) == 672 ); //string("reg1") ) == 672 );
 
                 // should set a few bits in each register
                 // 00100 00011 00010 0001
@@ -85,6 +86,35 @@ class DeviceTest : public CppUnit::TestFixture {
        CPPUNIT_ASSERT_EQUAL ( 0x403, (int32) dev.get ( "int_term", "int.hw" ) );
 
     }
+
+    void testNarrow() {
+       try {
+           dev.set ( "narrow_term", 0, 0x12 );
+           dev.set ( "narrow_term", 1, 0x1234 ); // should case to 0x34 since too big for 8 bit addr 
+
+           uint32 narrow_addr = dev.get_di()->get_child("narrow_term")->get_attr("addr");
+
+           CPPUNIT_ASSERT_EQUAL ( 0x12, (int32) dev.get ( "narrow_term", 0 ) );
+           CPPUNIT_ASSERT_EQUAL ( 0x34, (int32) dev.get ( "narrow_term", 1 ) );
+
+           // same thing should work if set by addr
+           //
+           dev.set( narrow_addr, 0, 0x56 );
+           dev.set( narrow_addr, 1, 0x7890 );
+
+           CPPUNIT_ASSERT_EQUAL ( 0x56, (int32) dev.get ( "narrow_term", 0 ) );
+           CPPUNIT_ASSERT_EQUAL ( 0x90, (int32) dev.get ( "narrow_term", 1 ) );
+
+           // non existent di should do two byte read/writes 
+
+           dev.set ( 0x6666, 0, 0x12345 );
+           CPPUNIT_ASSERT_EQUAL ( 0x2345, (int32) dev.get( 0x6666, 0 ) );
+
+       } catch ( Exception &e ) {
+          cout << "error " << e << endl;
+       }
+
+   }
 
     void testValuemap() {
         dev.set ( "Terminal1", "reg1", "evens" );

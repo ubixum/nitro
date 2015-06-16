@@ -9,8 +9,11 @@ TESTS=tests/node.o tests/error.o tests/types.o tests/xml.o tests/device.o tests/
 run: test userdevice.so
 	LD_LIBRARY_PATH=../build/usr/lib64 PYTHONPATH=$(PYTHONBUILD) ./test
 
-mem: test
+mem: test userdevice.so
 	LD_LIBRARY_PATH=../build/usr/lib64 valgrind --leak-check=full --show-reachable=yes $(SUPP) ./test
+
+gdb: test userdevice.so
+	LD_LIBRARY_PATH=../build/usr/lib64 gdb ./test
 
 test: $(TESTS) test.o
 	g++ -o test test.o $(TESTS) $(LDFLAGS)
