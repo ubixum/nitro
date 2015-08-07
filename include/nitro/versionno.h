@@ -1,4 +1,4 @@
-// Copyright (C) 2010 Ubixum, Inc. 
+// Copyright (C) 2015 Ubixum, Inc 
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,7 +19,7 @@
 #define NITRO_MAJOR 1
 #define NITRO_MINOR 1
 #define NITRO_RELEASE 1
-#define NITRO_SUBREL 0
+#define NITRO_SUBREL 1
 
 #define NITRO_VERSION ((uint32)((NITRO_MAJOR << 24)|(NITRO_MINOR << 16)|(NITRO_RELEASE << 8)|NITRO_SUBREL))
 
