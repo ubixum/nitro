@@ -1,3 +1,6 @@
 [submodule "win32/xerces-c"]
 	path = win32/xerces-c
 	url = git://git.apache.org/xerces-c.git
+[submodule "win32/libusb"]
+	path = win32/libusb
+	url = https://github.com/libusb/libusb.git
