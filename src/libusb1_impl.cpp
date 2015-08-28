@@ -16,7 +16,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  **/
 
+#ifdef WIN32
+#include <libusb.h>
+#else
 #include <libusb-1.0/libusb.h>
+#endif
+
 #include <queue>
 
 //typedef std::vector<struct usb_device*> DeviceList;
