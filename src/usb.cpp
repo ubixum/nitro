@@ -374,7 +374,7 @@ std::wstring USBDevice::get_device_serial ( ) {
                  8; // ascii before that
     uint8 buf[16]; // the max
     int ret = m_impl->control_transfer ( NITRO_IN, VC_SERIAL, 0, 0, buf, buflen, 1000 );
-    if (ret<0) throw Exception ( USB_COMM, "Get Serial Failed." );
+    if (ret<0) throw Exception ( USB_COMM, "Get Serial Failed.", ret );
     std::wstring serial;
     // use copy instead because wchar_t is 32 instead of 16 on some platforms
     for (int i=0;i<8;++i) {
