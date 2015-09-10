@@ -145,6 +145,7 @@ PyMODINIT_FUNC init_nitro(void) {
     PyModule_AddIntConstant(m, "GETSET_VERIFY", Nitro::Device::GETSET_VERIFY);
     PyModule_AddIntConstant(m, "DOUBLEGET_VERIFY", Nitro::Device::DOUBLEGET_VERIFY);
     PyModule_AddIntConstant(m, "STATUS_VERIFY", Nitro::Device::STATUS_VERIFY);
+    PyModule_AddIntConstant(m, "CHECKSUM_VERIFY", Nitro::Device::CHECKSUM_VERIFY);
     PyModule_AddIntConstant(m, "RETRY_ON_FAILURE", Nitro::Device::RETRY_ON_FAILURE);
     PyModule_AddIntConstant(m, "LOG_IO", Nitro::Device::LOG_IO);
     PyModule_AddStringConstant(m, "str_version", (char*)Nitro::str_version().c_str() ); 
