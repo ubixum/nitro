@@ -438,7 +438,7 @@ int USBDevice::impl::control_transfer ( NITRO_DIR d, NITRO_VC c, uint16 value, u
 }
 int USBDevice::impl::bulk_transfer ( NITRO_DIR d, uint8 ep, uint8* data, size_t length, uint32 timeout ) {
    check_open();
-   int transferred=0;
+   int transferred=0, tmp;
    if(ep == READ_EP) {
      if(m_read_ep) {
        ep = m_read_ep;
@@ -455,6 +455,9 @@ int USBDevice::impl::bulk_transfer ( NITRO_DIR d, uint8 ep, uint8* data, size_t 
    if (rv) {
     usb_debug ( "bulk transfer fail: " << rv );
     throw Exception ( USB_COMM, "bulk transfer fail",rv );
+   }
+   if (transferred==length && ep==m_write_ep) {
+     libusb_bulk_transfer ( m_dev, ep, NULL, 0, &tmp, timeout );
    }
    return transferred;
 }
