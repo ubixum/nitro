@@ -44,6 +44,12 @@ def get_ext():
        sources = ['src/nitro.cpp', 'src/device.cpp', 'src/usb.cpp', 'src/userdevice.cpp', 'src/node.cpp', 'src/buffer.cpp', 'src/xml.cpp']
        )
 
+def get_scripts():
+    scripts=['di','diconv']
+    if sys.platform=='win32':
+        scripts += ['di.bat','diconv.bat']
+    return scripts
+
 if __name__=='__main__':
     setup(
      name='nitro',
@@ -52,7 +58,7 @@ if __name__=='__main__':
      package_dir={'nitro':'py/nitro'},
      package_data ={'nitro': [ 'include/python_nitro.h' ],
                     'nitro.wx': ['*.xrc']},
-     scripts=['di', 'diconv'],
+     scripts=get_scripts(),
      ext_modules=[get_ext()]
     )
 
