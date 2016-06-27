@@ -397,7 +397,7 @@ def printVerilogDefs(di, module, filename):
 def printCDefs(di, filename, registers_only=False):
     f = open(filename, "w");
     f.write("// This file is auto-generated. Do not edit.\n");
-    defname = "_" + filename.upper().replace(".","_") + "_"
+    defname = "_" + filename.upper().replace(".","_").replace('\\','_').replace('/','_') + "_"
     f.write("#ifndef %s\n" % defname)
     f.write("#define %s\n\n" % defname)
 
