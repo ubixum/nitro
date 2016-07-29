@@ -428,6 +428,9 @@ def printCDefs(di, filename, registers_only=False):
                         if(w>0 and i==0):
                             f.write("#define   " + reg_name)
                             f.write(" " + str(i+reg.addr) + "\n")
+                        for s in reg.values():
+                            s_name = reg_name + "_" + s.name.upper()
+                            f.write ( "#define      " + s_name + " " + str(s.addr) + "\n" ) 
                     i=i-1
 #                f.write("#define    WIDTH_"+term_name+"_"+reg.name+" %d\n" % reg.width)
 
