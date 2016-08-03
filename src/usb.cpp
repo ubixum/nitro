@@ -88,6 +88,7 @@ struct usbdev_impl_core {
     virtual int control_transfer ( NITRO_DIR, NITRO_VC, uint16 value, uint16 index, uint8* data, size_t length, uint32 timeout )=0;
     virtual int bulk_transfer ( NITRO_DIR, uint8, uint8* , size_t, uint32 )=0; 
     virtual uint16 firmware_version() = 0;
+    virtual const char* impl_error_name(int) =0;
     int write_ram(uint16 addr, const uint8* data, size_t length, unsigned int timeout ) {
     
     	size_t transferred = 0;
@@ -100,7 +101,7 @@ struct usbdev_impl_core {
     			transferred += cur_transfer_size;
                 usb_debug ( "Transfered " << cur_transfer_size << " to device." );
     		} else {
-                throw Exception ( USB_COMM, "Failed to transfer bytes to usb device memory.", ret ); //, usb_strerror() );
+                throw Exception ( USB_COMM, "Failed to transfer bytes to usb device memory.", impl_error_name(ret) );
             }
                 
     	}
@@ -113,7 +114,7 @@ struct usbdev_impl_core {
             assert (sizeof(c)==5);
             int ret=control_transfer( NITRO_OUT, VC_HI_RDWR, terminal_addr, reg_addr, reinterpret_cast<uint8*>(&c), sizeof(c),  timeout);
             if (ret != sizeof(c)){ 
-                throw Exception ( USB_COMM, "Unable to initiate rdwr process on device.", ret);//, usb_strerror() );
+                throw Exception ( USB_COMM, "Unable to initiate rdwr process on device.", impl_error_name(ret));
             }
         } else {
 	  rdwr_data_header c = { command, terminal_addr, reg_addr, (uint32) length };
@@ -122,7 +123,7 @@ struct usbdev_impl_core {
             // purposes of fx3 we only need if it's divisible by 4.
             int ret=control_transfer( NITRO_OUT, VC_HI_RDWR, terminal_addr, length, reinterpret_cast<uint8*>(&c), sizeof(c),  timeout);
             if (ret != sizeof(c)){ 
-                throw Exception ( USB_COMM, "Unable to initiate rdwr process on device.", ret);//, usb_strerror() );
+                throw Exception ( USB_COMM, "Unable to initiate rdwr process on device.", impl_error_name(ret));
             }
         }
     }
@@ -144,15 +145,12 @@ struct usbdev_impl_core {
              usb_debug ( "Core Transfer Speed " << mb << " MB in " << timer.getElapsedTime() << " s = " << mb/timer.getElapsedTime() << " MBps" ); 
             }
             #endif
-            if (ret<0) {
-                throw Exception ( USB_COMM, "Unable to write data to device.", ret);//, usb_strerror() );
-            }
-    
+   
             usb_debug ( "bytes read/written: " << ret << " (total: " << (transferred+ret) << ")" );
             
             if (!ret) {
                ++tmp_zcount;
-               if (tmp_zcount>3) throw Exception ( USB_COMM, "Unable to Read/Write data to device", "Overflow" ); 
+               if (tmp_zcount>3) throw Exception ( USB_COMM, "Unable to Read/Write data to device", "Zero Byte transferrs exceeded." ); 
             }
             transferred += ret;
         }
@@ -374,7 +372,7 @@ std::wstring USBDevice::get_device_serial ( ) {
                  8; // ascii before that
     uint8 buf[16]; // the max
     int ret = m_impl->control_transfer ( NITRO_IN, VC_SERIAL, 0, 0, buf, buflen, 1000 );
-    if (ret<0) throw Exception ( USB_COMM, "Get Serial Failed.", ret );
+    if (ret<0) throw Exception ( USB_COMM, "Get Serial Failed.", m_impl->impl_error_name(ret) );
     std::wstring serial;
     // use copy instead because wchar_t is 32 instead of 16 on some platforms
     for (int i=0;i<8;++i) {
@@ -430,7 +428,7 @@ size_t USBDevice::write_fx3_ram(uint32 addr, const uint8* data, size_t length, u
       transferred += cur_transfer_size;
       usb_debug ( "Transfered " << cur_transfer_size << " to device." );
     } else {
-      throw Exception ( USB_COMM, "Failed to transfer bytes to usb device memory.", ret ); //, usb_strerror() );
+      throw Exception ( USB_COMM, "Failed to transfer bytes to usb device memory.", libusb_error_name(ret) );
     }
   }
   return length;
@@ -492,7 +490,7 @@ void USBDevice::load_fx3_firmware(const char* bytes, size_t length) {
   // write the program entry point
   r = m_impl->control_transfer(NITRO_OUT, VC_RDWR_RAM, (program_entry & 0x0000ffff ) , program_entry >> 16, NULL, 0, 1000);
   if ( r ) {
-    throw Exception (USB_COMM, "Error in control_transfer", r);
+    throw Exception (USB_COMM, "Error in control_transfer", m_impl->impl_error_name(r));
   }
   m_impl->close();
 }

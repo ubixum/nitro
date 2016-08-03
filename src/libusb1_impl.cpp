@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009 Ubixum, Inc. 
+ * Copyright (C) 2016 BrooksEE, LLC 
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -101,7 +101,7 @@ struct USBDevice::impl : public usbdev_impl_core {
                         if (!m_override_version) { check_ver(dscr.bcdDevice); }
                         int ret = libusb_open(dev, &m_dev);
                         if (ret) {
-                           throw Exception ( USB_PROTO, "Failed to open device.", ret ); 
+                           throw Exception ( USB_PROTO, "Failed to open device.", libusb_error_name(ret) ); 
                         }
                         m_ver=dscr.bcdDevice;
                         return false;
@@ -122,7 +122,7 @@ struct USBDevice::impl : public usbdev_impl_core {
                     if (m_addr == addr) {
                         int ret = libusb_open(dev, &m_dev);
                         if (ret) {
-                            throw Exception ( USB_PROTO, "Failed to open device.", ret );
+                            throw Exception ( USB_PROTO, "Failed to open device.", libusb_error_name(ret) );
                         }
                         m_ver = dscr.bcdDevice;
                         return false;
@@ -133,12 +133,13 @@ struct USBDevice::impl : public usbdev_impl_core {
 
         };
 
+
         /**
          * Gets the serial number from an opened (not necessarily configured) device.
          **/
         static std::wstring get_serial(libusb_device_handle* dev) {
             unsigned char *buf = new unsigned char[1025]; // 1k buffer + 1 NULL
-            memset(buf,1025,0);
+            memset(buf,0, 1025);
             libusb_device* d = libusb_get_device(dev);
             libusb_device_descriptor dscr;
             int ret = libusb_get_device_descriptor ( d, &dscr );
@@ -156,7 +157,7 @@ struct USBDevice::impl : public usbdev_impl_core {
             }
             delete [] buf; 
             if (str_ok >= 0) return res;
-            else throw Exception ( USB_PROTO, "Failed to retrieve string descriptor while checking device.", ret );
+            else throw Exception ( USB_PROTO, "Failed to retrieve string descriptor while checking device.", libusb_error_name(ret) );
         }
 
         class SerialOpener : public DevItr {
@@ -169,7 +170,7 @@ struct USBDevice::impl : public usbdev_impl_core {
                 bool process(libusb_device* dev, libusb_device_descriptor& dscr) {
 
                     int ret = libusb_open(dev,&m_dev);
-                    if ( ret ) throw Exception ( USB_PROTO, "Failed opening device while checking serial number." );
+                    if ( ret ) throw Exception ( USB_PROTO, "Failed opening device while checking serial number.", libusb_error_name(ret) );
 
                     try {
                         std::wstring ser = get_serial ( m_dev );
@@ -223,6 +224,7 @@ struct USBDevice::impl : public usbdev_impl_core {
         static std::wstring get_device_serial(uint32 vid, uint32 pid, uint32 index );
         static uint16 get_device_address (uint32, uint32, uint32 );
         uint16 get_device_address();
+        const char* impl_error_name(int r) { return libusb_error_name(r); }
    
         int control_transfer ( NITRO_DIR, NITRO_VC, uint16 value, uint16 index, uint8* data, size_t length, uint32 timeout );
         int bulk_transfer ( NITRO_DIR, uint8 ep, uint8* data, size_t length, uint32 timeout ); 
@@ -242,7 +244,7 @@ void USBDevice::impl::check_init() {
     
         int rv=libusb_init(NULL);
         if (rv) {
-         throw Exception( USB_INIT );
+         throw Exception( USB_INIT, "Libusb1 Init Fail", libusb_error_name(rv) );
         }
         m_initialized=true;
 		usb_debug ( "Initialized Lib USB1" );
@@ -259,9 +261,10 @@ void USBDevice::impl::iter_devices ( uint32 vid, uint32 pid, DevItr& itr) {
   usb_debug ( "usb devices to check: " << devices );
   for (int i=0;i<devices;++i) {
      libusb_device_descriptor dscr;
-     if (libusb_get_device_descriptor( list[i], &dscr )) {
+     int ret=libusb_get_device_descriptor( list[i], &dscr );
+     if (ret) {
         libusb_free_device_list ( list, 1 );
-        throw Exception ( USB_PROTO, "Error reading device information." );
+        throw Exception ( USB_PROTO, "Error reading device information.", libusb_error_name(ret) );
      }
      if (dscr.idVendor == vid && dscr.idProduct == pid ) {
         try {
@@ -292,9 +295,10 @@ std::vector<std::vector<int> > USBDevice::impl::get_device_list(int vid, int pid
   std::vector<std::vector<int> > vec;
   for (int i=0;i<devices;++i) {
      libusb_device_descriptor dscr;
-     if (libusb_get_device_descriptor( list[i], &dscr )) {
+     int ret=libusb_get_device_descriptor( list[i], &dscr );
+     if (ret) {
         libusb_free_device_list ( list, 1 );
-        throw Exception ( USB_PROTO, "Error reading device information." );
+        throw Exception ( USB_PROTO, "Error reading device information.", libusb_error_name(ret) );
      }
      if ((vid<0 || dscr.idVendor  == (uint32) vid) &&
 	 (pid<0 || dscr.idProduct == (uint32) pid)) {
@@ -367,18 +371,20 @@ void USBDevice::impl::config_device() {
   const libusb_interface_descriptor *idesc;
   const libusb_endpoint_descriptor *epdesc;
 
-  if (libusb_set_configuration(m_dev,1)) {
+  int ret=libusb_set_configuration(m_dev,1);
+  if (ret) {
     libusb_close(m_dev);
     m_dev=NULL;
-    throw Exception(USB_PROTO, "Failed to set device configuration."); //, usb_strerror());
+    throw Exception(USB_PROTO, "Failed to set device configuration.", libusb_error_name(ret));
   }
 	  
   // Find the altsetting and ep addresses
   dev = libusb_get_device(m_dev);
-  if(libusb_get_active_config_descriptor(dev, &config)) {
+  ret=libusb_get_active_config_descriptor(dev, &config);
+  if(ret) {
     libusb_close(m_dev);
     m_dev=NULL;
-    throw Exception(USB_PROTO, "Failed to get active device configuration.");
+    throw Exception(USB_PROTO, "Failed to get active device configuration.", libusb_error_name(ret));
   }
   m_read_ep = m_write_ep = m_altsetting = 0;
   m_interface = 0; // claim the first if there isn't any that match w/ 2 endpoints 
@@ -415,17 +421,19 @@ void USBDevice::impl::config_device() {
   //}
 
   // claim interface
-  if (libusb_claim_interface(m_dev,m_interface)) {
+  ret=libusb_claim_interface(m_dev,m_interface);
+  if (ret) {
 	  libusb_close(m_dev);
       m_dev=NULL;
-      throw Exception(USB_PROTO, "Failed to claim device interface."); //, usb_strerror());
+      throw Exception(USB_PROTO, "Failed to claim device interface.", libusb_error_name(ret));
   }
 
   if(m_altsetting) {
-    if (libusb_set_interface_alt_setting(m_dev,m_interface,m_altsetting) ) {
+    ret=libusb_set_interface_alt_setting(m_dev,m_interface,m_altsetting);
+    if (ret) {
   	  libusb_close(m_dev);
   	  m_dev=NULL;
-  	  throw Exception(USB_PROTO, "Failed to set interface alt setting.");
+  	  throw Exception(USB_PROTO, "Failed to set interface alt setting.", libusb_error_name(ret));
     }
   }
   usb_debug ( "Device configured." );
@@ -449,14 +457,14 @@ int USBDevice::impl::bulk_transfer ( NITRO_DIR d, uint8 ep, uint8* data, size_t 
      }
    }
    int rv=libusb_bulk_transfer ( m_dev, ep, data, length>1024*256?1024*256:length, &transferred, timeout );
-   for(int i=0;i<length&&i<32; i++) {
+   for(size_t i=0;i<length&&i<32; i++) {
      usb_debug(i << ": " << (int) data[i]);
    }
    if (rv) {
     usb_debug ( "bulk transfer fail: " << rv );
-    throw Exception ( USB_COMM, "bulk transfer fail",rv );
+    throw Exception ( USB_COMM, "bulk transfer fail",libusb_error_name(rv) ) ;
    }
-   if (transferred==length && ep==m_write_ep) {
+   if ((unsigned)transferred==length && ep==m_write_ep) {
      libusb_bulk_transfer ( m_dev, ep, NULL, 0, &tmp, timeout );
    }
    return transferred;
