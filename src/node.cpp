@@ -42,7 +42,7 @@ namespace Nitro {
 
 bool file_exists(const std::string &path) {
    std::ifstream file(path.c_str());
-   return file; // file closed if goes out of scope.
+   return file.good(); // file closed if goes out of scope.
 }
 
 NodeRef load_di( const std::string &path, NodeRef dst ) {
