@@ -386,7 +386,9 @@ def printVerilogDefs(di, module, filename):
             f.write("`define      WIDTH_"+term.name+"_"+reg.name+" %d\n" % reg.width)
             if(reg.array > 1):
                 f.write("`define      ARRAY_SIZE_"+term.name+"_"+reg.name+" %d\n" % reg.array)
-
+            if hasattr(reg, "valuemap"):
+                for k,v in reg.valuemap.attr_items():
+                    f.write("`define       "+term.name+"_"+reg.name+"_"+k+" " + str(v)+"\n")
             for subreg in reg.values():
                 f.write("`define     "+term.name+"_"+reg.name+"_"+subreg.name+ " %d:%d\n" % (subreg.addr+subreg.width-1,subreg.addr))
         f.write("\n\n")
@@ -432,6 +434,9 @@ def printCDefs(di, filename, registers_only=False):
                             s_name = reg_name + "_" + s.name.upper()
                             f.write ( "#define      " + s_name + " " + str(s.addr) + "\n" ) 
                     i=i-1
+            if hasattr(reg, "valuemap"):
+                for k,v in reg.valuemap.attr_items():
+                    f.write("#define       "+term.name.upper()+"_"+reg.name.upper()+"_"+k.upper()+" " + str(v)+"\n")
 #                f.write("#define    WIDTH_"+term_name+"_"+reg.name+" %d\n" % reg.width)
 
 #            for subreg in reg.values():
