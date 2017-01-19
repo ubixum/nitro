@@ -113,13 +113,23 @@ class XmlTest : public CppUnit::TestFixture {
             CPPUNIT_ASSERT_NO_THROW ( bt->get_child( "little" ) ); 
             CPPUNIT_ASSERT_NO_THROW ( bt->get_child( "little" )->get_attr("endian") ); 
             CPPUNIT_ASSERT_EQUAL ( string("little"), (string) bt->get_child("little")->get_attr("endian") );
+
+            // type
+            CPPUNIT_ASSERT_NO_THROW( tree->get_child("pipeTerm") );
+            NodeRef p = tree->get_child("pipeTerm");
+            CPPUNIT_ASSERT_NO_THROW( p->get_attr("type"));
+            CPPUNIT_ASSERT_EQUAL ( string("pipe"), (string) p->get_attr("type") );
         }
 
         void testTwice() {
             const char* xml_path="test.xml";
             XmlReader reader ( xml_path, true );
             NodeRef tree = DeviceInterface::create("di");
-            reader.read(tree);
+            try {
+                reader.read(tree);
+            } catch (Exception &e) {
+                cout << "exception reading xml: " << e << endl;
+            }
             CPPUNIT_ASSERT_NO_THROW ( reader.read(tree) );
         }
 

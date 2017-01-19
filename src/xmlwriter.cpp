@@ -86,6 +86,9 @@ void XmlWriter::write(const NodeRef& node) {
         if ( term->has_attr("endian") ) {
             out << "      endian=\"" << term->get_attr("endian") << '"' << endl;
         }
+        if ( term->has_attr("type")) {
+            out << "      type=\"" << term->get_attr("type") << '"' << endl;
+        }
         if ( term->has_attr("version") ) {
             out << "      version=\"" << term->get_attr("version") << '"' << endl;
         }

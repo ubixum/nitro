@@ -114,12 +114,15 @@
                             newname="reg_renamed"
                             addr="1" />
                   <register name="new_register">
-                    <type>int</type>
+                    <type>int</type> 
                     <mode>read</mode>
                     <width>32</width>
                   </register>
         </termoverlay>        
     </include>
+
+    <terminal 
+        name="pipeTerm"
+        type="pipe" />
     
 </deviceinterface>
-

@@ -314,10 +314,21 @@ void handle_registers ( NodeRef diterm , DOMNode *term ) {
 void handle_terminal ( NodeRef di, DOMNode *term ) {
     NodeRef diterm = Terminal::create( get_attr(term, "name", STR_DATA) );
     debug("  <terminal name=\"" << diterm->get_name() );
-    diterm->set_attr ( "regDataWidth", get_attr(term, "regDataWidth", UINT_DATA ) );
-    diterm->set_attr ( "regAddrWidth", get_attr(term, "regAddrWidth", UINT_DATA ) );
+    if (has_attr(term, "regDataWidth")) { 
+        diterm->set_attr ( "regDataWidth", get_attr(term, "regDataWidth", UINT_DATA ) );
+    } else {
+        diterm->set_attr ( "regDataWidth", 32);
+    }
+    if (has_attr(term, "regAddrWidth")) {
+        diterm->set_attr ( "regAddrWidth", get_attr(term, "regAddrWidth", UINT_DATA ) );
+    } else {
+        diterm->set_attr ( "regAddrWidth", 32);
+    }
     if (has_attr(term,"endian")) {
       diterm->set_attr("endian", get_attr(term, "endian", STR_DATA ) );
+    }
+    if (has_attr(term,"type")) {
+        diterm->set_attr("type", get_attr(term, "type", STR_DATA ) );
     }
     if (has_attr(term,"addr")) {
       diterm->set_attr("addr", get_attr(term, "addr", UINT_DATA ));
