@@ -16,13 +16,7 @@ PROGS=$(addprefix $(BINDIR)/, $(PROG_NAMES))
 CPPFLAGS:=$(CPPFLAGS) -Wall -fPIC -Iinclude -I$(shell python -c "from distutils import sysconfig; print sysconfig.get_config_var('INCLUDEPY');") -Ipython/py/nitro/include
 PYLIB:=`python -c "from distutils import sysconfig; print sysconfig.get_config_var('BLDLIBRARY')"`
 
-ifeq ($(USB_BACKEND), libusb0)
-CPPFLAGS:=$(CPPFLAGS) -DUSB_CORE_LIBUSB0
-USBLIB=-lusb
-else
-CPPFLAGS:=$(CPPFLAGS) -DUSB_CORE_LIBUSB1
 USBLIB=-lusb-1.0
-endif
 
 OBJNAMES=node device usb error types reader xmlreader userdevice writer xmlwriter scripts version
 DLLHEADERS=$(addprefix include/nitro/, $(addsuffix .h, $(OBJNAMES)))

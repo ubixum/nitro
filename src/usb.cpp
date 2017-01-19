@@ -173,11 +173,7 @@ struct usbdev_impl_core {
 
 };
 
-#ifdef USB_CORE_LIBUSB1
 #include "libusb1_impl.cpp"
-#else
-#include "libusb0_impl.cpp"
-#endif
 
 
 uint32 USBDevice::get_vid() {
