@@ -123,7 +123,7 @@ public:
         DOUBLEGET_VERIFY=1<<1, ///< Performs every get twice and verifies the result is the same for each get.
         STATUS_VERIFY=1<<2, ///< After any get/set/read/write, checks the transfer_status function for a successful transfer.
         CHECKSUM_VERIFY=1<<3, ///< After any get/set/read/write, check that the transfer_checksum is correct for the data.
-        LOG_IO=1<<4, ///< Log get/set/read/wrote to stdout
+        LOG_IO=1<<4, ///< Log get/set/read/write to stdout
         SKIP_ACK_PKT=1<<5, ///< Allows a terminal to implemented on the device without requiring an ack packet.
         RETRY_ON_FAILURE=1<<31 ///< If a mode check failes and this is set, the transfer will be attempted again.
     };

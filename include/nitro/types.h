@@ -122,7 +122,7 @@ class DLL_API DataType {
 		 * \brief Return a datatype to buffer form.
          *
          * Cast datatype back to raw buffer.
-         * The length of the buffer can be objtained by casting the datatype to a uint32
+         * The length of the buffer can be obtained by casting the datatype to a uint32
 		 **/
 		static uint8* as_buffer(const DataType& d);
 
