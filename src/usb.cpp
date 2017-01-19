@@ -155,10 +155,7 @@ struct usbdev_impl_core {
             transferred += ret;
         }
     }
-    void read_ack(Device* dev, uint16_t term, uint32 timeout) {
-
-        if (dev->get_modes() & Device::SKIP_ACK_PKT) return;
-        if (dev->get_modes(term) & Device::SKIP_ACK_PKT) return;
+    void read_ack(uint32 timeout) {
            // read bytes for ack
         uint16 ack[4];
         usb_debug ( "Read the ack..." );
@@ -270,7 +267,7 @@ void USBDevice::_read( uint32 terminal_addr, uint32 reg_addr, uint8* data, size_
     m_impl->rdwr_data ( NITRO_IN, READ_EP, data, length, timeout );
 
     if ((m_impl->firmware_version() >> 8) >= 2) {
-        m_impl->read_ack(this,terminal_addr,timeout);
+        m_impl->read_ack(timeout);
     }
 
 }
@@ -328,7 +325,7 @@ void USBDevice::_write( uint32 terminal_addr, uint32 reg_addr, const uint8* data
             usb_debug ( "Transfer Length " << stats.transfer_length << " bytes written " << stats.bytes_written );
         } while ( stats.bytes_written < stats.transfer_length && sanity_check++<10);
     } else {
-        m_impl->read_ack(this,terminal_addr,timeout);
+        m_impl->read_ack(timeout);
     }
 
 }
