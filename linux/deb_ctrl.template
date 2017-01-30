@@ -2,7 +2,7 @@ Package: nitro
 Architecture: amd64
 Version: VER
 Maintainer: dennis@brooksee.tech
-Depends: libgmpxx4ldbl, libxerces-c3.1, libusb-1.0-0
+Depends: libgmpxx4ldbl, libxerces-c3.1, libusb-1.0-0, python2.7
 Description: nitro
  Nitro libraries for data acquisition
  via nitro api.
