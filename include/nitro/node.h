@@ -22,6 +22,7 @@
 #include <vector>
 #include <map>
 #include <iosfwd>
+#include <functional>
 
 #include "types.h"
 
@@ -278,7 +279,7 @@ class DLL_API Node {
          * \code
          * DITreeIter itr=n.child_begin()
          * while(itr!=n.child_end()) {
-         *  Node* pn = *itr;
+         *  NodeRef pn = *itr;
          *  // process node
          *  ++itr;
          * }
@@ -289,6 +290,14 @@ class DLL_API Node {
          * \copydoc child_begin
          **/
         DITreeIter child_end() const;
+
+        /**
+         * Find a child with a custom function.  Shortcut 
+         * to using DITreeIter directly.
+         *
+         * \return NodeRef of found child else NodeRef::Empty
+         */
+        NodeRef find_child(std::function<bool(NodeRef)>) const;
 
 
         /**

@@ -299,7 +299,7 @@ void Node::del_child(const std::string& name) {
         m_impl->m_childrenmap[name] );
 
     m_impl->m_childrenmap.clear();
-    for (int i=0;i<m_impl->m_children.size();++i) 
+    for (size_t i=0;i<m_impl->m_children.size();++i) 
         m_impl->m_childrenmap[m_impl->m_children.at(i)->get_name()] = i;
     
 }
@@ -339,6 +339,15 @@ void Node::del_attr(const std::string &name) {
 
 DITreeIter Node::child_begin() const { return m_impl->m_children.begin(); }
 DITreeIter Node::child_end() const { return m_impl->m_children.end(); }
+
+NodeRef Node::find_child(std::function<bool(NodeRef)> test) const {
+
+    for (auto c : m_impl->m_children ) {
+        if (test(c)) return c;
+    }
+
+    return NodeRef();
+}
 
 
 DIAttrIter Node::attrs_begin() const { return m_impl->m_attrmap.begin(); }
