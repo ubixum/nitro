@@ -295,7 +295,7 @@ class DLL_API Node {
          * Find a child with a custom function.  Shortcut 
          * to using DITreeIter directly.
          *
-         * \return NodeRef of found child else NodeRef::Empty
+         * \return NodeRef of found child else a null NodeRef
          */
         NodeRef find_child(std::function<bool(NodeRef)>) const;
 

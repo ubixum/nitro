@@ -27,6 +27,7 @@
 
 #include <nitro/usb.h>
 #include <nitro/error.h>
+#include <nitro/node.h>
 #include "vendor_commands.h"
 
 #include "ihx.h"
@@ -69,11 +70,6 @@ typedef enum {
  NITRO_OUT // = USB_TYPE_VENDOR
 } NITRO_DIR;
 
-typedef enum {
- READ_EP=0x86,
- WRITE_EP=0x02
-} NITRO_EPDEF;
-
 struct usbdev_impl_core {
 
     uint32 m_vid;
@@ -89,6 +85,21 @@ struct usbdev_impl_core {
     virtual int bulk_transfer ( NITRO_DIR, uint8, uint8* , size_t, uint32 )=0; 
     virtual uint16 firmware_version() = 0;
     virtual const char* impl_error_name(int) =0;
+
+    bool is_pipe(NodeRef di,uint16 terminal_addr) {
+      auto test = [terminal_addr](NodeRef r){
+         // find terminal by term_addr
+         uint32 addr = r->get_attr("addr");
+         return addr == terminal_addr;
+      };
+      NodeRef term = di->find_child(test);
+      if (!term.is_null()) {
+         // is this terminal a pipe
+        return term->has_attr("type") && term->get_attr("type") == "pipe";
+      }        
+      return false;
+    }
+
     int write_ram(uint16 addr, const uint8* data, size_t length, unsigned int timeout ) {
     
     	size_t transferred = 0;
@@ -128,7 +139,7 @@ struct usbdev_impl_core {
         }
     }
 
-    void rdwr_data( NITRO_DIR dir, NITRO_EPDEF ep, uint8* data, size_t length , uint32 timeout ) {
+    void rdwr_data( NITRO_DIR dir, uint8 ep, uint8* data, size_t length , uint32 timeout ) {
         uint32 transferred=0;
         int tmp_zcount=0;
         usb_debug ( "Transferring " << length << " bytes. Timeout: " << timeout );
@@ -155,11 +166,11 @@ struct usbdev_impl_core {
             transferred += ret;
         }
     }
-    void read_ack(uint32 timeout) {
+    void read_ack(uint32 timeout, uint8 ep) {
            // read bytes for ack
         uint16 ack[4];
         usb_debug ( "Read the ack..." );
-        rdwr_data ( NITRO_IN, READ_EP, reinterpret_cast<uint8*>(&ack), sizeof(ack), timeout );
+        rdwr_data ( NITRO_IN, ep, reinterpret_cast<uint8*>(&ack), sizeof(ack), timeout );
         usb_debug ( "Device Ack: " << ack[0] << ", " << ack[1] << ", " << ack[2] << ", " << ack[3] );
         if (ack[0] != 0xa50f) throw Exception ( USB_COMM, "Invalid transfer ack packet", ack[0] );
         last_transfer_checksum = ack[1];
@@ -257,13 +268,22 @@ void USBDevice::_read( uint32 terminal_addr, uint32 reg_addr, uint8* data, size_
 
     // send usb read command
 	usb_debug ( "Read term: " << terminal_addr << " reg: " << reg_addr << " length: " << length );
+  bool is_pipe=m_impl->is_pipe(get_di(),terminal_addr);
+  if (!is_pipe)
     m_impl->rdwr_setup( COMMAND_READ, length, terminal_addr, reg_addr, timeout );
-  
+  else {
+    usb_debug( "Read from pipe." );
+  }
 
-    m_impl->rdwr_data ( NITRO_IN, READ_EP, data, length, timeout );
+    m_impl->rdwr_data ( NITRO_IN, is_pipe ? terminal_addr : m_impl->m_read_ep, data, length, timeout );
 
     if ((m_impl->firmware_version() >> 8) >= 2) {
-        m_impl->read_ack(timeout);
+        if (!is_pipe) {
+          m_impl->read_ack(timeout, m_impl->m_read_ep);
+        } else {
+          m_impl->last_transfer_status=0;
+          m_impl->last_transfer_checksum=0;
+        }
     }
 
 }
@@ -305,11 +325,18 @@ rdwr_v1;
 void USBDevice::_write( uint32 terminal_addr, uint32 reg_addr, const uint8* data, size_t length, uint32 timeout ) {
 
 	usb_debug ( "Write term: " << terminal_addr << " reg: " << reg_addr << " length: " << length );
-    m_impl->rdwr_setup(COMMAND_WRITE, length, terminal_addr, reg_addr, timeout);
-	usb_debug ( "Write process initialized." );
 
-	//	usleep(1000);
-    m_impl->rdwr_data( NITRO_OUT, WRITE_EP, const_cast<uint8*>(data), length, timeout );
+  bool is_pipe=m_impl->is_pipe(get_di(),terminal_addr);
+
+  if (!is_pipe) {
+    m_impl->rdwr_setup(COMMAND_WRITE, length, terminal_addr, reg_addr, timeout);  
+	  usb_debug ( "Write process initialized." );
+  } else {
+    usb_debug ( "Write to pipe." );
+  }
+
+    m_impl->rdwr_data( NITRO_OUT, is_pipe ? terminal_addr : m_impl->m_write_ep, const_cast<uint8*>(data), length, timeout );
+
 
     if ((m_impl->firmware_version() >> 8) < 2) {
         // when a write occurs, you have to wait for the device to finish writing.
@@ -321,7 +348,14 @@ void USBDevice::_write( uint32 terminal_addr, uint32 reg_addr, const uint8* data
             usb_debug ( "Transfer Length " << stats.transfer_length << " bytes written " << stats.bytes_written );
         } while ( stats.bytes_written < stats.transfer_length && sanity_check++<10);
     } else {
-        m_impl->read_ack(timeout);
+        if (!is_pipe) 
+          m_impl->read_ack(timeout, m_impl->m_read_ep);
+        else {
+          // always good on pipes
+          // checksum not supported
+          m_impl->last_transfer_status=0; 
+          m_impl->last_transfer_checksum=0;
+        }
     }
 
 }

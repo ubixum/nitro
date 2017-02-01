@@ -39,10 +39,6 @@ struct USBDevice::impl : public usbdev_impl_core {
         static void check_init();
 
         libusb_device_handle* m_dev;
-        uint8 m_read_ep;
-        uint8 m_write_ep;
-        uint8 m_interface;
-        uint8 m_altsetting;
 
         void config_device();
         void check_open() const;
@@ -203,6 +199,10 @@ struct USBDevice::impl : public usbdev_impl_core {
          **/
         static void iter_devices ( uint32 vid, uint32 pid, DevItr& itr);
     public:
+        uint8 m_read_ep;
+        uint8 m_write_ep;
+        uint8 m_interface;
+        uint8 m_altsetting;
 
         impl(uint32 vid, uint32 pid): usbdev_impl_core(vid,pid), m_dev(NULL) { ++m_ref_count; }
         ~impl() { close(); 
@@ -447,15 +447,7 @@ int USBDevice::impl::control_transfer ( NITRO_DIR d, NITRO_VC c, uint16 value, u
 int USBDevice::impl::bulk_transfer ( NITRO_DIR d, uint8 ep, uint8* data, size_t length, uint32 timeout ) {
    check_open();
    int transferred=0, tmp;
-   if(ep == READ_EP) {
-     if(m_read_ep) {
-       ep = m_read_ep;
-     }
-   } else {
-     if(m_write_ep) {
-       ep = m_write_ep;
-     }
-   }
+   
    int rv=libusb_bulk_transfer ( m_dev, ep, data, length>1024*256?1024*256:length, &transferred, timeout );
    for(size_t i=0;i<length&&i<32; i++) {
      usb_debug(i << ": " << (int) data[i]);
