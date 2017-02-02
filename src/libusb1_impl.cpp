@@ -35,6 +35,7 @@ struct USBDevice::impl : public usbdev_impl_core {
         static int m_ref_count;
         static bool m_initialized; 
         uint16 m_ver;
+        std::vector<std::pair<int,int>> m_interfaces;
 
         static void check_init();
 
@@ -201,8 +202,6 @@ struct USBDevice::impl : public usbdev_impl_core {
     public:
         uint8 m_read_ep;
         uint8 m_write_ep;
-        uint8 m_interface;
-        uint8 m_altsetting;
 
         impl(uint32 vid, uint32 pid): usbdev_impl_core(vid,pid), m_dev(NULL) { ++m_ref_count; }
         ~impl() { close(); 
@@ -363,6 +362,13 @@ void USBDevice::impl::check_open() const {
     if (!m_dev) throw Exception(USB_PROTO, "IO method called on unopened device.");
 }
 
+/**
+ * In Firmware versions <= 3, we claim the last interface that has 2 endpoints
+ * Starting in version 4, pipes are supported.  The normal nitro interface
+ * Must have class, sublcass and protocol set to FF, 1F, 01 in this case.
+ * For a pipe, the interface must be FF, 1F, 02. All interfaces with 
+ * matching class,sublcass and protocol will be claimed by the nitro driver.
+ */
 
 void USBDevice::impl::config_device() {
   libusb_device *dev;
@@ -386,54 +392,82 @@ void USBDevice::impl::config_device() {
     m_dev=NULL;
     throw Exception(USB_PROTO, "Failed to get active device configuration.", libusb_error_name(ret));
   }
-  m_read_ep = m_write_ep = m_altsetting = 0;
-  m_interface = 0; // claim the first if there isn't any that match w/ 2 endpoints 
-                   // useful for programming firmware etc.
+  m_read_ep = m_write_ep = 0;
+
+  m_interfaces.clear();
+
+  
   for(unsigned char i=0; i < config->bNumInterfaces; i++) {
     iface = config->interface + i;
     for(int j=0; j < iface->num_altsetting; j++) {
       idesc = iface->altsetting + j;
       usb_debug(" Interface=" << (int) i << " altsetting=" << j << " num_ep=" << (int) idesc->bNumEndpoints);
-      if(idesc->bNumEndpoints == 2) {
-	for(unsigned char k=0; k<idesc->bNumEndpoints; k++) {
-	  epdesc = idesc->endpoint + k;
-	  usb_debug("  EP addr = " << (int) epdesc->bEndpointAddress);
-	  if(epdesc->bEndpointAddress & 0x80) {
-	    m_read_ep = epdesc->bEndpointAddress;
-	    usb_debug(" setting m_read_ep=" << (int) epdesc->bEndpointAddress);
-	  } else {
-	    m_write_ep = epdesc->bEndpointAddress;
-	    usb_debug(" setting m_write_ep=" << (int) epdesc->bEndpointAddress);
-	  }
-	}
-      m_interface = idesc->bInterfaceNumber;
-	  m_altsetting = idesc->bAlternateSetting;
+      bool v4=(m_ver>>8)>3;
+
+      // find register interface
+      if (idesc->bNumEndpoints == 2 && 
+          (!v4 || 
+           (v4 && idesc->bInterfaceClass== 0xff && 
+                 idesc->bInterfaceSubClass == 0x1f && 
+                 idesc->bInterfaceProtocol == 0x01)
+          )) {
+        for(unsigned char k=0; k<idesc->bNumEndpoints; k++) {
+           epdesc = idesc->endpoint + k;
+           usb_debug("  EP addr = " << (int) epdesc->bEndpointAddress);
+           if(epdesc->bEndpointAddress & 0x80) {
+             m_read_ep = epdesc->bEndpointAddress;
+             usb_debug(" setting m_read_ep=" << (int) epdesc->bEndpointAddress);
+           } else {
+             m_write_ep = epdesc->bEndpointAddress;
+             usb_debug(" setting m_write_ep=" << (int) epdesc->bEndpointAddress);
+           }
+        }
+        usb_debug ( "Interface=" << (int)idesc->bInterfaceNumber << " alt=" << (int)idesc->bAlternateSetting <<
+                    " claim as registers" );
+        if (!v4) 
+          m_interfaces.clear(); // because we only claim the last one
+        m_interfaces.push_back(std::make_pair(idesc->bInterfaceNumber, idesc->bAlternateSetting));
+      }
+
+      // find any pipe interfaces
+      if (v4 && idesc->bInterfaceClass == 0xff &&
+                idesc->bInterfaceSubClass == 0x1f &&
+                idesc->bInterfaceProtocol == 0x02
+         ) {
+        usb_debug ( "Inteface=" << (int)idesc->bInterfaceNumber << " altsetting=" << (int)idesc->bAlternateSetting 
+                    << " claim as pipe");
+        m_interfaces.push_back(std::make_pair(idesc->bInterfaceNumber, idesc->bAlternateSetting));
       }
     }
   }
   libusb_free_config_descriptor(config);
-  usb_debug("m_interface="<<(int)m_interface<< " m_read_ep="<< (int) m_read_ep << " m_write_ep="<< (int) m_write_ep << " altsetting=" << (int) m_altsetting);
 
-  //if(m_read_ep == 0 || m_write_ep==0) {
-  //  libusb_close(m_dev);
-  //  m_dev=NULL;
-  //  throw Exception(USB_PROTO, "Failed to find the read and write endpoint.");
-  //}
-
-  // claim interface
-  ret=libusb_claim_interface(m_dev,m_interface);
-  if (ret) {
-	  libusb_close(m_dev);
-      m_dev=NULL;
-      throw Exception(USB_PROTO, "Failed to claim device interface.", libusb_error_name(ret));
+  // claim the first if there isn't any that match w/ 2 endpoints 
+  // useful for programming firmware etc.
+  if (m_interfaces.empty()) {
+    m_interfaces.push_back(std::make_pair(0,0));
   }
 
-  if(m_altsetting) {
-    ret=libusb_set_interface_alt_setting(m_dev,m_interface,m_altsetting);
+  usb_debug( std::hex << "m_read_ep="<< (int) m_read_ep << " m_write_ep="<< (int) m_write_ep);
+  usb_debug ( "Claim interfaces:");
+  for (auto p : m_interfaces) {
+     usb_debug( "interface=" << p.first << " alt=" << p.second);
+    // claim interfaces
+
+    ret=libusb_claim_interface(m_dev,p.first);
     if (ret) {
   	  libusb_close(m_dev);
-  	  m_dev=NULL;
-  	  throw Exception(USB_PROTO, "Failed to set interface alt setting.", libusb_error_name(ret));
+        m_dev=NULL;
+        throw Exception(USB_PROTO, "Failed to claim device interface.", libusb_error_name(ret));
+    }
+
+    if(p.second) {
+      ret=libusb_set_interface_alt_setting(m_dev,p.first,p.second);
+      if (ret) {
+    	  libusb_close(m_dev);
+    	  m_dev=NULL;
+    	  throw Exception(USB_PROTO, "Failed to set interface alt setting.", libusb_error_name(ret));
+      }
     }
   }
   usb_debug ( "Device configured." );
@@ -463,12 +497,14 @@ int USBDevice::impl::bulk_transfer ( NITRO_DIR d, uint8 ep, uint8* data, size_t 
 }
 
 void USBDevice::impl::close() {
-    if (m_dev) {
-      libusb_release_interface(m_dev,0);
-      libusb_close(m_dev);
-      m_dev=NULL;
-	  usb_debug ( "Closed device." );
+  if (m_dev) {
+    for (auto p : m_interfaces) {
+      libusb_release_interface(m_dev,p.first);
     }
+    libusb_close(m_dev);
+    m_dev=NULL;
+    usb_debug ( "Closed device." );
+  }
 }
 
 std::wstring USBDevice::impl::get_device_serial(uint32 vid, uint32 pid, uint32 index ) {

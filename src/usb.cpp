@@ -41,7 +41,7 @@
 #define usb_debug(d)
 #endif
 
-#define FIRMWARE_MAJOR 3 // current drivers support this version of the device firmware
+#define FIRMWARE_MAJOR 4 // current drivers support this version of the device firmware
 #define FIRMWARE_MAJOR_MIN 0 // min version drivers support.
 
 #define VC_HI_REGVAL (NITRO_VC)0xb2 // version 1 vendor command no longer in firmware
