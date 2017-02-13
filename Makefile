@@ -1,10 +1,11 @@
 BUILDDIR=build
-PREFIX=/usr
-LIBDIR=/lib64
+DESTDIR?=/
+PREFIX?=/usr
+LIBDIR?=/lib64
 LLIBDIR=$(BUILDDIR)$(PREFIX)$(LIBDIR)
-BINDIR=$(BUILDDIR)$(PREFIX)/bin
-INCDIR=$(BUILDDIR)$(PREFIX)/include
-DOCDIR=$(BUILDDIR)$(PREFIX)/share/docs/nitro
+BINDIR?=$(BUILDDIR)$(PREFIX)/bin
+INCDIR?=$(BUILDDIR)$(PREFIX)/include
+DOCDIR?=$(BUILDDIR)$(PREFIX)/share/docs/nitro
 
 SOFILE=$(LLIBDIR)/libnitro.so
 ARFILE=$(LLIBDIR)/libnitro.a
@@ -12,7 +13,7 @@ PROG_NAMES=nitro nitro_version
 PROG_FILES=$(addprefix prog/, $(addsuffix .cpp, $(PROG_NAMES)))
 PROGS=$(addprefix $(BINDIR)/, $(PROG_NAMES))
 
-CPPFLAGS:=$(CPPFLAGS) -Wall -fPIC -Iinclude -I`python -c "from distutils import sysconfig; print sysconfig.get_config_var('INCLUDEPY');"` -Ipython/py/nitro/include
+CPPFLAGS:=$(CPPFLAGS) -Wall -fPIC -Iinclude -I$(shell python -c "from distutils import sysconfig; print sysconfig.get_config_var('INCLUDEPY');") -Ipython/py/nitro/include
 PYLIB:=`python -c "from distutils import sysconfig; print sysconfig.get_config_var('BLDLIBRARY')"`
 
 ifeq ($(USB_BACKEND), libusb0)
@@ -106,5 +107,6 @@ clean:
 	rm -rf python/build
 
 install:
-	cp -r $(BUILDDIR)$(PREFIX)/* $(PREFIX)
-	cp -r $(BUILDDIR)/etc/* /etc/
+	mkdir -p $(DESTDIR)$(PREFIX)
+	cp -r $(BUILDDIR)$(PREFIX)/* $(DESTDIR)$(PREFIX)
+	cp -r $(BUILDDIR)/etc/* $(DESTDIR)/etc/
