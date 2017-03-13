@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2016 BrooksEE, LLC 
+ * Copyright (C) 2016 BrooksEE, LLC
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -33,7 +33,7 @@ struct USBDevice::impl : public usbdev_impl_core {
 
     private:
         static int m_ref_count;
-        static bool m_initialized; 
+        static bool m_initialized;
         uint16 m_ver;
         std::vector<std::pair<int,int>> m_interfaces;
 
@@ -73,13 +73,13 @@ struct USBDevice::impl : public usbdev_impl_core {
                 DevAddress(uint32 idx) : m_curidx(0), m_idx(idx), addr(0) {}
                 bool process(libusb_device* dev, libusb_device_descriptor &) {
                    if ( m_idx == m_curidx++ ) {
-                     addr = get_addr(dev); 
+                     addr = get_addr(dev);
                       return false;
                    }
                    return true;
                 }
         };
-        static void check_ver(uint16 ver) { 
+        static void check_ver(uint16 ver) {
             if (FIRMWARE_MAJOR < (ver>>8) || FIRMWARE_MAJOR_MIN > (ver>>8) )
                 throw Exception ( USB_PROTO, "Current drivers don't support firmware version.", ver );
         }
@@ -90,15 +90,15 @@ struct USBDevice::impl : public usbdev_impl_core {
                 bool m_override_version;
             public:
                 uint16 m_ver;
-                libusb_device_handle* m_dev; 
-                IndexOpener ( uint32 idx, bool override_version=false ) : m_idx ( idx ), m_curidx(0), m_override_version(override_version), m_dev(NULL) {} 
+                libusb_device_handle* m_dev;
+                IndexOpener ( uint32 idx, bool override_version=false ) : m_idx ( idx ), m_curidx(0), m_override_version(override_version), m_dev(NULL) {}
                 bool process(libusb_device* dev, libusb_device_descriptor& dscr) {
                     if (m_curidx++ == m_idx) {
                         // found device
                         if (!m_override_version) { check_ver(dscr.bcdDevice); }
                         int ret = libusb_open(dev, &m_dev);
                         if (ret) {
-                           throw Exception ( USB_PROTO, "Failed to open device.", libusb_error_name(ret) ); 
+                           throw Exception ( USB_PROTO, "Failed to open device.", libusb_error_name(ret) );
                         }
                         m_ver=dscr.bcdDevice;
                         return false;
@@ -115,7 +115,7 @@ struct USBDevice::impl : public usbdev_impl_core {
                 uint16 m_ver;
                 AddrOpener( uint16 addr ) : m_addr(addr), m_dev(NULL) {}
                 bool process(libusb_device* dev, libusb_device_descriptor &dscr) {
-                    uint16 addr = get_addr(dev); 
+                    uint16 addr = get_addr(dev);
                     if (m_addr == addr) {
                         int ret = libusb_open(dev, &m_dev);
                         if (ret) {
@@ -123,7 +123,7 @@ struct USBDevice::impl : public usbdev_impl_core {
                         }
                         m_ver = dscr.bcdDevice;
                         return false;
-                        
+
                     }
                     return true;
                 }
@@ -150,9 +150,9 @@ struct USBDevice::impl : public usbdev_impl_core {
                 //if ( str_ok >= 0 ) {
                 //    for (int i=0;i<str_ok;++i)
                 //        res.append ( 1, ((uint16*)buf)[i] );
-                //} 
+                //}
             }
-            delete [] buf; 
+            delete [] buf;
             if (str_ok >= 0) return res;
             else throw Exception ( USB_PROTO, "Failed to retrieve string descriptor while checking device.", libusb_error_name(ret) );
         }
@@ -162,8 +162,8 @@ struct USBDevice::impl : public usbdev_impl_core {
                 const std::wstring &m_serial;
             public:
                 uint16 m_ver;
-                libusb_device_handle* m_dev; 
-                SerialOpener ( const std::wstring &serial ) : m_serial ( serial ), m_dev(NULL) {} 
+                libusb_device_handle* m_dev;
+                SerialOpener ( const std::wstring &serial ) : m_serial ( serial ), m_dev(NULL) {}
                 bool process(libusb_device* dev, libusb_device_descriptor& dscr) {
 
                     int ret = libusb_open(dev,&m_dev);
@@ -173,7 +173,7 @@ struct USBDevice::impl : public usbdev_impl_core {
                         std::wstring ser = get_serial ( m_dev );
                         m_ver=dscr.bcdDevice;
                         if (ser == m_serial) {
-                           check_ver(m_ver); 
+                           check_ver(m_ver);
                            return false;
                         } else {
                             libusb_close(m_dev);
@@ -190,10 +190,10 @@ struct USBDevice::impl : public usbdev_impl_core {
 
 
         /**
-         * iterate through the matching devices, calls DevItr::process for each 
+         * iterate through the matching devices, calls DevItr::process for each
          * matching vid, pid device.
          *
-         * itr should return true if it wants to continue processing other 
+         * itr should return true if it wants to continue processing other
          * devices or false to stop.
          *
          * only devices matching vid/pid are passed to process method.
@@ -204,11 +204,11 @@ struct USBDevice::impl : public usbdev_impl_core {
         uint8 m_write_ep;
 
         impl(uint32 vid, uint32 pid): usbdev_impl_core(vid,pid), m_dev(NULL) { ++m_ref_count; }
-        ~impl() { close(); 
+        ~impl() { close();
             --m_ref_count;
-            if (m_initialized && !m_ref_count ) { 
+            if (m_initialized && !m_ref_count ) {
                 usb_debug ( "Uninizilizing libusb" );
-                libusb_exit(NULL); 
+                libusb_exit(NULL);
                 m_initialized=false;
             }
         }
@@ -224,10 +224,10 @@ struct USBDevice::impl : public usbdev_impl_core {
         static uint16 get_device_address (uint32, uint32, uint32 );
         uint16 get_device_address();
         const char* impl_error_name(int r) { return libusb_error_name(r); }
-   
+
         int control_transfer ( NITRO_DIR, NITRO_VC, uint16 value, uint16 index, uint8* data, size_t length, uint32 timeout );
-        int bulk_transfer ( NITRO_DIR, uint8 ep, uint8* data, size_t length, uint32 timeout ); 
-    
+        int bulk_transfer ( NITRO_DIR, uint8 ep, uint8* data, size_t length, uint32 timeout );
+
         void close();
 
 };
@@ -240,7 +240,7 @@ void USBDevice::impl::check_init() {
         assert ( sizeof(uint16) == 2 );
         assert ( sizeof(uint32) == 4);
 		assert ( sizeof(uint64) == 8);
-    
+
         int rv=libusb_init(NULL);
         if (rv) {
          throw Exception( USB_INIT, "Libusb1 Init Fail", libusb_error_name(rv) );
@@ -329,7 +329,7 @@ void USBDevice::impl::open(uint32 index, bool override_version) {
 
 void USBDevice::impl::open_addr(uint16 addr) {
    CHECK_ALREADY_OPENED();
-   AddrOpener a ( addr ); 
+   AddrOpener a ( addr );
    iter_devices ( m_vid, m_pid, a );
    if (!a.m_dev) throw Exception ( USB_PROTO, "Failed to open device.", "No matching device address with vid/pid found." );
    m_dev = a.m_dev;
@@ -355,7 +355,7 @@ void USBDevice::impl::open(const std::wstring& serial) {
  m_ver = d.m_ver;
 
  config_device();
- 
+
 }
 
 void USBDevice::impl::check_open() const {
@@ -366,26 +366,70 @@ void USBDevice::impl::check_open() const {
  * In Firmware versions <= 3, we claim the last interface that has 2 endpoints
  * Starting in version 4, pipes are supported.  The normal nitro interface
  * Must have class, sublcass and protocol set to FF, 1F, 01 in this case.
- * For a pipe, the interface must be FF, 1F, 02. All interfaces with 
+ * For a pipe, the interface must be FF, 1F, 02. All interfaces with
  * matching class,sublcass and protocol will be claimed by the nitro driver.
  */
 
 void USBDevice::impl::config_device() {
   libusb_device *dev;
+  libusb_device_descriptor device;
   libusb_config_descriptor *config;
   const libusb_interface *iface;
   const libusb_interface_descriptor *idesc;
   const libusb_endpoint_descriptor *epdesc;
+  int ret;
 
-  int ret=libusb_set_configuration(m_dev,1);
+  bool v4=(m_ver>>8)>3;
+  dev = libusb_get_device(m_dev);
+  ret=libusb_get_device_descriptor(dev,&device);
+  if (ret) {
+    libusb_close(m_dev);
+    m_dev=NULL;
+    throw Exception(USB_PROTO, "Failed to get device configuration.", libusb_error_name(ret));
+  }
+
+  int nConfigs=device.bNumConfigurations;
+  int nConfig=1;
+  usb_debug("nConfigs " << nConfigs);
+  if (v4 && nConfigs>1) {
+    // in this case, we need to find the nitro config
+    for (int nIdx=0;nIdx<nConfigs;++nIdx) {
+      ret=libusb_get_config_descriptor(dev,nIdx,&config);
+      if (ret) {
+        libusb_close(m_dev);
+        m_dev=NULL;
+        throw Exception ( USB_PROTO, "Failed to read device configuration.", libusb_error_name(ret));
+      }
+      // is this Nitro?
+      uint8_t strIndex = config->iConfiguration;
+      bool v4Config=false;
+      if (strIndex>0) {
+         char buf[256] = {0};
+         ret=libusb_get_string_descriptor_ascii(m_dev,strIndex,(uint8_t*)buf,256);
+         if (ret>0) {
+            std::string nitro("Nitro");
+            v4Config = nitro.compare(buf)==0;
+         } else {
+           usb_debug("Error getting string: " << strIndex);
+         }
+      }
+      if (v4Config) {
+        nConfig=config->bConfigurationValue;
+      }
+      libusb_free_config_descriptor(config);
+      if (v4Config) break;
+    }
+  }
+
+  usb_debug ( "Attempt to set config: " << nConfig);
+  ret=libusb_set_configuration(m_dev,nConfig);
   if (ret) {
     libusb_close(m_dev);
     m_dev=NULL;
     throw Exception(USB_PROTO, "Failed to set device configuration.", libusb_error_name(ret));
   }
-	  
+
   // Find the altsetting and ep addresses
-  dev = libusb_get_device(m_dev);
   ret=libusb_get_active_config_descriptor(dev, &config);
   if(ret) {
     libusb_close(m_dev);
@@ -396,19 +440,19 @@ void USBDevice::impl::config_device() {
 
   m_interfaces.clear();
 
-  
+
   for(unsigned char i=0; i < config->bNumInterfaces; i++) {
     iface = config->interface + i;
     for(int j=0; j < iface->num_altsetting; j++) {
       idesc = iface->altsetting + j;
       usb_debug(" Interface=" << (int) i << " altsetting=" << j << " num_ep=" << (int) idesc->bNumEndpoints);
-      bool v4=(m_ver>>8)>3;
+
 
       // find register interface
-      if (idesc->bNumEndpoints == 2 && 
-          (!v4 || 
-           (v4 && idesc->bInterfaceClass== 0xff && 
-                 idesc->bInterfaceSubClass == 0x1f && 
+      if (idesc->bNumEndpoints == 2 &&
+          (!v4 ||
+           (v4 && idesc->bInterfaceClass== 0xff &&
+                 idesc->bInterfaceSubClass == 0x1f &&
                  idesc->bInterfaceProtocol == 0x01)
           )) {
         for(unsigned char k=0; k<idesc->bNumEndpoints; k++) {
@@ -424,7 +468,7 @@ void USBDevice::impl::config_device() {
         }
         usb_debug ( "Interface=" << (int)idesc->bInterfaceNumber << " alt=" << (int)idesc->bAlternateSetting <<
                     " claim as registers" );
-        if (!v4) 
+        if (!v4)
           m_interfaces.clear(); // because we only claim the last one
         m_interfaces.push_back(std::make_pair(idesc->bInterfaceNumber, idesc->bAlternateSetting));
       }
@@ -434,7 +478,7 @@ void USBDevice::impl::config_device() {
                 idesc->bInterfaceSubClass == 0x1f &&
                 idesc->bInterfaceProtocol == 0x02
          ) {
-        usb_debug ( "Inteface=" << (int)idesc->bInterfaceNumber << " altsetting=" << (int)idesc->bAlternateSetting 
+        usb_debug ( "Inteface=" << (int)idesc->bInterfaceNumber << " altsetting=" << (int)idesc->bAlternateSetting
                     << " claim as pipe");
         m_interfaces.push_back(std::make_pair(idesc->bInterfaceNumber, idesc->bAlternateSetting));
       }
@@ -442,7 +486,7 @@ void USBDevice::impl::config_device() {
   }
   libusb_free_config_descriptor(config);
 
-  // claim the first if there isn't any that match w/ 2 endpoints 
+  // claim the first if there isn't any that match w/ 2 endpoints
   // useful for programming firmware etc.
   if (m_interfaces.empty()) {
     m_interfaces.push_back(std::make_pair(0,0));
@@ -476,12 +520,12 @@ void USBDevice::impl::config_device() {
 int USBDevice::impl::control_transfer ( NITRO_DIR d, NITRO_VC c, uint16 value, uint16 index, uint8* data, size_t length, uint32 timeout ) {
    check_open();
    int type = d == NITRO_OUT ? 0x40 : 0xc0;
-   return libusb_control_transfer( m_dev, type, c, value, index, data, length, timeout ); 
+   return libusb_control_transfer( m_dev, type, c, value, index, data, length, timeout );
 }
 int USBDevice::impl::bulk_transfer ( NITRO_DIR d, uint8 ep, uint8* data, size_t length, uint32 timeout ) {
    check_open();
    int transferred=0, tmp;
-   
+
    int rv=libusb_bulk_transfer ( m_dev, ep, data, length>1024*256?1024*256:length, &transferred, timeout );
    for(size_t i=0;i<length&&i<32; i++) {
      usb_debug(i << ": " << (int) data[i]);
@@ -513,7 +557,7 @@ std::wstring USBDevice::impl::get_device_serial(uint32 vid, uint32 pid, uint32 i
     if (!d.m_dev) throw Exception ( USB_PROTO, "Insufficient devices connected." );
     std::wstring serial;
     try {
-        serial=get_serial(d.m_dev); 
+        serial=get_serial(d.m_dev);
     } catch ( const Exception &e) {
         libusb_close(d.m_dev);
         throw e;
@@ -539,5 +583,5 @@ uint16 USBDevice::impl::get_device_address() {
     libusb_device* dev = libusb_get_device(m_dev);
 
     return get_addr(dev);
-    
+
 }
