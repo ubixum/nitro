@@ -57,7 +57,7 @@ $(CTRL): deb_ctrl.template build_dir
 install_files: $(INST_LIB_FILES) $(INST_BIN_FILES) $(INST_HTML_FILES) $(CTRL) $(INST_INC_FILES) py
 
 py:
-	@cp -r $(PY_DIR)/* $(DEB_DIR)/usr/lib/python2.7/
+	@cp -r $(PY_DIR)/* $(DEB_DIR)/usr/lib/python2.7/dist-packages/
 
 $(DEB_DIR).deb: install_files
 	dpkg-deb --build $(DEB_DIR)

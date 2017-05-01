@@ -1,3 +1,4 @@
+SHELL := /bin/bash
 BUILDDIR=build
 DESTDIR?=/
 PREFIX?=/usr
@@ -6,6 +7,7 @@ LLIBDIR=$(BUILDDIR)$(PREFIX)$(LIBDIR)
 BINDIR?=$(BUILDDIR)$(PREFIX)/bin
 INCDIR?=$(BUILDDIR)$(PREFIX)/include
 DOCDIR?=$(BUILDDIR)$(PREFIX)/share/docs/nitro
+PYTHON_LAYOUT ?= unix # unix or deb
 
 SOFILE=$(LLIBDIR)/libnitro.so
 ARFILE=$(LLIBDIR)/libnitro.a
@@ -103,4 +105,6 @@ clean:
 install:
 	mkdir -p $(DESTDIR)$(PREFIX)
 	cp -r $(BUILDDIR)$(PREFIX)/* $(DESTDIR)$(PREFIX)
+	pushd python ;\
+	python setup.py install --root=$(DESTDIR) --prefix=/usr --install-layout=$(PYTHON_LAYOUT)
 	cp -r $(BUILDDIR)/etc/* $(DESTDIR)/etc/
