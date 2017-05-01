@@ -1,0 +1,5 @@
+nitro (VER) unstable; urgency=medium
+  
+  * Correcting python installation at package build time.
+
+ -- Dennis Muhlestein <dennis@brooksee.tech>  DATE 

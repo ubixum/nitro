@@ -1,8 +1,13 @@
+Source: nitro
+Priority: optional
+Maintainer: Dennis Muhlestein <dennis@brooksee.tech>
+Build-Depends: debhelper (>=9), libxerces-c-dev, libgmp-dev, libusb-1.0-0-dev
+Standards-Version: 3.9.6
+Section: libs
+
 Package: nitro
-Architecture: amd64
-Version: VER
-Maintainer: dennis@brooksee.tech
-Depends: libgmpxx4ldbl, libxerces-c3.1, libusb-1.0-0, python2.7
-Description: nitro
- Nitro libraries for data acquisition
- via nitro api.
+Section: libdevel
+Architecture: any
+Depends: libxerces-c3.1, libgmp10, libusb-1.0-0 
+Description: Nitro Data Acquisition Library 
+

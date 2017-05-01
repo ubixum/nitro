@@ -8,9 +8,9 @@ PY_DIR := ../python/build/lib.linux-x86_64-2.7
 
 NITRO_VERSION := $(shell LD_LIBRARY_PATH=$(LIB_DIR) $(BIN_DIR)/nitro_version)
 DEB_VER := 3
-DEB_DIR := nitro_$(NITRO_VERSION)-$(DEB_VER)
+DEB_DIR ?= nitro_$(NITRO_VERSION)-$(DEB_VER)
 
-CTRL := $(DEB_DIR)/DEBIAN/control
+CTRL := $(DEB_DIR)/debian/control
 
 
 
@@ -25,7 +25,7 @@ build_dir:
 	@mkdir -p $(DEB_DIR)/usr/include/nitro
 	@mkdir -p $(DEB_DIR)/usr/share/doc/nitro/html
 	@mkdir -p $(DEB_DIR)/usr/lib/python2.7
-	@mkdir -p $(DEB_DIR)/DEBIAN
+	@mkdir -p $(DEB_DIR)/debian
 
 LIB_FILES := $(wildcard $(LIB_DIR)/*)
 BIN_FILES := $(wildcard $(BIN_DIR)/*)
