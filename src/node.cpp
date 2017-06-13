@@ -45,6 +45,8 @@ bool file_exists(const std::string &path) {
    return file.good(); // file closed if goes out of scope.
 }
 
+#ifndef ANDROID
+
 NodeRef load_di( const std::string &path, NodeRef dst ) {
     // construct list of paths to search
 
@@ -87,7 +89,7 @@ NodeRef load_di( const std::string &path, NodeRef dst ) {
     return dst;
 }
 
-
+#endif
 
 // name helper function for di nodes
 
