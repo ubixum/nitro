@@ -171,6 +171,10 @@ public:
     **/
     void open(const std::wstring& serial);
 
+#ifdef ANDROID
+    void open_fd(int32_t fd);
+#endif
+
 
     /**
      * Opens the device with the specified address.  Addresses are determined

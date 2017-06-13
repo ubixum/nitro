@@ -18,6 +18,8 @@
 
 #ifdef WIN32
 #include <libusb.h>
+#elif defined(ANDROID)
+#include <libusb.h>
 #else
 #include <libusb-1.0/libusb.h>
 #endif
@@ -215,6 +217,9 @@ struct USBDevice::impl : public usbdev_impl_core {
         void open ( uint32 index, bool override_version=false );
         void open ( const std::string& serial );
         void open ( const std::wstring& serial );
+#ifdef ANDROID
+        void open_fd ( int32_t fd );
+#endif
         void open_addr ( uint16 addr );
         bool is_open() { return m_dev != NULL; }
         uint16 firmware_version() { check_open(); return m_ver; }
@@ -361,6 +366,32 @@ void USBDevice::impl::open(const std::wstring& serial) {
 void USBDevice::impl::check_open() const {
     if (!m_dev) throw Exception(USB_PROTO, "IO method called on unopened device.");
 }
+
+#ifdef ANDROID
+void USBDevice::impl::open_fd(int32_t fd) {
+    check_init();
+
+    CHECK_ALREADY_OPENED();
+
+    int e;
+    libusb_device_handle *handle;
+    if ((e=libusb_wrap_fd(NULL, fd,&handle))) {
+        throw Exception ( USB_INIT, "Failed to wrap file descriptor.", libusb_error_name(e) ); 
+    }
+
+    m_dev = handle;
+    
+    libusb_device *dev = libusb_get_device(m_dev);
+    libusb_device_descriptor desc;
+    e=libusb_get_device_descriptor(dev,&desc); 
+    if (e) 
+       throw Exception ( USB_INIT, "Failed to retrieve device descriptor.", libusb_error_name(e)); 
+
+    m_ver = desc.bcdDevice;
+
+    config_device();
+}
+#endif
 
 /**
  * In Firmware versions <= 3, we claim the last interface that has 2 endpoints

@@ -36,7 +36,18 @@
 #include "hr_time.h"
 
 #ifdef DEBUG_USB
+#ifdef ANDROID
+#include <sstream>
+#include <android/log.h>
+std::stringstream gldebug;
+#define usb_debug(debugstr) { \
+    gldebug << debugstr; \
+    __android_log_print(ANDROID_LOG_INFO, "usb","%s", gldebug.str().c_str()); \
+    gldebug.str(""); \
+}
+#else
 #define usb_debug(d) (std::cout << __FILE__ << ':' << __LINE__ << ' ' << d << std::endl)
+#endif
 #else
 #define usb_debug(d)
 #endif
@@ -252,6 +263,12 @@ void USBDevice::open(uint32 index, bool override_version) {
   m_impl->open(index,override_version);
   
 }
+
+#ifdef ANDROID
+void USBDevice::open_fd(int32_t fd) {
+    m_impl->open_fd(fd);
+}
+#endif
 
 void USBDevice::open_by_address ( uint16 addr ) {
     m_impl->open_addr ( addr );
