@@ -91,7 +91,7 @@ double CStopWatch::getElapsedTime() {
 
 
 void nitro_sleep(uint32 usecs) {
-    timespec ts = { 0 , usecs*1000 };
+    timespec ts = { 0 , static_cast<long>(usecs*1000) };
     nanosleep ( &ts, NULL);
 }
 
