@@ -15,7 +15,7 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 #ifndef NITRO_WRITER_H
-#define NITRO_WRITER_H_
+#define NITRO_WRITER_H
 
 
 #include <nitro/types.h>

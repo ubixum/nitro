@@ -33,6 +33,11 @@ typedef int Py_ssize_t;
 
 #include <python_nitro.h>
 
+#if __APPLE__
+// basename needs additional include
+#include <libgen.h>
+#endif
+
 #include "xutils.h"
 
 #ifdef DEBUG_PY

@@ -42,7 +42,7 @@ test:
 	make -C test run
 
 $(SOFILE): $(LLIBDIR) $(DLLHEADERS) $(DLLOBJS)
-	g++ $(CPPFLAGS) -o $(SOFILE) --shared $(DLLOBJS) -Iinclude $(USBLIB) -lxerces-c -ldl -lgmp -lgmpxx \
+	g++ $(CPPFLAGS) -o $(SOFILE) --shared $(DLLOBJS) -Iinclude $(USBLIB) $(LDFLAGS) -lxerces-c -ldl -lgmp -lgmpxx \
 		$(PYLIB)
 
 $(ARFILE): $(LLIBDIR) $(DLLHEADERS) $(DLLOBJS)
@@ -62,7 +62,7 @@ $(BUILDDIR)/etc/udev/rules.d/60-ubixum.rules: linux/*.rules
 
 
 $(PROGS): $(BINDIR) $(ARFILE) $(PROG_FILES) include/nitro.h
-	g++ $(CPPFLAGS) -o $@ prog/`basename $@`.cpp -Iinclude -L$(LLIBDIR) -lnitro $(PYLIB)
+	g++ $(CPPFLAGS) -o $@ prog/`basename $@`.cpp -Iinclude -L$(LLIBDIR) $(LDFLAGS) -lnitro $(PYLIB) 
 
 $(LLIBDIR):
 	mkdir -p $(LLIBDIR)
