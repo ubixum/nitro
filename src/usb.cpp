@@ -46,7 +46,7 @@ std::stringstream gldebug;
     gldebug.str(""); \
 }
 #else
-#define usb_debug(d) (std::cout << __FILE__ << ':' << __LINE__ << ' ' << d << std::endl)
+#define usb_debug(d) (std::cout << __FILE__ << ':' << std::dec << __LINE__ << ' ' << d << std::endl)
 #endif
 #else
 #define usb_debug(d)
@@ -104,7 +104,7 @@ struct usbdev_impl_core {
          return addr == terminal_addr;
       };
       NodeRef term = di->find_child(test);
-      if (!term.is_null()) {
+      if (term.use_count()) {
          // is this terminal a pipe
         return term->has_attr("type") && term->get_attr("type") == "pipe";
       }        

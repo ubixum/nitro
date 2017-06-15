@@ -16,11 +16,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  **/
 
-#ifndef WIN32
-#include <pthread.h>
-#else
-#include <windows.h>
-#endif
 
 #include <bitset>
 #include <string>
@@ -30,6 +25,7 @@
 #include <algorithm>
 #include <iostream>
 #include <cstring>
+#include <mutex>
 
 #ifdef DEBUG_DEV
 #define dev_debug(x) cout << x << " (" << __FILE__ << ':' << __LINE__ << ')' << endl;
@@ -55,84 +51,9 @@ using namespace std;
 
 namespace Nitro {
 
-#ifdef WIN32
+    typedef std::recursive_mutex Mutex;
+    typedef std::lock_guard<Mutex> MutexLock;
 
-class Mutex {
-private:
-    HANDLE m_mutex;
-public:
-    Mutex() {
-		m_mutex = CreateMutex(0,FALSE,0);
-		if (!m_mutex) {
-            throw Exception ( DEVICE_MUTEX, "Failed to create mutex for device." );
-        }
-    }
-    ~Mutex() {
-        CloseHandle(m_mutex);
-    }
-    void lock() {
-        WaitForSingleObject(m_mutex,INFINITE);
-    }
-    void unlock() {
-        ReleaseMutex(m_mutex);
-    }
-};
-
-#else
-
-class Mutex {
-
-    private:
-        pthread_mutex_t m_mutex;
-        pthread_mutexattr_t m_attrs;
-        int m_lock_cnt;
-    public:
-        Mutex() : m_lock_cnt(0) {
-            
-            if(pthread_mutexattr_init(&m_attrs)) {
-                throw Exception ( DEVICE_MUTEX, "Failed to create mutex attrs for device." );  
-            }
-
-            if(pthread_mutexattr_settype(&m_attrs, PTHREAD_MUTEX_RECURSIVE)){
-                throw Exception ( DEVICE_MUTEX, "Failed to set mutex type." );
-            }
-
-            if(pthread_mutex_init(&m_mutex, &m_attrs)) {
-                throw Exception ( DEVICE_MUTEX, "Failed to create mutex for device." );
-            }
-        }
-        ~Mutex() {
-            pthread_mutex_destroy(&m_mutex);
-            pthread_mutexattr_destroy(&m_attrs);
-        }
-        void lock() {
-            pthread_mutex_lock(&m_mutex);
-            ++m_lock_cnt;
-            dev_mutex ( "Lock Count: " << m_lock_cnt << " " << (uint64)this );
-        }
-        void unlock() {
-            --m_lock_cnt;
-            pthread_mutex_unlock(&m_mutex);
-        }
-
-};
-
-#endif
-
-
-class MutexLock {
-    private:
-        Mutex& m_mutex;
-    public:
-        MutexLock(Mutex& mutex) : m_mutex(mutex) { 
-            m_mutex.lock(); 
-            dev_mutex ( "Locked" );
-            } 
-        ~MutexLock() { 
-            dev_mutex ( "Unlocking." );
-            m_mutex.unlock(); 
-            }
-};
 
 /**
  * Helper classes for get/set
@@ -184,7 +105,7 @@ struct Device::impl{
     NodeRef find_name_or_addr( NodeRef& parent, const DataType& find);
     uint32 reg_addr( const DataType& term, const DataType& reg );
     DataType valmap_or_const_val ( NodeRef node, const DataType& val );
-    auto_ptr<AddressData> resolve_addrs ( const DataType& term, const DataType& reg, uint32 width ) ;
+    unique_ptr<AddressData> resolve_addrs ( const DataType& term, const DataType& reg, uint32 width ) ;
     void get_set_subreg ( bitset<1024> &bits, uint32 term_addr, uint32 reg_addr, bitset<1024> &value, uint32 offset, uint32 width, uint32 dwidth, vector<uint32> &clean_regs, int32 timeout , Device &dev);
     DataType do_get(Device &dev, uint32 term_addr, uint32 reg_addr, AddressData &a, uint32 width, int32 timeout ); 
     void do_set(Device &dev, uint32 term_addr, uint32 reg_addr, DataType &value, uint32 width, AddressData &a, int32 timeout);
@@ -267,7 +188,7 @@ void Device::impl::check_checksum(Device& dev, uint32 term_addr, const uint8* da
 DataType Device::impl::raw_get ( Device &dev, uint32 term_addr, uint32 reg_addr, AddressData &a, uint32 width, uint32 timeout ) {
 
 
-   uint8 bytes[4]; // NOTE width not ready to compile on old vs2008
+   uint8 bytes[4]={0}; // NOTE width not ready to compile on old vs2008
    //if (width>4) throw Exception ( DEVICE_OP_ERROR, "Raw device width > 4 currently unsupported." );
    // width>4?
    dev._read( term_addr, reg_addr, bytes, width, get_timeout( timeout ) );
@@ -290,7 +211,7 @@ DataType Device::impl::raw_get ( Device &dev, uint32 term_addr, uint32 reg_addr,
          m_modes & DOUBLEGET_VERIFY) && 
         (a.type == AddressData::RAW || 
          a.reg_node->get_attr("mode") == "write" ) ) { 
-         uint8 check[4]; // NOTE fix win32 again
+         uint8 check[4] = {0}; // NOTE fix win32 again
          dev._read ( term_addr, reg_addr, check, width, timeout );
          uint32 res2 = 0;
          memcpy(&res2,check,width>4?4:width);
@@ -428,9 +349,8 @@ void Device::impl::do_write(Device &dev, uint32 term_addr, uint32 reg_addr, cons
    RETRY_LOGIC_END
 }
 
-auto_ptr<AddressData> Device::impl::resolve_addrs ( const DataType& term, const DataType& reg, uint32 data_width ) {
-
-    auto_ptr<AddressData> addrs ( new AddressData() ); 
+    unique_ptr<AddressData> Device::impl::resolve_addrs ( const DataType& term, const DataType& reg, uint32 data_width ) {
+    unique_ptr<AddressData> addrs ( new AddressData() );
 
     if ( STR_DATA != reg.get_type() ) {
         addrs->type = AddressData::RAW;
@@ -742,7 +662,7 @@ void Device::set ( const DataType& term, const DataType& reg, const DataType& va
 
     dev_debug ( "Set: " << term << " " << reg << ": " << value );
 
-    auto_ptr<AddressData> addrs = m_impl->resolve_addrs( term, reg, data_width );
+    unique_ptr<AddressData> addrs = m_impl->resolve_addrs( term, reg, data_width );
 
     vector<DataType> set_vals;
     // val setters
@@ -859,19 +779,13 @@ void Device::set ( const DataType& term, const DataType& reg, const DataType& va
     }
 }
 
-
-
-//DataType Device::get( const DataType& term, const DataType& reg, int32 timeout  ) {
-//    return get(term,reg,16,timeout);
-//}
-
 /**
  * Basic Get 
  **/
 DataType Device::get( const DataType& term, const DataType& reg, int32 timeout, uint32 data_width ) {
     MutexLock thread_safe_method(m_impl->m_mutex);
 
-    auto_ptr<AddressData> addrs = m_impl->resolve_addrs( term, reg, data_width );
+    unique_ptr<AddressData> addrs = m_impl->resolve_addrs( term, reg, data_width );
 
     vector<DataType> results;
     //uint8 read_bytes = addrs->bytes / addrs->addrs.size();

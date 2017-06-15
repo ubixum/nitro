@@ -59,7 +59,6 @@
 namespace Nitro {
 
 
-class DLL_API NodeRef;
 // FUTURE typedef std::map<std::string,DataType> DataDict;
 
 /**

@@ -30,9 +30,7 @@
 namespace Nitro {
 
 class DLL_API Node;
-class DLL_API NodeRef;
 
- 
 typedef std::vector<NodeRef>::const_iterator DITreeIter;
 typedef std::map<std::string,DataType>::const_iterator DIAttrIter;
 
@@ -87,76 +85,17 @@ typedef std::map<std::string,DataType>::const_iterator DIAttrIter;
 
 
 /**
- * \ingroup devif
- * \brief Reference Counted Node
- *
- * Tracks references to Nodes in order to allow more convenient Node API usage.  Node won't be deleted
- * until all references to the node are no longer used.
- **/
-class DLL_API NodeRef {
-
-    friend DLL_API std::ostream& operator << ( std::ostream& , const NodeRef& );
-
-    private:
-        Node* m_node;
-        void dec() throw();
-    public:
-        /**
-         * \brief Construct a temporary NodeRef.
-         *
-         * NodeRef does not reference a Node object.
-         **/
-        NodeRef ( );
-
-        /**
-         *  \brief Constructs a NodeRef that references a new node.
-         *
-         *  Nodes cannot be created directly. Use a Nodes create method
-         *  to obtain a new NodeRef.
-         **/
-        NodeRef ( Node* node );
-
-        /**
-         *  \brief Construct a NodeRef based on an existing NodeRef.
-         *
-         *  Both NodeRefs point to the same Node.
-         **/
-        NodeRef ( const NodeRef& copy );
-        ~NodeRef () throw();
-
-        /**
-         * \brief Determine if this NodeRef points to a valid node or NULL
-         **/
-        bool is_null() const;
-
-        /**
-         *  \brief Obtain access to Node methods with this operator.
-         **/
-        Node* operator ->() const;
-
-        /**
-         *  \brief Obtain access to the referenced Node with this operator.
-         **/
-        Node& operator *() const;
-
-        /**
-         * \brief The assignment operator makes a shallow copy of the Node.
-         * Both objects point to the same Node.
-         **/
-        NodeRef& operator=( const NodeRef & );
-
-        /**
-         * \brief return true if NodeRef points to the same node object.
-         **/
-        bool operator == ( const NodeRef & );
-
-};
-
-/**
  * \brief Write a NodeRef to an output stream
  **/
 DLL_API std::ostream& operator << ( std::ostream& , const NodeRef & node );
 
+/**
+ * \brief Compare NodeRefs
+ *
+ * Overrides the == operator when the 2nd noderef is returned from functions
+ * that cast it as as a datatype
+ */
+DLL_API bool operator== ( NodeRef lhs, const DataType& rhs);
 
 // for clone to work properly, a virtual function must call the derived
 // class create method.  Otherwise the base class create is called
@@ -181,7 +120,6 @@ DLL_API std::ostream& operator << ( std::ostream& , const NodeRef & node );
  **/
 class DLL_API Node {
 
-    friend class NodeRef;
     friend DLL_API std::ostream& operator << ( std::ostream&, const Node& );
 
     private:

@@ -20,6 +20,7 @@
 #include <string>
 #include <vector>
 #include <iosfwd>
+#include <memory>
 
 #ifdef WIN32
 #include <BaseTsd.h> // Windows types
@@ -77,8 +78,8 @@ typedef enum {
 	BUF_DATA ///< raw buffer.  In C++, this is unsigned char[]
 } DATA_TYPE;
 
-
-class NodeRef;
+class Node;
+typedef std::shared_ptr<Node> NodeRef;
 class Device;
 
 

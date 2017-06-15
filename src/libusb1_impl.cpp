@@ -564,11 +564,11 @@ typedef struct {
    libusb_device_handle *dev;
    uint8_t ep;
    std::vector<libusb_transfer*> transfers;
-   int length;
+   unsigned length;
    uint8_t* data;
-   int queued;
-   int transferred;
-   int timeout;
+   unsigned queued;
+   unsigned transferred;
+   unsigned timeout;
    int err;
 
 } usb_async_tx_struct;
@@ -600,7 +600,7 @@ void usb_tx_callback(libusb_transfer *tx) {
     } else {
         if (tx->status != LIBUSB_TRANSFER_COMPLETED) {
             tx_struct->err = tx->status;
-            usb_debug ( "tx packet failed " << tx->status );
+            usb_debug ( "tx packet failed " << libusb_error_name(tx->status) );
         } else if (tx->actual_length < tx->length) {
             tx_struct->err = USB_COMM; 
             usb_debug ( "tx packet transferred less than requested. " );
@@ -671,7 +671,7 @@ int USBDevice::impl::bulk_transfer ( NITRO_DIR d, uint8 ep, uint8* data, size_t 
    // the tx callback queues events adding to transferred
    while (tx_struct.transferred < length && !tx_struct.err) {
        int ret;
-       if (ret=libusb_handle_events_timeout(NULL, &tv )) {
+       if ((ret=libusb_handle_events_timeout(NULL, &tv ))) {
           tx_struct.err=ret;
           break; 
        }

@@ -100,7 +100,7 @@ UserDevice::impl::impl(const std::string& path, const char* args[], void* ud)  {
     ud_write = (ud_rdwr_func)GetProcAddress ( m_handle, "ud_write" );
     CHECK_SYM_ERR(ud_write);
     ud_close = (ud_close_func)GetProcAddress ( m_handle, "ud_close" );
-    CHECK_SYM_ERR("ud_close");
+    CHECK_SYM_ERR(ud_close);
 
     m_ud_userdat = ud_init(args,ud);
 }

@@ -23,7 +23,6 @@
 namespace Nitro {
 
 
-class DLL_API NodeRef;
 
 /**
  * \ingroup devif

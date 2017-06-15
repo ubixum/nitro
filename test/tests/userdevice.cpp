@@ -31,7 +31,7 @@ class UserDeviceTest : public CppUnit::TestFixture {
         void testUD () {
                         
             try {
-                std::auto_ptr<UserDevice> ud(new UserDevice(USERDLL_PATH, NULL, NULL));
+                std::unique_ptr<UserDevice> ud(new UserDevice(USERDLL_PATH, NULL, NULL));
                 ud->get ( 0, 0 );
                 ud->set ( 1, 2, 3 );
                 ud->close();

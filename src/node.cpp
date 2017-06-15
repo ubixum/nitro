@@ -23,6 +23,7 @@
 #include <fstream>
 #include <sstream>
 #include <cctype> // isalnum
+#include <atomic>
 
 #include <nitro/node.h>
 #include <nitro/error.h>
@@ -104,6 +105,14 @@ bool valid_name(const std::string& name) {
    return true;
 }
 
+//********** NodeRef *****************
+
+bool operator== ( NodeRef lhs, const DataType& rhs) {
+    if (rhs.get_type() != NODE_DATA) return false;
+    return lhs == (NodeRef)rhs;
+}
+
+
 //********** Node::impl **************
 
 typedef std::map<std::string,int> childrenmap_t;
@@ -113,97 +122,27 @@ struct Node::impl {
 	std::vector<NodeRef> m_children;
 	childrenmap_t m_childrenmap;
 	std::map<std::string,DataType> m_attrmap;
-    static int m_global_refs;
-    int m_ref_count;
+    static std::atomic<int> m_global_refs;
+    std::atomic<int> m_ref_count;
     Node* m_parent;
     void inc() { ++m_ref_count; ++m_global_refs; }
-    void dec() { --m_ref_count; --m_global_refs; }
+    int dec() { --m_global_refs; return m_ref_count.fetch_sub(1); }
 
-	impl(const std::string &name) : m_name(name), m_ref_count(0), m_parent(NULL) {}
+	impl(const std::string &name) : m_name(name), m_parent(NULL) {
+        m_ref_count=0;
+    }
 
 	bool has_child(const std::string &name);
     ~impl() {}
 };
 
 
-int Node::impl::m_global_refs=0;
+std::atomic<int> Node::impl::m_global_refs(0);
 
 bool Node::impl::has_child(const std::string &name) {	
 	return m_childrenmap.find( name ) != m_childrenmap.end();
 }
 
-
-//********** NodeRef ******************
-
-NodeRef::NodeRef() : m_node ( NULL )  {
-    node_debug ( "Tmp Node Creation" );
-}
-
-NodeRef::NodeRef ( Node* node ) : m_node ( node ) {
-    node_debug ("New Node Ref: " << node->get_name() );
-    m_node->m_impl->inc();
-}
-
-void NodeRef::dec() throw() {
-    if (m_node) {
-        m_node->m_impl->dec();
-        node_debug ( "Delete NodeRef: " << m_node->get_name() << " remaining refs: " << m_node->m_impl->m_ref_count << " " << m_node);
-        if (m_node->m_impl->m_ref_count <=0) {   
-            delete m_node;
-            node_debug ( "Global NodeRefs: " << Node::impl::m_global_refs );
-        }
-    }
-    m_node=NULL;
-}
-
-NodeRef::NodeRef ( const NodeRef& copy ) : m_node (copy.m_node)  {
-    if ( m_node ) {
-        m_node->m_impl->inc();
-        node_debug ( "Copy Node: " << copy->get_name() << " refs: " << m_node->m_impl->m_ref_count );
-    }
-}
-NodeRef::~NodeRef ( ) throw() { 
-    dec();
-}
-
-bool NodeRef::is_null() const {
- return m_node == NULL;
-}
-
-Node* NodeRef::operator ->() const {
-    if (!m_node) throw Exception ( NODE_OP_ERROR, "Attempt to use unassigned NodeRef" );
-    node_debug ( "Using Pointer " << m_node);
-    return m_node;
-}
-Node& NodeRef::operator *() const {
-    if (!m_node) throw Exception ( NODE_OP_ERROR, "Attempt to use unassigned NodeRef" );
-    node_debug ( "Using Ref " << m_node );
-    return *m_node;
-}
-
-
-NodeRef& NodeRef::operator=( const NodeRef &copy ) {
-    if ( this != &copy ) {
-        dec();
-        m_node = copy.m_node;
-        if (m_node) {
-           m_node->m_impl->inc();
-           node_debug ( "Inc ref: " << m_node->get_name() << " refs: " << m_node->m_impl->m_ref_count );
-        }
-    }
-    return *this;
-}
-
-
-bool NodeRef::operator==( const NodeRef& other ) {
-    return m_node == other.m_node;
-}
-
-
-std::ostream& operator << ( std::ostream& out, const NodeRef& n ) {
-    out << "NodeRef<NodePtr>(" << *n.m_node << ")"; 
-    return out;
-}
 
 //********** Node *********************
 
@@ -355,6 +294,11 @@ NodeRef Node::find_child(std::function<bool(NodeRef)> test) const {
 DIAttrIter Node::attrs_begin() const { return m_impl->m_attrmap.begin(); }
 DIAttrIter Node::attrs_end() const { return m_impl->m_attrmap.end(); }
 
+
+std::ostream& operator << ( std::ostream& out, const NodeRef& n ) {
+    out << "NodeRef<NodePtr>(" << *n << ")";
+    return out;
+}
 
 std::ostream& operator << ( std::ostream& out, const Node& n ) {
     out << "{name: " << n.m_impl->m_name;
