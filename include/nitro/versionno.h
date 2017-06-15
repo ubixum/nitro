@@ -1,4 +1,4 @@
-// Copyright (C) 2015 Ubixum, Inc 
+// Copyright (C) 2017 BrooksEE, LLC 
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -17,7 +17,7 @@
 #define NITRO_VERSIONNO_H
 
 #define NITRO_MAJOR 1
-#define NITRO_MINOR 2
+#define NITRO_MINOR 3
 #define NITRO_RELEASE 0
 #define NITRO_SUBREL 0
 

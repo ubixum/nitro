@@ -187,4 +187,10 @@
         regDataWidth="8">
     </terminal>
 
+    <terminal
+        name="pipe_term"
+        regAddrWidth="8"
+        regDataWidth="8">
+    </terminal>
+
 </deviceinterface>

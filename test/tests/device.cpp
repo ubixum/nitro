@@ -22,6 +22,7 @@ class DeviceTest : public CppUnit::TestFixture {
     CPPUNIT_TEST ( testMutex );
     CPPUNIT_TEST ( testVerify );
     CPPUNIT_TEST ( testBuffers );
+    CPPUNIT_TEST ( testPipe );
     CPPUNIT_TEST_SUITE_END();
 
     MemoryDevice dev;
@@ -337,6 +338,13 @@ class DeviceTest : public CppUnit::TestFixture {
         dev.read( "int_term", 0, buffer, 1024*1024 );
 		delete [] buffer;
 
+    }
+
+    void testPipe() {
+        // pipe reads use separate mutex        
+        uint8 *buffer = new uint8[1024*1024];
+        dev.read( "pipe_term", 0, buffer, 1024*1024 );
+		delete [] buffer;
     }
 };
 

@@ -49,6 +49,12 @@
  * used with raw integer addresses, but can also be configured to identify terminals and registers
  * by name.  The \ref devif "Device Interface" documentations explains this process further.
  *
+ * Nitro::Device is thread-safe.  However, Device Interfaces can declare terminals with type
+ * "pipe".  If a terminal is a pipe, it has it's own mutex.  This allows different threads
+ * to read from different pipes at the same time.  Note that get/set always lock the device
+ * as pipe terminals can only be used with read/write. It is indefined to try to use get/set
+ * with pipe data.
+ *
  * Nitro::Device is used to get/set and/or read/write from register addresses.  The \ref hello.cpp "Hello" 
  * example provides a quick overview of how a device might be opened and used for a few
  * basie I/O operations.

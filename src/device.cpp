@@ -77,7 +77,9 @@ struct AddressData {
 
 struct Device::impl{
     uint32 m_timeout;
-    Mutex m_mutex;
+    shared_ptr<recursive_mutex> m_mutex;
+    map<uint32_t,shared_ptr<recursive_mutex>> m_rdwrmutexes; // protect normal terminals/pipes separately
+                                                   // mutexes added at set_di
     NodeRef di;
     uint32 m_modes;
     map<uint32,uint32> m_term_modes;
@@ -96,7 +98,7 @@ struct Device::impl{
     DefaultRetry m_default_retry;
     bool m_retry_bit;
 
-    impl(): m_timeout(1000), di(DeviceInterface::create("di")), m_modes(STATUS_VERIFY), m_retry_bit(false) {
+    impl(): m_timeout(1000), m_mutex(new recursive_mutex), di(DeviceInterface::create("di")), m_modes(STATUS_VERIFY), m_retry_bit(false) {
         m_retry_func=&m_default_retry;
     }
 
@@ -105,6 +107,7 @@ struct Device::impl{
     NodeRef find_name_or_addr( NodeRef& parent, const DataType& find);
     uint32 reg_addr( const DataType& term, const DataType& reg );
     DataType valmap_or_const_val ( NodeRef node, const DataType& val );
+    shared_ptr<recursive_mutex> mutex_for_rdwr(const DataType& addr);
     unique_ptr<AddressData> resolve_addrs ( const DataType& term, const DataType& reg, uint32 width ) ;
     void get_set_subreg ( bitset<1024> &bits, uint32 term_addr, uint32 reg_addr, bitset<1024> &value, uint32 offset, uint32 width, uint32 dwidth, vector<uint32> &clean_regs, int32 timeout , Device &dev);
     DataType do_get(Device &dev, uint32 term_addr, uint32 reg_addr, AddressData &a, uint32 width, int32 timeout ); 
@@ -151,6 +154,14 @@ DataType Device::impl::valmap_or_const_val ( NodeRef node, const DataType& val )
    dev_debug ( "Attempt to find value from valuemap" << val );
    NodeRef valuemap = node->get_attr ( "valuemap" );
    return valuemap->get_attr(val); 
+}
+
+shared_ptr<recursive_mutex> Device::impl::mutex_for_rdwr(const DataType &term) {
+    uint32 addr = term_addr(term);
+    if (m_rdwrmutexes.count(addr)) {
+        return m_rdwrmutexes[addr];
+    }
+    return m_mutex; // just lock the dev mutex for non-pipe terminals
 }
 
 void Device::impl::check_status(Device &dev, uint32 term_addr) {
@@ -349,7 +360,7 @@ void Device::impl::do_write(Device &dev, uint32 term_addr, uint32 reg_addr, cons
    RETRY_LOGIC_END
 }
 
-    unique_ptr<AddressData> Device::impl::resolve_addrs ( const DataType& term, const DataType& reg, uint32 data_width ) {
+unique_ptr<AddressData> Device::impl::resolve_addrs ( const DataType& term, const DataType& reg, uint32 data_width ) {
     unique_ptr<AddressData> addrs ( new AddressData() );
 
     if ( STR_DATA != reg.get_type() ) {
@@ -487,8 +498,16 @@ Device::~Device() throw() {
 
 
 void Device::set_di( const NodeRef& node ) {
-   MutexLock thread_safe_method(m_impl->m_mutex);
-   m_impl->di = node; 
+   MutexLock thread_safe_method(*m_impl->m_mutex);
+   m_impl->di = node;
+
+   // scan terminals for pipes and set up rdwr mutexes
+   m_impl->m_rdwrmutexes.clear();
+   for ( auto i =  node->child_begin(); i!=node->child_end(); ++i ) {
+       if ((*i)->has_attr("type") && (*i)->get_attr("type") == "pipe") {
+           m_impl->m_rdwrmutexes[(*i)->get_attr("addr")] = shared_ptr<recursive_mutex>(new recursive_mutex);
+       }
+   }
 }
 NodeRef Device::get_di( ) const {
     return m_impl->di;
@@ -502,12 +521,12 @@ NodeRef Device::get_register ( const DataType& term , const DataType& reg ) cons
 }
 
 void Device::set_timeout ( uint32 timeout ) {
-    MutexLock thread_safe_method(m_impl->m_mutex);
+    MutexLock thread_safe_method(*m_impl->m_mutex);
     m_impl->m_timeout=timeout;
 }
 
 uint32 Device::get_timeout () {
-    MutexLock thread_safe_method(m_impl->m_mutex);
+    MutexLock thread_safe_method(*m_impl->m_mutex);
     return m_impl->m_timeout;
 }
 
@@ -567,53 +586,52 @@ DataType from_bitset(bitset<1024> &bits ) {
 }
 
 void Device::lock() {
-    m_impl->m_mutex.lock();
+    m_impl->m_mutex->lock();
 }
 void Device::unlock() {
-    m_impl->m_mutex.unlock();
+    m_impl->m_mutex->unlock();
 }
 
 void Device::enable_mode(uint32 modes) {
-    MutexLock thread_safe_method (m_impl->m_mutex);
+    MutexLock thread_safe_method (*m_impl->m_mutex);
     m_impl->m_modes |= modes;
 }
 void Device::set_modes(uint32 modes) {
-    MutexLock thread_safe_method (m_impl->m_mutex);
+    MutexLock thread_safe_method (*m_impl->m_mutex);
     m_impl->m_modes = modes;
 }
 
 
 void Device::disable_mode(uint32 modes) {
-    MutexLock thread_safe_method (m_impl->m_mutex);
+    MutexLock thread_safe_method (*m_impl->m_mutex);
     m_impl->m_modes &= ~modes;
 }
 uint32 Device::get_modes() const {
-    MutexLock thread_safe_method(m_impl->m_mutex);
+    MutexLock thread_safe_method(*m_impl->m_mutex);
     return m_impl->m_modes;
 }
 
 void Device::enable_mode(const DataType &term, uint32 modes) {
-    MutexLock thread_safe_method (m_impl->m_mutex);
+    MutexLock thread_safe_method (*m_impl->m_mutex);
     uint32 addr = m_impl->term_addr(term);
     m_impl->m_term_modes[addr] |= modes; 
 }
 void Device::set_modes(const DataType &term, uint32 modes) {
-    MutexLock thread_safe_method (m_impl->m_mutex);
+    MutexLock thread_safe_method (*m_impl->m_mutex);
     uint32 addr = m_impl->term_addr(term);
     m_impl->m_term_modes[addr] = modes; 
 }
 void Device::disable_mode(const DataType &term, uint32 modes) {
-    MutexLock thread_safe_method (m_impl->m_mutex);
+    MutexLock thread_safe_method (*m_impl->m_mutex);
     uint32 addr = m_impl->term_addr(term);
     m_impl->m_term_modes[addr] &= ~modes;
 }
 uint32 Device::get_modes(const DataType &term) const {
-    MutexLock thread_safe_method(m_impl->m_mutex);
+    MutexLock thread_safe_method(*m_impl->m_mutex);
     return m_impl->m_term_modes[m_impl->term_addr(term)];
 }
 
 void Device::set_retry_func( Device::RetryFunc *func) {
-    MutexLock thread_safe_method(m_impl->m_mutex);
     if (!func) {
         m_impl->m_retry_func = &(m_impl->m_default_retry);
     } else {
@@ -653,14 +671,13 @@ void Device::impl::get_set_subreg ( bitset<1024> &bits, uint32 term_addr, uint32
 
 }
 
-//void Device::set ( const DataType& term, const DataType& reg, const DataType& value, int32 timeout ) {
-//   set(term,reg,value,16,timeout);
-//}
 
 void Device::set ( const DataType& term, const DataType& reg, const DataType& value, int32 timeout, uint32 data_width ) {
-    MutexLock thread_safe_method(m_impl->m_mutex);
+
+    MutexLock thread_safe_method(*m_impl->m_mutex);
 
     dev_debug ( "Set: " << term << " " << reg << ": " << value );
+
 
     unique_ptr<AddressData> addrs = m_impl->resolve_addrs( term, reg, data_width );
 
@@ -783,7 +800,8 @@ void Device::set ( const DataType& term, const DataType& reg, const DataType& va
  * Basic Get 
  **/
 DataType Device::get( const DataType& term, const DataType& reg, int32 timeout, uint32 data_width ) {
-    MutexLock thread_safe_method(m_impl->m_mutex);
+
+    MutexLock thread_safe_method(*m_impl->m_mutex);
 
     unique_ptr<AddressData> addrs = m_impl->resolve_addrs( term, reg, data_width );
 
@@ -873,7 +891,8 @@ DataType Device::get( const DataType& term, const DataType& reg, int32 timeout, 
 
 NodeRef Device::get_subregs ( const DataType& term, const DataType& reg , int32 timeout ) {
 
-    MutexLock thread_safe_method(m_impl->m_mutex);
+    MutexLock thread_safe_method(*m_impl->m_mutex);
+
     NodeRef tnode = m_impl->find_name_or_addr( m_impl->di , term );
     NodeRef rnode = m_impl->find_name_or_addr( tnode, reg ); 
     if ( !rnode->has_children()) {
@@ -898,20 +917,22 @@ NodeRef Device::get_subregs ( const DataType& term, const DataType& reg , int32 
 /**
  * Set the register by subregister values.
  **/
-void Device::read(const DataType& term, const DataType& reg, uint8* data, size_t length, int32 timeout) {    
+void Device::read(const DataType& term, const DataType& reg, uint8* data, size_t length, int32 timeout) {
+
+    MutexLock thread_safe_method(*m_impl->mutex_for_rdwr(term));
+
     dev_debug ( "Read " << length << " bytes from " << term << ", " << reg );
-    MutexLock thread_safe_method(m_impl->m_mutex);    
     dev_debug ( "Mem addr " << (uint64)data );
     m_impl->do_read(*this, m_impl->term_addr(term), m_impl->reg_addr(term,reg), data, length, timeout);
 }
 void Device::write(const DataType& term, const DataType& reg, const uint8* data, size_t length, int32 timeout) {
+    MutexLock thread_safe_method(*m_impl->mutex_for_rdwr(term));
     dev_debug ( "Write " << length << " bytes to " << term << ", " << reg );
-    MutexLock thread_safe_method(m_impl->m_mutex);    
     m_impl->do_write(*this, m_impl->term_addr(term),m_impl->reg_addr(term,reg),data,length,timeout);
 };
 
 void Device::close() {
-    MutexLock thread_safe_method(m_impl->m_mutex);
+    MutexLock thread_safe_method (*m_impl->m_mutex);
     _close();
 }
 
