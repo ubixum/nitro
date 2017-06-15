@@ -16,7 +16,7 @@ PROG_FILES=$(addprefix prog/, $(addsuffix .cpp, $(PROG_NAMES)))
 PROGS=$(addprefix $(BINDIR)/, $(PROG_NAMES))
 
 CPPFLAGS:=$(CPPFLAGS) -Wall -fPIC -Iinclude -I$(shell python -c "from distutils import sysconfig; print sysconfig.get_config_var('INCLUDEPY');") -Ipython/py/nitro/include
-PYLIB:=`python -c "from distutils import sysconfig; print sysconfig.get_config_var('BLDLIBRARY')"`
+PYLIB:=$(shell python -c "from distutils import sysconfig; print sysconfig.get_config_var('BLDLIBRARY')")
 
 USBLIB=-lusb-1.0
 
@@ -36,7 +36,7 @@ endif
 
 .PHONY: all test docs INCLUDES clean udev specs tgz python
 
-all: $(SOFILE) $(ARFILE) $(PROGS) INCLUDES udev python
+all: $(SOFILE) $(ARFILE) $(PROGS) INCLUDES
 
 test:
 	make -C test run
