@@ -660,6 +660,7 @@ void usb_tx_submit_helper(tx_struct_ptr tx_struct, libusb_transfer *tx) {
     tx_struct->queued += this_len;
     int ret = libusb_submit_transfer(tx);
     if (ret) {
+        usb_debug ( "Fail to submit transfer: " << libusb_error_name(ret));
         tx_struct->transfers.pop_back(); // we didn't submit so we don't get a callback.
         tx_struct->err = ret;
         libusb_free_transfer(tx);
@@ -704,8 +705,9 @@ int USBDevice::impl::bulk_transfer ( NITRO_DIR d, uint8 ep, uint8* data, size_t 
        tx_struct->mutex.lock();
        completed=!tx_struct->transfers.size();
        //tx_struct->transferred >= length || tx_struct->err;
-       if (tx_struct->err) {
+       if (tx_struct->err || std::chrono::system_clock::now() > stop) {
            // cancel any transfer that's outstanding even if it's already canceled
+           if (!tx_struct->err) tx_struct->err = LIBUSB_ERROR_TIMEOUT;
            for (auto tx : tx_struct->transfers) {
                libusb_cancel_transfer(tx);
            }
@@ -717,19 +719,17 @@ int USBDevice::impl::bulk_transfer ( NITRO_DIR d, uint8 ep, uint8* data, size_t 
                tx_struct->err = ret;
            }
        }
-   } while (!completed && std::chrono::system_clock::now() < stop);
+   } while (!completed);
 
-
-    std::lock_guard<std::mutex> lock(tx_struct->mutex);
-    for (auto tx: tx_struct->transfers) {
-        // this shouldn't have any left but just in case
-        // perhaps in the case of timeout for instance
-        libusb_cancel_transfer(tx); // we'll hope that a subsequent events call cleans them up.
-        if (!tx_struct->err) tx_struct->err = USB_PROTO;
-    }
+   // tx_struct empty now so no need to lock mutex
+   assert(tx_struct.use_count()==1); // we have a bug in the libusb or usage of it if
+   // refs haven't all been cleaned up.
 
    if (tx_struct->err || tx_struct->transferred < length ) {
-     throw Exception ( USB_COMM, "bulk transfer fail", tx_struct->err );
+     DataType info(0);
+     if (tx_struct->err >= LIBUSB_ERROR_OTHER) info = libusb_error_name(tx_struct->err);
+     else info = tx_struct->err;
+     throw Exception ( USB_COMM, "bulk transfer fail", info );
    }
 
    return length;
