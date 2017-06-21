@@ -25,6 +25,8 @@
 #endif
 
 #include <queue>
+#include <mutex>
+#include <atomic>
 
 //typedef std::vector<struct usb_device*> DeviceList;
 //typedef std::vector<struct usb_device*>::iterator DeviceListItr;
@@ -44,6 +46,7 @@ struct USBDevice::impl : public usbdev_impl_core {
 
         static void check_init();
 
+        mutable std::mutex handle_lock; // need for non-thread safe read/write
         libusb_device_handle* m_dev;
 
         void config_device();
@@ -367,6 +370,7 @@ void USBDevice::impl::open(const std::wstring& serial) {
 }
 
 void USBDevice::impl::check_open() const {
+    std::lock_guard<std::mutex> devLock(handle_lock);
     if (!m_dev) throw Exception(USB_PROTO, "IO method called on unopened device.");
 }
 
@@ -561,33 +565,50 @@ int USBDevice::impl::control_transfer ( NITRO_DIR d, NITRO_VC c, uint16 value, u
 #define NITRO_TX_QUEUE_DEPTH 32 
 
 typedef struct {
-   libusb_device_handle *dev;
-   uint8_t ep;
-   std::vector<libusb_transfer*> transfers;
-   unsigned length;
-   uint8_t* data;
-   unsigned queued;
-   unsigned transferred;
-   unsigned timeout;
-   int err;
+    std::mutex *devlock;
+    libusb_device_handle **dev;
+    uint8_t ep;
+    std::vector<libusb_transfer*> transfers;
+    unsigned length;
+    uint8_t* data;
+    unsigned queued;
+    unsigned transferred;
+    unsigned timeout;
+    int err;
+    std::mutex mutex;
 
 } usb_async_tx_struct;
 
+typedef std::shared_ptr<usb_async_tx_struct> tx_struct_ptr;
 
-void usb_tx_submit_helper(usb_async_tx_struct *tx_struct, libusb_transfer *tx);
+void usb_tx_submit_helper(tx_struct_ptr tx_struct, libusb_transfer *tx);
 
 void usb_tx_callback(libusb_transfer *tx) {
     
-    usb_async_tx_struct * tx_struct = (usb_async_tx_struct*)tx->user_data;
+    tx_struct_ptr *ud = (tx_struct_ptr*)tx->user_data; // only ref counted from creation
+    tx_struct_ptr tx_struct = *ud; // now it's ref counted in this function
+    delete ud;
+    tx->user_data=0;
+
+    // callback is only called from the libusb thread but we need to be thread safe
+    // with the submit below which can happen from another pipe caller
+    tx_struct->mutex.lock();
+    libusb_transfer *f;
+
+    if (tx_struct->err) {
+        // ignoring this transfer error already occurred
+        libusb_free_transfer(tx);
+        goto ret;
+    }
 
     if (tx_struct->transfers.size()<1) {
         usb_debug ( "bad logic no tranfers in transfer queue." ); 
         tx_struct->err = USB_PROTO;
         libusb_free_transfer(tx);
-        return;
+        goto ret;
     }
 
-    libusb_transfer *f = tx_struct->transfers.front();
+    f = tx_struct->transfers.front();
     tx_struct->transfers.erase(tx_struct->transfers.begin());
 
     if (f != tx) {
@@ -595,8 +616,6 @@ void usb_tx_callback(libusb_transfer *tx) {
         usb_debug ( "bad async request order, callback tx not first in queue." );
         usb_debug ( "front " << f << " tx " << tx );
         tx_struct->err = USB_PROTO; 
-        // possible memory leak here but who to free? 
-        // fix submission or libusb error instead.
     } else {
         if (tx->status != LIBUSB_TRANSFER_COMPLETED) {
             tx_struct->err = tx->status;
@@ -613,32 +632,50 @@ void usb_tx_callback(libusb_transfer *tx) {
         tx_struct->transferred += tx->actual_length;
         usb_tx_submit_helper(tx_struct, tx); // resubmit or free
     }
+ret:
+    tx_struct->mutex.unlock();
 
 }
 
-void usb_tx_submit_helper(usb_async_tx_struct *tx_struct, libusb_transfer *tx) {
+
+void usb_tx_submit_helper(tx_struct_ptr tx_struct, libusb_transfer *tx) {
+
+    // NOTE tx_struct->mutex locked by calling function
+
 
     if (tx_struct->queued >= tx_struct->length) {
         // in this case, we're done queuing, free the tx
-        if (tx) libusb_free_transfer(tx);
+
+        if (tx) {
+            libusb_free_transfer(tx);
+        }
+        return;
+    }
+
+    tx_struct->devlock->lock();
+    if (!(*tx_struct->dev)) {
+        // device closed on different thread?
+        tx_struct->devlock->unlock();
         return;
     }
 
     //libusb_transfer *tx = tx ? libusb_alloc_transfer(0) : 
     if (!tx) tx = libusb_alloc_transfer(0);
     int this_len = tx_struct->queued + NITRO_TX_SIZE > tx_struct->length ? tx_struct->length-tx_struct->queued : NITRO_TX_SIZE;
+    tx_struct_ptr *user_data = new tx_struct_ptr(tx_struct);
     libusb_fill_bulk_transfer(
        tx,
-       tx_struct->dev,
+       *tx_struct->dev,
        tx_struct->ep,
        (tx_struct->data + tx_struct->queued),
        this_len, 
        usb_tx_callback,
-       tx_struct, 
+       user_data,
        tx_struct->timeout );
     tx_struct->transfers.push_back(tx);
     tx_struct->queued += this_len;
     libusb_submit_transfer(tx);
+    tx_struct->devlock->unlock();
 }
 
 
@@ -646,15 +683,16 @@ int USBDevice::impl::bulk_transfer ( NITRO_DIR d, uint8 ep, uint8* data, size_t 
    check_open();
   //int transferred=0;
 
-   usb_async_tx_struct tx_struct;
-   tx_struct.dev = m_dev;
-   tx_struct.ep = ep;
-   tx_struct.length = length;
-   tx_struct.data = data;
-   tx_struct.queued = 0;
-   tx_struct.transferred = 0;
-   tx_struct.err=0;
-   tx_struct.timeout=timeout;
+   tx_struct_ptr tx_struct (new usb_async_tx_struct);
+   tx_struct->devlock=&handle_lock;
+   tx_struct->dev = &m_dev;
+   tx_struct->ep = ep;
+   tx_struct->length = length;
+   tx_struct->data = data;
+   tx_struct->queued = 0;
+   tx_struct->transferred = 0;
+   tx_struct->err=0;
+   tx_struct->timeout=timeout;
 
     timeval tv;
     // TODO only wait the remining portion of the time...
@@ -664,37 +702,36 @@ int USBDevice::impl::bulk_transfer ( NITRO_DIR d, uint8 ep, uint8* data, size_t 
     tv.tv_usec = (timeout % 1000) * 1e3;
 
 
-    while (tx_struct.transfers.size() < NITRO_TX_QUEUE_DEPTH && tx_struct.queued < length && !tx_struct.err) {
-       usb_tx_submit_helper(&tx_struct,NULL);
-   }
+    tx_struct->mutex.lock();
+    while (tx_struct->transfers.size() < NITRO_TX_QUEUE_DEPTH && tx_struct->queued < length && !tx_struct->err) {
+       usb_tx_submit_helper(tx_struct,NULL);
+    }
+    tx_struct->mutex.unlock();
 
    // the tx callback queues events adding to transferred
-   while (tx_struct.transferred < length && !tx_struct.err) {
-       int ret;
-       if ((ret=libusb_handle_events_timeout(NULL, &tv ))) {
-          tx_struct.err=ret;
-          break; 
+   bool completed=false;
+   do {
+
+       tx_struct->mutex.lock();
+       completed=tx_struct->transferred >= length || tx_struct->err;
+       tx_struct->mutex.unlock();
+       if (!completed) {
+           int ret;
+           if ((ret = libusb_handle_events_timeout(NULL, &tv))) {
+               tx_struct->err = ret;
+           }
        }
-   }
+   } while (!completed);
 
-   while ( tx_struct.transfers.size() ) {
-       usb_debug ( "handling usb completion events." );
-       int ret;
-       if ((ret=libusb_handle_events_completed(NULL,NULL))) {
-           // TODO memory in tx_struct transfers
-
-           throw Exception ( USB_COMM, "libusb completion handler fail", libusb_error_name(ret));
-       }
-   }
-
-   if (tx_struct.err || tx_struct.transferred < length ) {
-     throw Exception ( USB_COMM, "bulk transfer fail", tx_struct.err );       
+   if (tx_struct->err || tx_struct->transferred < length ) {
+     throw Exception ( USB_COMM, "bulk transfer fail", tx_struct->err );
    }
 
    return length;
 }
 
 void USBDevice::impl::close() {
+  std::lock_guard<std::mutex> lock(handle_lock);
   if (m_dev) {
     for (auto p : m_interfaces) {
       libusb_release_interface(m_dev,p.first);
