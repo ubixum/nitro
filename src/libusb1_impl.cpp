@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2015 BrooksEE, Inc. 
+ * Copyright (C) 2017 BrooksEE, Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -383,16 +383,16 @@ void USBDevice::impl::open_fd(int32_t fd) {
     int e;
     libusb_device_handle *handle;
     if ((e=libusb_wrap_fd(NULL, fd,&handle))) {
-        throw Exception ( USB_INIT, "Failed to wrap file descriptor.", libusb_error_name(e) ); 
+        throw Exception ( USB_INIT, "Failed to wrap file descriptor.", libusb_error_name(e) );
     }
 
     m_dev = handle;
-    
+
     libusb_device *dev = libusb_get_device(m_dev);
     libusb_device_descriptor desc;
-    e=libusb_get_device_descriptor(dev,&desc); 
-    if (e) 
-       throw Exception ( USB_INIT, "Failed to retrieve device descriptor.", libusb_error_name(e)); 
+    e=libusb_get_device_descriptor(dev,&desc);
+    if (e)
+       throw Exception ( USB_INIT, "Failed to retrieve device descriptor.", libusb_error_name(e));
 
     m_ver = desc.bcdDevice;
 
@@ -562,7 +562,7 @@ int USBDevice::impl::control_transfer ( NITRO_DIR d, NITRO_VC c, uint16 value, u
 }
 
 #define NITRO_TX_SIZE  (64*1024) // seemed to be the fastest buffer size
-#define NITRO_TX_QUEUE_DEPTH 32 
+#define NITRO_TX_QUEUE_DEPTH 32
 
 typedef struct {
     std::mutex *devlock;
@@ -584,46 +584,34 @@ typedef std::shared_ptr<usb_async_tx_struct> tx_struct_ptr;
 void usb_tx_submit_helper(tx_struct_ptr tx_struct, libusb_transfer *tx);
 
 void usb_tx_callback(libusb_transfer *tx) {
-    
+
     tx_struct_ptr *ud = (tx_struct_ptr*)tx->user_data; // only ref counted from creation
     tx_struct_ptr tx_struct = *ud; // now it's ref counted in this function
-    delete ud;
-    tx->user_data=0;
 
     // callback is only called from the libusb thread but we need to be thread safe
     // with the submit below which can happen from another pipe caller
-    tx_struct->mutex.lock();
-    libusb_transfer *f;
 
-    if (tx_struct->err) {
-        // ignoring this transfer error already occurred
+    std::lock_guard<std::mutex> lock(tx_struct->mutex);
+
+    delete ud;
+    tx->user_data=0;
+
+    if (tx_struct->transfers.size()<1 || tx_struct->transfers.front() != tx) {
+        // this should not happen
+        usb_debug ( "bad logic no tranfers in transfer queue." );
+        if (!tx_struct->err) tx_struct->err = USB_PROTO;
         libusb_free_transfer(tx);
-        goto ret;
+        return;
     }
 
-    if (tx_struct->transfers.size()<1) {
-        usb_debug ( "bad logic no tranfers in transfer queue." ); 
-        tx_struct->err = USB_PROTO;
-        libusb_free_transfer(tx);
-        goto ret;
-    }
-
-    f = tx_struct->transfers.front();
     tx_struct->transfers.erase(tx_struct->transfers.begin());
 
-    if (f != tx) {
-        // this should never happen
-        usb_debug ( "bad async request order, callback tx not first in queue." );
-        usb_debug ( "front " << f << " tx " << tx );
-        tx_struct->err = USB_PROTO; 
-    } else {
-        if (tx->status != LIBUSB_TRANSFER_COMPLETED) {
-            tx_struct->err = tx->status;
-            usb_debug ( "tx packet failed " << libusb_error_name(tx->status) );
-        } else if (tx->actual_length < tx->length) {
-            tx_struct->err = USB_COMM; 
-            usb_debug ( "tx packet transferred less than requested. " );
-        }
+    if (tx->status != LIBUSB_TRANSFER_COMPLETED) {
+        if (!tx_struct->err) tx_struct->err = tx->status;
+        usb_debug ( "tx packet failed " << libusb_error_name(tx->status) );
+    } else if (tx->actual_length < tx->length) {
+        if (!tx_struct->err) tx_struct->err = USB_COMM;
+        usb_debug ( "tx packet transferred less than requested. " );
     }
 
     if (tx_struct->err) {
@@ -632,8 +620,6 @@ void usb_tx_callback(libusb_transfer *tx) {
         tx_struct->transferred += tx->actual_length;
         usb_tx_submit_helper(tx_struct, tx); // resubmit or free
     }
-ret:
-    tx_struct->mutex.unlock();
 
 }
 
@@ -643,24 +629,22 @@ void usb_tx_submit_helper(tx_struct_ptr tx_struct, libusb_transfer *tx) {
     // NOTE tx_struct->mutex locked by calling function
 
 
-    if (tx_struct->queued >= tx_struct->length) {
-        // in this case, we're done queuing, free the tx
+    // note tx_struct always locked first!
+    std::lock_guard<std::mutex> lock ( *tx_struct->devlock);
 
+    if (tx_struct->queued >= tx_struct->length || !(*tx_struct->dev)) {
+        // in this case, we're done queuing, free the tx
+        // or the device has gone away
         if (tx) {
             libusb_free_transfer(tx);
         }
         return;
     }
 
-    tx_struct->devlock->lock();
-    if (!(*tx_struct->dev)) {
-        // device closed on different thread?
-        tx_struct->devlock->unlock();
-        return;
+    if (!tx) {
+        tx = libusb_alloc_transfer(0);
     }
 
-    //libusb_transfer *tx = tx ? libusb_alloc_transfer(0) : 
-    if (!tx) tx = libusb_alloc_transfer(0);
     int this_len = tx_struct->queued + NITRO_TX_SIZE > tx_struct->length ? tx_struct->length-tx_struct->queued : NITRO_TX_SIZE;
     tx_struct_ptr *user_data = new tx_struct_ptr(tx_struct);
     libusb_fill_bulk_transfer(
@@ -668,14 +652,20 @@ void usb_tx_submit_helper(tx_struct_ptr tx_struct, libusb_transfer *tx) {
        *tx_struct->dev,
        tx_struct->ep,
        (tx_struct->data + tx_struct->queued),
-       this_len, 
+       this_len,
        usb_tx_callback,
        user_data,
        tx_struct->timeout );
     tx_struct->transfers.push_back(tx);
     tx_struct->queued += this_len;
-    libusb_submit_transfer(tx);
-    tx_struct->devlock->unlock();
+    int ret = libusb_submit_transfer(tx);
+    if (ret) {
+        tx_struct->transfers.pop_back(); // we didn't submit so we don't get a callback.
+        tx_struct->err = ret;
+        libusb_free_transfer(tx);
+        delete user_data;
+    }
+
 }
 
 
@@ -695,11 +685,10 @@ int USBDevice::impl::bulk_transfer ( NITRO_DIR d, uint8 ep, uint8* data, size_t 
    tx_struct->timeout=timeout;
 
     timeval tv;
-    // TODO only wait the remining portion of the time...
-    // need to use gettimeofday to subtract delta of
-    // current ellapsed time.
     tv.tv_sec = timeout / 1e3;
     tv.tv_usec = (timeout % 1000) * 1e3;
+
+    auto stop = std::chrono::system_clock::now() + std::chrono::seconds(tv.tv_sec) + std::chrono::microseconds(tv.tv_usec);
 
 
     tx_struct->mutex.lock();
@@ -713,7 +702,14 @@ int USBDevice::impl::bulk_transfer ( NITRO_DIR d, uint8 ep, uint8* data, size_t 
    do {
 
        tx_struct->mutex.lock();
-       completed=tx_struct->transferred >= length || tx_struct->err;
+       completed=!tx_struct->transfers.size();
+       //tx_struct->transferred >= length || tx_struct->err;
+       if (tx_struct->err) {
+           // cancel any transfer that's outstanding even if it's already canceled
+           for (auto tx : tx_struct->transfers) {
+               libusb_cancel_transfer(tx);
+           }
+       }
        tx_struct->mutex.unlock();
        if (!completed) {
            int ret;
@@ -721,7 +717,16 @@ int USBDevice::impl::bulk_transfer ( NITRO_DIR d, uint8 ep, uint8* data, size_t 
                tx_struct->err = ret;
            }
        }
-   } while (!completed);
+   } while (!completed && std::chrono::system_clock::now() < stop);
+
+
+    std::lock_guard<std::mutex> lock(tx_struct->mutex);
+    for (auto tx: tx_struct->transfers) {
+        // this shouldn't have any left but just in case
+        // perhaps in the case of timeout for instance
+        libusb_cancel_transfer(tx); // we'll hope that a subsequent events call cleans them up.
+        if (!tx_struct->err) tx_struct->err = USB_PROTO;
+    }
 
    if (tx_struct->err || tx_struct->transferred < length ) {
      throw Exception ( USB_COMM, "bulk transfer fail", tx_struct->err );
