@@ -16,8 +16,11 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USAimport struct
 import sys
 from distutils.core import setup, Extension 
+import subprocess
+from subprocess import Popen
 
-version='1.1.1.5'
+version=Popen('../build/usr/bin/nitro_version',stdout=subprocess.PIPE).stdout.read().strip()
+
 
 def get_ext():
     if sys.platform == 'win32':
