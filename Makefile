@@ -27,16 +27,16 @@ DLLOBJS=$(addprefix src/, $(addsuffix .o, $(OBJNAMES))) src/hr_time.o src/bihelp
 
 
 ifeq ($(dist), .el5)
-UDEV_FILE:=centos.rules
+UDEV_FILE:=linux/centos.rules
 else
-UDEV_FILE:=fedora.rules
+UDEV_FILE:=linux/fedora.rules
 endif
-
+UDEV_DST=$(BUILDDIR)/etc/udev/rules.d/60-nitro.rules
 
 
 .PHONY: all test docs INCLUDES clean udev specs tgz python
 
-all: $(SOFILE) $(ARFILE) $(PROGS) INCLUDES
+all: $(SOFILE) $(ARFILE) $(PROGS) INCLUDES udev
 
 test:
 	make -C test run
@@ -54,11 +54,11 @@ INCLUDES: $(INCDIR) $(DLLHEADERS) include/nitro.h
 	cp include/nitro.h $(INCDIR)
 	cp include/nitro/versionno.h $(INCDIR)/nitro/
 
-udev: $(BUILDDIR)/etc/udev/rules.d/60-ubixum.rules
+udev: $(UDEV_DST) 
 
-$(BUILDDIR)/etc/udev/rules.d/60-ubixum.rules: linux/*.rules
+$(UDEV_DST): $(UDEV_FILE) 
 	mkdir -p $(BUILDDIR)/etc/udev/rules.d
-	cp linux/$(UDEV_FILE) $@ 
+	cp $< $@ 
 
 
 $(PROGS): $(BINDIR) $(ARFILE) $(PROG_FILES) include/nitro.h
