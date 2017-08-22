@@ -7,7 +7,7 @@ SHELL := /bin/bash # so pushd works
 DEB_DIR=deb-src
 VERSION:=$(shell LD_LIBRARY_PATH=../build/usr/lib64 ../build/usr/bin/nitro_version)
 BUILDDIR=$(DEB_DIR)/nitro-$(VERSION)
-BUILD:=4
+BUILD:=1
 
 .PHONY: build 
 

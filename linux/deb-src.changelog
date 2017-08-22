@@ -1,5 +1,6 @@
 nitro (VER) unstable; urgency=medium
   
-  * Correcting python installation at package build time.
+  * Updated async API
+  * Updated support for USB Firmware updates. 
 
  -- Dennis Muhlestein <dennis@brooksee.tech>  DATE 
