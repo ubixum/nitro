@@ -97,9 +97,8 @@ nitro_USBDevice_init(nitro_USBDeviceObject* self, PyObject *args, PyObject *kwds
             return -1;
         }
         try {
-            Device* dev = ((nitro_DeviceObject*)arg)->nitro_device;
-            if (!dev || (typeid(*dev) !=
-                         typeid(USBDevice))) {
+            Device* dev = dynamic_cast<USBDevice*>(((nitro_DeviceObject*)arg)->nitro_device);
+            if (!dev) {
                 PyErr_SetString ( PyExc_Exception, "Device must be of type Nitro::USBDevice" );
                 return -1;
             }
@@ -114,7 +113,7 @@ nitro_USBDevice_init(nitro_USBDeviceObject* self, PyObject *args, PyObject *kwds
         ((nitro_DeviceObject*)self)->nitro_device = 
             ((nitro_DeviceObject*)arg)->nitro_device;
 
-
+        return 0;
     }
     PyErr_SetString ( PyExc_Exception, "USBDevice (vid,pid) | USBDevice(Device)" );
     return -1;
