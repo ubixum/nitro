@@ -1,6 +1,5 @@
 nitro (VER) unstable; urgency=medium
   
-  * Updated async API
-  * Updated support for USB Firmware updates. 
+  * Python handling of usbdevice updated. 
 
  -- Dennis Muhlestein <dennis@brooksee.tech>  DATE 
