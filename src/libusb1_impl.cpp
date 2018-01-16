@@ -731,6 +731,15 @@ int USBDevice::impl::bulk_transfer ( NITRO_DIR d, uint8 ep, uint8* data, size_t 
      else info = tx_struct->err;
      throw Exception ( USB_COMM, "bulk transfer fail", info );
    }
+   
+   // if this is a write and the size is a multiple of the endpoint size, we need
+   // to send a null packet so that the dma buffer is committed to the dma
+   // engine
+   
+   if (ep == m_write_ep && length % 512==0) {
+      int tmp; // don't care 
+      libusb_bulk_transfer(m_dev, ep, NULL, 0,&tmp, 100);
+   }
 
    return length;
 }
