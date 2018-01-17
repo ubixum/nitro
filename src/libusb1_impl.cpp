@@ -562,7 +562,7 @@ int USBDevice::impl::control_transfer ( NITRO_DIR d, NITRO_VC c, uint16 value, u
 }
 
 #define NITRO_TX_SIZE  (64*1024) // seemed to be the fastest buffer size
-#define NITRO_TX_QUEUE_DEPTH 32
+#define NITRO_TX_QUEUE_DEPTH 32 
 
 typedef struct {
     std::mutex *devlock;
@@ -647,6 +647,8 @@ void usb_tx_submit_helper(tx_struct_ptr tx_struct, libusb_transfer *tx) {
 
     int this_len = tx_struct->queued + NITRO_TX_SIZE > tx_struct->length ? tx_struct->length-tx_struct->queued : NITRO_TX_SIZE;
     tx_struct_ptr *user_data = new tx_struct_ptr(tx_struct);
+
+    usb_debug ( "urb timeout " << tx_struct->timeout );
     libusb_fill_bulk_transfer(
        tx,
        *tx_struct->dev,
@@ -684,6 +686,7 @@ int USBDevice::impl::bulk_transfer ( NITRO_DIR d, uint8 ep, uint8* data, size_t 
    tx_struct->transferred = 0;
    tx_struct->err=0;
    tx_struct->timeout=timeout;
+   usb_debug ( "Transfer Timeout " << timeout ); 
 
     timeval tv;
     tv.tv_sec = timeout / 1e3;
