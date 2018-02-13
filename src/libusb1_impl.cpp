@@ -27,6 +27,7 @@
 #include <queue>
 #include <mutex>
 #include <atomic>
+#include <algorithm> // remove_if
 
 //typedef std::vector<struct usb_device*> DeviceList;
 //typedef std::vector<struct usb_device*>::iterator DeviceListItr;
@@ -583,6 +584,13 @@ typedef std::shared_ptr<usb_async_tx_struct> tx_struct_ptr;
 
 void usb_tx_submit_helper(tx_struct_ptr tx_struct, libusb_transfer *tx);
 
+void usb_tx_free_helper(libusb_transfer *tx, const char* src) {
+    usb_debug ( "Free tx from " << src << "(" << (uint64_t)tx << ")");
+    tx_struct_ptr *ud = (tx_struct_ptr*)tx->user_data;
+    if (ud) delete ud;
+    libusb_free_transfer(tx);
+}
+
 void usb_tx_callback(libusb_transfer *tx) {
 
     tx_struct_ptr *ud = (tx_struct_ptr*)tx->user_data; // only ref counted from creation
@@ -593,18 +601,20 @@ void usb_tx_callback(libusb_transfer *tx) {
 
     std::lock_guard<std::mutex> lock(tx_struct->mutex);
 
-    delete ud;
-    tx->user_data=0;
 
-    if (tx_struct->transfers.size()<1 || tx_struct->transfers.front() != tx) {
+    if (std::count(tx_struct->transfers.begin(), tx_struct->transfers.end(),tx)!=1) { 
         // this should not happen
         usb_debug ( "bad logic no tranfers in transfer queue." );
         if (!tx_struct->err) tx_struct->err = USB_PROTO;
-        libusb_free_transfer(tx);
+        usb_tx_free_helper(tx, "cb bad proto");
         return;
     }
 
-    tx_struct->transfers.erase(tx_struct->transfers.begin());
+    tx_struct->transfers.erase(std::remove(
+			            tx_struct->transfers.begin(),
+				    tx_struct->transfers.end(),
+				    tx ),
+		               tx_struct->transfers.end());
 
     if (tx->status != LIBUSB_TRANSFER_COMPLETED) {
         if (!tx_struct->err) tx_struct->err = tx->status;
@@ -615,12 +625,11 @@ void usb_tx_callback(libusb_transfer *tx) {
     }
 
     if (tx_struct->err) {
-        libusb_free_transfer( tx );
+	usb_tx_free_helper(tx, "libusb error" );
     } else {
         tx_struct->transferred += tx->actual_length;
         usb_tx_submit_helper(tx_struct, tx); // resubmit or free
     }
-
 }
 
 
@@ -636,19 +645,20 @@ void usb_tx_submit_helper(tx_struct_ptr tx_struct, libusb_transfer *tx) {
         // in this case, we're done queuing, free the tx
         // or the device has gone away
         if (tx) {
-            libusb_free_transfer(tx);
+	    usb_tx_free_helper(tx,"finished");
         }
         return;
     }
 
     if (!tx) {
         tx = libusb_alloc_transfer(0);
+	usb_debug ( "new tx for submit: " << (uint64_t)tx);
     }
 
     int this_len = tx_struct->queued + NITRO_TX_SIZE > tx_struct->length ? tx_struct->length-tx_struct->queued : NITRO_TX_SIZE;
-    tx_struct_ptr *user_data = new tx_struct_ptr(tx_struct);
+    tx_struct_ptr *user_data = tx->user_data ? (tx_struct_ptr*)tx->user_data : new tx_struct_ptr(tx_struct);
 
-    usb_debug ( "urb timeout " << tx_struct->timeout );
+    //usb_debug ( "urb timeout " << tx_struct->timeout );
     libusb_fill_bulk_transfer(
        tx,
        *tx_struct->dev,
@@ -665,8 +675,9 @@ void usb_tx_submit_helper(tx_struct_ptr tx_struct, libusb_transfer *tx) {
         usb_debug ( "Fail to submit transfer: " << libusb_error_name(ret));
         tx_struct->transfers.pop_back(); // we didn't submit so we don't get a callback.
         tx_struct->err = ret;
-        libusb_free_transfer(tx);
-        delete user_data;
+	usb_tx_free_helper(tx,"fail to submit");
+    } else {
+	usb_debug ( "submit tx " << (uint64_t)tx << " size " << tx_struct->transfers.size() );
     }
 
 }
@@ -706,15 +717,28 @@ int USBDevice::impl::bulk_transfer ( NITRO_DIR d, uint8 ep, uint8* data, size_t 
    do {
 
        tx_struct->mutex.lock();
-       completed=!tx_struct->transfers.size();
        //tx_struct->transferred >= length || tx_struct->err;
        if (tx_struct->err || std::chrono::system_clock::now() > stop) {
            // cancel any transfer that's outstanding even if it's already canceled
            if (!tx_struct->err) tx_struct->err = LIBUSB_ERROR_TIMEOUT;
-           for (auto tx : tx_struct->transfers) {
-               libusb_cancel_transfer(tx);
-           }
+	   tx_struct->transfers.erase(std::remove_if(
+		tx_struct->transfers.begin(),tx_struct->transfers.end(), [](auto tx) {
+		auto r=libusb_cancel_transfer(tx);
+		if (r == LIBUSB_ERROR_NOT_FOUND) {
+		    usb_tx_free_helper(tx, "tx not found to cancel");
+		    return true; // remove it isn't submitted
+		}
+		if (r) {
+		    // error we need to address
+		    usb_debug ( "error canceling tx: " << r );
+		    return true; // this might cause a crash if it is submitted
+		}
+		return false;
+	   }),
+	   tx_struct->transfers.end());
+ 
        }
+       completed=!tx_struct->transfers.size();
        tx_struct->mutex.unlock();
        if (!completed) {
            int ret;
