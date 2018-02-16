@@ -20,8 +20,11 @@
 
 #include <cassert>
 #include <vector>
-
 #include <nitro/error.h>
+
+// TODO - This is due to libgmp being compiled for win with older VC++
+// need to recompile libs
+extern "C" { FILE __iob_func[3] = { *stdin,*stdout,*stderr }; }
 
 using namespace Nitro;
 

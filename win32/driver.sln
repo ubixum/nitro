@@ -1,43 +1,24 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2008
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "driver", "driver.vcproj", "{A5E74A24-E6CF-498B-A9C8-6922C70510E4}"
-	ProjectSection(ProjectDependencies) = postProject
-		{152CE948-F659-4206-A50A-1D2B9658EF96} = {152CE948-F659-4206-A50A-1D2B9658EF96}
-		{5AB6B770-1925-48D5-ABC2-930F3259C020} = {5AB6B770-1925-48D5-ABC2-930F3259C020}
-	EndProjectSection
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26730.16
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "driver", "driver.vcxproj", "{A5E74A24-E6CF-498B-A9C8-6922C70510E4}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "nitro", "test.vcproj", "{57223B0F-0EF4-488E-BC21-2A49D54B1563}"
-	ProjectSection(ProjectDependencies) = postProject
-		{A5E74A24-E6CF-498B-A9C8-6922C70510E4} = {A5E74A24-E6CF-498B-A9C8-6922C70510E4}
-	EndProjectSection
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "nitro", "test.vcxproj", "{57223B0F-0EF4-488E-BC21-2A49D54B1563}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "csharp", "..\csharp\csharp.vcproj", "{41D52D5C-8275-4614-8EF5-863C325A051B}"
-	ProjectSection(ProjectDependencies) = postProject
-		{A5E74A24-E6CF-498B-A9C8-6922C70510E4} = {A5E74A24-E6CF-498B-A9C8-6922C70510E4}
-		{152CE948-F659-4206-A50A-1D2B9658EF96} = {152CE948-F659-4206-A50A-1D2B9658EF96}
-	EndProjectSection
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "csharp", "..\csharp\csharp.vcxproj", "{41D52D5C-8275-4614-8EF5-863C325A051B}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tests", "tests.vcproj", "{D096ED14-4894-434D-9C12-1E563666480B}"
-	ProjectSection(ProjectDependencies) = postProject
-		{A5E74A24-E6CF-498B-A9C8-6922C70510E4} = {A5E74A24-E6CF-498B-A9C8-6922C70510E4}
-	EndProjectSection
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tests", "tests.vcxproj", "{D096ED14-4894-434D-9C12-1E563666480B}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "userdev_dll", "userdev_dll.vcproj", "{802E1DDF-26D6-402E-BC4C-FA3F30F6F7E0}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "userdev_dll", "userdev_dll.vcxproj", "{802E1DDF-26D6-402E-BC4C-FA3F30F6F7E0}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "nitro_version", "nitro_version.vcproj", "{FE739FA4-C983-4E1B-9247-EEE2C97A8D68}"
-	ProjectSection(ProjectDependencies) = postProject
-		{A5E74A24-E6CF-498B-A9C8-6922C70510E4} = {A5E74A24-E6CF-498B-A9C8-6922C70510E4}
-	EndProjectSection
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "nitro_version", "nitro_version.vcxproj", "{FE739FA4-C983-4E1B-9247-EEE2C97A8D68}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "python", "python.vcproj", "{62F731E7-BFFB-403C-AD8C-CCBEBFAE8F7F}"
-	ProjectSection(ProjectDependencies) = postProject
-		{A5E74A24-E6CF-498B-A9C8-6922C70510E4} = {A5E74A24-E6CF-498B-A9C8-6922C70510E4}
-	EndProjectSection
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "python", "python.vcxproj", "{62F731E7-BFFB-403C-AD8C-CCBEBFAE8F7F}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XercesLib", "xerces-c\projects\Win32\VC9\xerces-all\XercesLib\XercesLib.vcproj", "{152CE948-F659-4206-A50A-1D2B9658EF96}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XercesLib", "xerces-c\projects\Win32\VC9\xerces-all\XercesLib\XercesLib.vcxproj", "{152CE948-F659-4206-A50A-1D2B9658EF96}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libusb_static_2005", "libusb\msvc\libusb_static_2005.vcproj", "{5AB6B770-1925-48D5-ABC2-930F3259C020}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libusb-1.0 (static)", "libusb\msvc\libusb_static_2005.vcxproj", "{5AB6B770-1925-48D5-ABC2-930F3259C020}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -342,5 +323,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {39D04435-AC56-45CF-820D-17DBBE1CC9F2}
 	EndGlobalSection
 EndGlobal

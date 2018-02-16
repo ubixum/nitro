@@ -1,6 +1,6 @@
 *.ncb
 *.suo
-*.vcproj.*
+*.vcxproj.*
 BinDebug
 BinRelease
 DllRelease

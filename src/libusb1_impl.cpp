@@ -17,7 +17,7 @@
  **/
 
 #ifdef WIN32
-#include <libusb.h>
+#include <libusb/libusb.h>
 #elif defined(ANDROID)
 #include <libusb.h>
 #else
