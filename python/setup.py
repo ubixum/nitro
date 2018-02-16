@@ -14,12 +14,17 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USAimport struct
-import sys
+import sys,os
 from distutils.core import setup, Extension 
 import subprocess
 from subprocess import Popen
 
-version=Popen('../build/usr/bin/nitro_version',stdout=subprocess.PIPE).stdout.read().strip()
+if sys.platform == 'win32':
+    vprog=os.path.join('..','win32','x64','Release','nitro_version.exe')
+else:
+    vprog=os.path.join('..','build','usr','bin','nitro_version')
+
+version=Popen(vprog,stdout=subprocess.PIPE).stdout.read().strip()
 
 
 def get_ext():
