@@ -585,7 +585,7 @@ typedef std::shared_ptr<usb_async_tx_struct> tx_struct_ptr;
 void usb_tx_submit_helper(tx_struct_ptr tx_struct, libusb_transfer *tx);
 
 void usb_tx_free_helper(libusb_transfer *tx, const char* src) {
-    usb_debug ( "Free tx from " << src << "(" << (uint64_t)tx << ")");
+	usb_debug("Free tx from " << src << "(" << (uint64_t)tx << ")");
     tx_struct_ptr *ud = (tx_struct_ptr*)tx->user_data;
     if (ud) delete ud;
     libusb_free_transfer(tx);
@@ -603,10 +603,12 @@ void usb_tx_callback(libusb_transfer *tx) {
 
 
     if (std::count(tx_struct->transfers.begin(), tx_struct->transfers.end(),tx)!=1) { 
-        // this should not happen
-        usb_debug ( "bad logic no tranfers in transfer queue." );
-        if (!tx_struct->err) tx_struct->err = USB_PROTO;
-        usb_tx_free_helper(tx, "cb bad proto");
+        // this seems to happen when a previous transfer didn't complete ok
+		// prob good to keep track of them in a list still so as not to confuse
+		// the current transfer with the previous one.
+        usb_debug ( "Untracked transfer in tx_struct->transfers." );
+        // if (!tx_struct->err) tx_struct->err = USB_PROTO;
+        usb_tx_free_helper(tx, "cb with not tracked packet");
         return;
     }
 
@@ -652,7 +654,6 @@ void usb_tx_submit_helper(tx_struct_ptr tx_struct, libusb_transfer *tx) {
 
     if (!tx) {
         tx = libusb_alloc_transfer(0);
-	usb_debug ( "new tx for submit: " << (uint64_t)tx);
     }
 
     int this_len = tx_struct->queued + NITRO_TX_SIZE > tx_struct->length ? tx_struct->length-tx_struct->queued : NITRO_TX_SIZE;
@@ -717,28 +718,27 @@ int USBDevice::impl::bulk_transfer ( NITRO_DIR d, uint8 ep, uint8* data, size_t 
    do {
 
        tx_struct->mutex.lock();
+	   completed = tx_struct->transfers.empty();
        //tx_struct->transferred >= length || tx_struct->err;
        if (tx_struct->err || std::chrono::system_clock::now() > stop) {
            // cancel any transfer that's outstanding even if it's already canceled
            if (!tx_struct->err) tx_struct->err = LIBUSB_ERROR_TIMEOUT;
 	   tx_struct->transfers.erase(std::remove_if(
 		tx_struct->transfers.begin(),tx_struct->transfers.end(), [](auto tx) {
-		auto r=libusb_cancel_transfer(tx);
-		if (r == LIBUSB_ERROR_NOT_FOUND) {
-		    usb_tx_free_helper(tx, "tx not found to cancel");
-		    return true; // remove it isn't submitted
-		}
-		if (r) {
-		    // error we need to address
-		    usb_debug ( "error canceling tx: " << r );
-		    return true; // this might cause a crash if it is submitted
-		}
-		return false;
+		   
+		   /*
+		      just remove all the transfers regardless of status.
+			  Before when we tried to free them here thinking the callback would
+			  not be called for cancels that returned "NOT_FOUND" turned out
+			  to be incorrect and cause crashes.
+		   */
+		libusb_cancel_transfer(tx);
+		return true;
 	   }),
 	   tx_struct->transfers.end());
  
        }
-       completed=!tx_struct->transfers.size();
+       
        tx_struct->mutex.unlock();
        if (!completed) {
            int ret;
