@@ -243,7 +243,7 @@ struct USBDevice::impl : public usbdev_impl_core {
         void close();
 
 };
-
+unsigned g_usb_tx_cnt=0; // debug only
 int USBDevice::impl::m_ref_count=0;
 bool USBDevice::impl::m_initialized=false;
 void USBDevice::impl::check_init() {
@@ -581,11 +581,12 @@ typedef struct {
 } usb_async_tx_struct;
 
 typedef std::shared_ptr<usb_async_tx_struct> tx_struct_ptr;
-
 void usb_tx_submit_helper(tx_struct_ptr tx_struct, libusb_transfer *tx);
 
 void usb_tx_free_helper(libusb_transfer *tx, const char* src) {
-	usb_debug("Free tx from " << src << "(" << (uint64_t)tx << ")");
+    --g_usb_tx_cnt;
+    usb_debug("Free tx from " << src << "(" << (uint64_t)tx << ", remaining: " << g_usb_tx_cnt << ")");  
+	
     tx_struct_ptr *ud = (tx_struct_ptr*)tx->user_data;
     if (ud) delete ud;
     libusb_free_transfer(tx);
@@ -654,6 +655,7 @@ void usb_tx_submit_helper(tx_struct_ptr tx_struct, libusb_transfer *tx) {
 
     if (!tx) {
         tx = libusb_alloc_transfer(0);
+        ++g_usb_tx_cnt;
     }
 
     int this_len = tx_struct->queued + NITRO_TX_SIZE > tx_struct->length ? tx_struct->length-tx_struct->queued : NITRO_TX_SIZE;
@@ -781,6 +783,7 @@ void USBDevice::impl::close() {
     m_dev=NULL;
     usb_debug ( "Closed device." );
   }
+  usb_debug ( "g_usb_tx_cnt: " << g_usb_tx_cnt);
 }
 
 std::wstring USBDevice::impl::get_device_serial(uint32 vid, uint32 pid, uint32 index ) {
