@@ -29,6 +29,15 @@
 using namespace std;
 using namespace Nitro;
 
+#if PY_MAJOR_VERSION >= 3
+#else
+#define PyUnicode_AsUTF8       PyString_AsString
+#define PyUnicode_FromString   PyString_FromString
+#define PyUnicode_Check        PyString_Check
+#define PyUnicode_ConcatAndDel PyString_ConcatAndDel
+#endif
+
+
 
 // predef
 PyObject* nitro_Node_GetIter ( PyObject* s ); 
@@ -142,8 +151,6 @@ nitro_Node_init ( nitro_NodeObject* self, PyObject *args, PyObject *kwds ) {
 
 
 // *********** class methods ****************************
-
-
 
 PyObject* nitro_Node_Keys ( nitro_NodeObject* self ) {
    try {
