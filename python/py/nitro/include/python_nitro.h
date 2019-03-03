@@ -61,15 +61,8 @@ static void **NitroCAPI;
  **/
 static int 
 import_nitro() {
-    PyObject* module = PyImport_ImportModule("nitro"); 
-    if (!module) return -1;
-    PyObject *nitro_api = PyObject_GetAttrString ( module, "_NITRO_API" );
-    if (!nitro_api) return -1;
-    if (!PyCObject_Check(nitro_api)) return -1;
-    NitroCAPI = (void**) PyCObject_AsVoidPtr(nitro_api);
-    Py_DECREF(nitro_api);
-    
-    return 0;
+    NitroCAPI = (void **)PyCapsule_Import("nitro._NITRO_API", 0);
+    return (NitroCAPI != 0) ? 0 : -1;
 }
 
 #endif // end capi import

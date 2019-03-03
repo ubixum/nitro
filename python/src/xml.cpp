@@ -34,7 +34,11 @@ nitro_XmlReader_new ( PyTypeObject* type, PyObject *args, PyObject *kwds ) {
 
 static void nitro_XmlReader_dealloc (nitro_XmlReaderObject* self) {
     if (self->m_reader) delete self->m_reader;
+#if PY_MAJOR_VERSION >= 3
+    self->ob_base.ob_type->tp_free((PyObject*)self);
+#else
     self->ob_type->tp_free((PyObject*)self);
+#endif
 }
 
 
@@ -86,6 +90,19 @@ static PyMethodDef nitro_XmlReader_Methods[] = {
 
 
 
+#if PY_MAJOR_VERSION >= 3
+PyTypeObject nitro_XmlReaderType = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name="nitro.XmlReader",            /*tp_name*/
+    .tp_basicsize=sizeof(nitro_XmlReaderObject),  /*tp_basicsize*/
+    .tp_dealloc=(destructor)nitro_XmlReader_dealloc,   /*tp_dealloc*/
+    .tp_flags=Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,   /*tp_flags*/
+    .tp_doc="Nitro XmlReader Object",           /* tp_doc */
+    .tp_methods=nitro_XmlReader_Methods,     /* tp_methods */
+    .tp_init=(initproc)nitro_XmlReader_init, /* tp_init */
+    .tp_new=nitro_XmlReader_new,            /* tp_new */
+};
+#else
 PyTypeObject nitro_XmlReaderType = {
 
     PyObject_HEAD_INIT(NULL)
@@ -128,7 +145,7 @@ PyTypeObject nitro_XmlReaderType = {
     0,                         /* tp_alloc */
     nitro_XmlReader_new,            /* tp_new */
 };
-
+#endif
 /// ******************************** xml writer ************************************
 
 static PyObject* 
@@ -141,7 +158,11 @@ nitro_XmlWriter_new ( PyTypeObject* type, PyObject *args, PyObject *kwds ) {
 
 static void nitro_XmlWriter_dealloc (nitro_XmlWriterObject* self) {
     if (self->m_writer) delete self->m_writer;
+#if PY_MAJOR_VERSION >= 3
+    self->ob_base.ob_type->tp_free((PyObject*)self);
+#else
     self->ob_type->tp_free((PyObject*)self);
+#endif
 }
 
 
@@ -192,7 +213,19 @@ static PyMethodDef nitro_XmlWriter_Methods[] = {
 
 
 
-
+#if PY_MAJOR_VERSION >= 3
+PyTypeObject nitro_XmlWriterType = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name="nitro.XmlWriter",            /*tp_name*/
+    .tp_basicsize=sizeof(nitro_XmlWriterObject),  /*tp_basicsize*/
+    .tp_dealloc=(destructor)nitro_XmlWriter_dealloc,   /*tp_dealloc*/
+    .tp_flags=Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,   /*tp_flags*/
+    .tp_doc="Nitro XmlWriter Object",           /* tp_doc */
+    .tp_methods=nitro_XmlWriter_Methods,     /* tp_methods */
+    .tp_init=(initproc)nitro_XmlWriter_init, /* tp_init */
+    .tp_new=nitro_XmlWriter_new,            /* tp_new */
+};
+#else
 PyTypeObject nitro_XmlWriterType = {
 
     PyObject_HEAD_INIT(NULL)
@@ -235,5 +268,5 @@ PyTypeObject nitro_XmlWriterType = {
     0,                         /* tp_alloc */
     nitro_XmlWriter_new,            /* tp_new */
 };
-
+#endif
 

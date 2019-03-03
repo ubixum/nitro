@@ -30,8 +30,8 @@ version=Popen(vprog,stdout=subprocess.PIPE).stdout.read().strip()
 def get_ext():
     if sys.platform == 'win32':
         if 'AMD64' in sys.version:
-	   plat_library_dirs = [ '../win32/x64/Release' ]
-	else:
+           plat_library_dirs = [ '../win32/x64/Release' ]
+        else:
            plat_library_dirs = ['../win32/DllRelease', '../win32/python_debug', '../win32/DllDebug']
         plat_extra_compile_args = ['/EHsc']
         plat_define_macros = [('WIN32',None)]

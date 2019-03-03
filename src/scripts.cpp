@@ -166,7 +166,7 @@ void Scripts::impl::add_path ( const std::string &path ) {
 	if (!sys_path) throw Exception ( SCRIPTS_ERR, "Unable to set module path" );
 	PyObjCleanup sys_path_cleanup(sys_path);
 
-	PyObject* dir_str = PyString_FromString ( path.c_str() );
+	PyObject* dir_str = PyBytes_FromString ( path.c_str() );
 	if ( !dir_str ) throw Exception ( SCRIPTS_ERR, "Unable to set module path (string creation)" );
 	PyObjCleanup dir_str_cleanup( dir_str );
 
@@ -176,7 +176,7 @@ void Scripts::impl::add_path ( const std::string &path ) {
 		#ifdef DEBUG_PY
 		PyObject* path_str = PyObject_Str(sys_path);
 		PyObjCleanup path_str_cleanup( path_str );
-		py_debug ( "New Path: " << PyString_AsString( path_str ) );
+		py_debug ( "New Path: " << PyBytes_AsString( path_str ) );
 		#endif
 	}
 }
@@ -219,8 +219,8 @@ void Scripts::import ( const std::string &module, const std::string &script_path
     PyObject *key, *value;
     Py_ssize_t pos=0;
     while (PyDict_Next(dict, &pos, &key, &value)) {
-        if (PyString_Check(key)) {
-            const char* key_str = PyString_AsString(key);
+        if (PyBytes_Check(key)) {
+            const char* key_str = PyBytes_AsString(key);
             if (PyCallable_Check( value )) {
                 Py_INCREF(value);
                 new_funcs[std::string(key_str)] = value ;
@@ -269,7 +269,7 @@ NodeRef Scripts::get_params (const std::string &module, const std::string &func_
    if (!doc_string) throw Exception ( SCRIPTS_SCRIPT, "Unable to read function doc string." );
    PyObjCleanup doc_string_cleanup(doc_string);
    
-   const char* doc_cstr = PyString_AsString(doc_string);
+   const char* doc_cstr = PyBytes_AsString(doc_string);
    py_debug ( "Func Docs: " << doc_cstr );
 
    std::stringstream ss;
@@ -303,7 +303,7 @@ std::string Scripts::get_comment(const std::string &module, const std::string &f
     if (!doc_string) throw Exception ( SCRIPTS_SCRIPT, "Unable to read function doc string." );
     PyObjCleanup doc_string_cleanup(doc_string);
    
-    const char* doc_cstr = PyString_AsString(doc_string);
+    const char* doc_cstr = PyBytes_AsString(doc_string);
 	return std::string(doc_cstr);
 }
 
@@ -335,7 +335,7 @@ DataType Scripts::exec(const std::string &module, const std::string &func_name, 
 
     #ifdef DEBUG_PY 
         PyObject* dstr = PyObject_Str(kw);
-        const char* dstr_str = PyString_AsString(dstr);
+        const char* dstr_str = PyBytes_AsString(dstr);
         py_debug ( "keywords: " << dstr_str );
         Py_DECREF(dstr);
     #endif
@@ -356,7 +356,7 @@ DataType Scripts::exec(const std::string &module, const std::string &func_name, 
             #ifdef DEBUG_PY
                 PyObject* str_args = PyObject_Str(eargs);
                 PyObjCleanup str_args_cleanup(str_args);
-                py_debug ( "Exception Args: " << PyString_AsString(str_args) );
+                py_debug ( "Exception Args: " << PyBytes_AsString(str_args) );
             #endif
             int code;
             const char* msg=NULL;
@@ -379,7 +379,7 @@ DataType Scripts::exec(const std::string &module, const std::string &func_name, 
             
             PyObject* str_value = PyObject_Str( pvalue );
             PyObjCleanup str_value_clenaup(str_value);
-            const char* exc = PyString_AsString(str_value);		    
+            const char* exc = PyBytes_AsString(str_value);		    
             throw Exception ( SCRIPTS_SCRIPT, exc );
         }
 

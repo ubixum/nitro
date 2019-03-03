@@ -54,14 +54,19 @@ PyObject* nitro_Exception;
 // tmp
 void obj_print ( const char* prefix, PyObject* obj ) {
     PyObject* str = PyObject_Str(obj);
-    char* cstr = PyString_AsString(str);
+    char* cstr = PyBytes_AsString(str);
     printf ( "%s: %s\n", prefix, cstr );
     Py_DECREF(str);
 }
 
 
-PyMODINIT_FUNC init_nitro(void) {
-
+PyMODINIT_FUNC
+#if PY_MAJOR_VERSION >= 3
+PyInit__nitro(void)
+#else
+init_nitro(void)
+#endif
+{
     #ifdef _DEBUG
      printf ("Debug Nitro Module!\n" );
     #endif
@@ -69,49 +74,115 @@ PyMODINIT_FUNC init_nitro(void) {
     PyObject* m;
 
     if (PyType_Ready(&nitro_DeviceType) < 0 )
-        return;
-
+#if PY_MAJOR_VERSION >= 3
+      return NULL;
+#else
+      return;
+#endif
 
     nitro_USBDeviceType.tp_base = &nitro_DeviceType;
     if (PyType_Ready(&nitro_USBDeviceType) < 0 ) 
-        return;
+#if PY_MAJOR_VERSION >= 3
+      return NULL;
+#else
+      return;
+#endif
 
     // because base type and type struct are in different cpp files.
     nitro_UserDeviceType.tp_base = &nitro_DeviceType;
     if (PyType_Ready(&nitro_UserDeviceType) < 0)
-        return;
+#if PY_MAJOR_VERSION >= 3
+      return NULL;
+#else
+      return;
+#endif
 
 
     if (PyType_Ready(&nitro_NodeType)<0) {
-        return;
+#if PY_MAJOR_VERSION >= 3
+      return NULL;
+#else
+      return;
+#endif
     }
-    if (PyType_Ready(&nitro_BufferType)<0) { return; }
+    if (PyType_Ready(&nitro_BufferType)<0) {
+#if PY_MAJOR_VERSION >= 3
+      return NULL;
+#else
+      return;
+#endif
+    }
     if (PyType_Ready(&nitro_DeviceInterfaceType)<0) {
-        return;
+#if PY_MAJOR_VERSION >= 3
+      return NULL;
+#else
+      return;
+#endif
     }
     if (PyType_Ready(&nitro_XmlReaderType)<0) {
-        return;
+#if PY_MAJOR_VERSION >= 3
+      return NULL;
+#else
+      return;
+#endif
     }
 
     if (PyType_Ready(&nitro_TerminalType)<0) {
-        return;
+#if PY_MAJOR_VERSION >= 3
+      return NULL;
+#else
+      return;
+#endif
     }
     if (PyType_Ready(&nitro_RegisterType)<0) {
-        return;
+#if PY_MAJOR_VERSION >= 3
+      return NULL;
+#else
+      return;
+#endif
     }
     if (PyType_Ready(&nitro_SubregisterType)<0) {
-        return;
+#if PY_MAJOR_VERSION >= 3
+      return NULL;
+#else
+      return;
+#endif
     }
     if (PyType_Ready(&nitro_ValuemapType)<0) {
-        return;
+#if PY_MAJOR_VERSION >= 3
+      return NULL;
+#else
+      return;
+#endif
     }
 
-    if (PyType_Ready(&nitro_XmlWriterType)<0) { return; }
-   
+    if (PyType_Ready(&nitro_XmlWriterType)<0) {
+#if PY_MAJOR_VERSION >= 3
+      return NULL;
+#else
+      return;
+#endif
+    }
     nitro_Exception = PyErr_NewException("nitro.Exception", NULL, NULL);
 
+#if PY_MAJOR_VERSION >= 3
+    static struct PyModuleDef moduledef =
+      {
+       PyModuleDef_HEAD_INIT,
+       "_nitro",     /* m_name */
+       "nitro wrapper for C++ objects",  /* m_doc */
+       -1,                  /* m_size */
+       core_methods,        /* m_methods */
+       NULL,                /* m_reload */
+       NULL,                /* m_traverse */
+       NULL,                /* m_clear */
+       NULL,                /* m_free */
+      };
+    m = PyModule_Create(&moduledef);
+#else
     m = Py_InitModule3("_nitro", core_methods,
                        "");
+#endif
 
     Py_INCREF(&nitro_DeviceType);
     PyModule_AddObject(m, "Device", (PyObject*)&nitro_DeviceType); 
@@ -159,15 +230,21 @@ PyMODINIT_FUNC init_nitro(void) {
     NitroCAPI[NITRO_EXCEPTION] = (void*) nitro_Exception;
     NitroCAPI[NITRO_BUILD_BUFFER] = (void*) nitro_BuildBuffer;
 
-    PyObject* capi = PyCObject_FromVoidPtr ( (void*) NitroCAPI , NULL );
+    PyObject* capi = PyCapsule_New ( (void*) NitroCAPI , NULL, NULL );
     if (capi) {
         PyModule_AddObject ( m, "_NITRO_API", capi );
     }    
-
+#if PY_MAJOR_VERSION >= 3
+    return m;
+#endif
 }
 
 // windows python26 debug distutils doesn't seem to know how to handle nameing things very well.
+#if PY_MAJOR_VERSION >= 3
+// Note: Don't know what windows python3 needs here, if anything
+#else
 PyMODINIT_FUNC init_nitro_d(void) { init_nitro(); }
+#endif
 
 
 // **************** util functions ************************
@@ -207,19 +284,24 @@ int to_datatype(PyObject *object, void *address) {
 
     Nitro::DataType* dt=(Nitro::DataType*)address; 
 
-    if ( PyString_Check(object) ) {
-        char* term = PyString_AsString(object);
+    if ( PyBytes_Check(object) ) {
+        char* term = PyBytes_AsString(object);
         *dt = term;
+#if PY_MAJOR_VERSION >= 3
+    } else if ( PyUnicode_Check(object) ) {
+        const char* term = PyUnicode_AsUTF8(object);
+        *dt = term;
+#endif        
     } else if ( PyFloat_Check ( object ) ) {
         // check float first to not loose precision
         *dt = PyFloat_AsDouble(object);
     }else if ( PyNumber_Check(object) ) {
-        PyObject* int_val = PyNumber_Int(object);
+        PyObject* int_val = PyNumber_Long(object);
         if (NULL==int_val) {
             PyErr_SetString ( PyExc_Exception, "Can't convert object to integer." );
             return 0;
         }
-        if (PyInt_Check(int_val)) {
+        if (PyLong_Check(int_val)) {
            // convert it to a long
 
            PyObject* long_args = Py_BuildValue("(O)",int_val);
@@ -316,7 +398,7 @@ int to_datatype(PyObject *object, void *address) {
         while ( (item = PyIter_Next(itr)) != NULL ) {
 
             PyObject *first = PySequence_GetItem ( item, 0 );
-            if ( !PyString_Check (first)) {
+            if ( !PyBytes_Check (first)) {
                 PyErr_SetString(PyExc_Exception,"Mapping key must be a string.");
                 Py_DECREF(first);
                 Py_DECREF(item);
@@ -328,7 +410,7 @@ int to_datatype(PyObject *object, void *address) {
             Nitro::DataType dt_item(0);
             int ret;
             if( (ret=to_datatype ( second, &dt_item )) ) {
-                char* key = PyString_AsString(first);
+                char* key = PyBytes_AsString(first);
                 node->set_attr ( key, dt_item ); 
             } 
             
@@ -377,7 +459,7 @@ PyObject* from_datatype(const Nitro::DataType& dt) {
         case Nitro::STR_DATA:
                 {
                  std::string s = (std::string)dt;
-                 return PyString_FromString(s.c_str());
+                 return PyBytes_FromString(s.c_str());
                 }
         case Nitro::NODE_DATA:
             {

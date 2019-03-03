@@ -1,11 +1,12 @@
+PYTHON=python3
 
 .PHONY: build install clean
 
 build:
-	python setup.py build
+	$(PYTHON) setup.py build
 
 install:
-	python setup.py install
+	$(PYTHON) setup.py install
 
 clean:
 	rm -rf build

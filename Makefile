@@ -1,3 +1,4 @@
+PYTHON=python3
 SHELL := /bin/bash
 BUILDDIR=build
 DESTDIR?=/
@@ -15,8 +16,9 @@ PROG_NAMES=nitro nitro_version
 PROG_FILES=$(addprefix prog/, $(addsuffix .cpp, $(PROG_NAMES)))
 PROGS=$(addprefix $(BINDIR)/, $(PROG_NAMES))
 
-CPPFLAGS:=$(CPPFLAGS) -Wall -fPIC -Iinclude -I$(shell python -c "from distutils import sysconfig; print sysconfig.get_config_var('INCLUDEPY');") -Ipython/py/nitro/include
-PYLIB:=$(shell python -c "from distutils import sysconfig; print sysconfig.get_config_var('BLDLIBRARY')")
+
+CPPFLAGS:=$(CPPFLAGS) -Wall -fPIC -Iinclude -I$(shell $(PYTHON) -c "from distutils import sysconfig; print(sysconfig.get_config_var('INCLUDEPY'));") -Ipython/py/nitro/include
+PYLIB:=$(shell $(PYTHON) -c "from distutils import sysconfig; print(sysconfig.get_config_var('BLDLIBRARY'))")
 
 USBLIB=-lusb-1.0
 

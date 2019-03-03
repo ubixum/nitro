@@ -67,7 +67,7 @@ class PyRetryFunc : public Device::RetryFunc {
                PyObject *ptype, *pvalue, *ptraceback;
                PyErr_Fetch(&ptype,&pvalue,&ptraceback);
                PyObject* str_value = PyObject_Str( pvalue );
-               str_error = PyString_AsString(str_value);
+               str_error = PyBytes_AsString(str_value);
                Py_XDECREF(ptype);
                Py_XDECREF(pvalue);
                Py_XDECREF(ptraceback);
@@ -139,9 +139,26 @@ static void nitro_Device_dealloc (nitro_DeviceObject* self) {
     }
     // we never de-allocate the nitro_device.  That is done
     // by the extending classes.
+#if PY_MAJOR_VERSION >= 3
+    self->ob_base.ob_type->tp_free((PyObject*)self);
+#else
     self->ob_type->tp_free((PyObject*)self);
+#endif
 }
 
+#if PY_MAJOR_VERSION >= 3
+PyTypeObject nitro_DeviceType = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "nitro.Device",
+    .tp_basicsize = sizeof(nitro_DeviceObject),
+    .tp_itemsize = 0,
+    .tp_dealloc = (destructor)nitro_Device_dealloc,
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+    .tp_doc = "Basic Nitro Device Object",
+    .tp_methods = nitro_Device_methods,
+    .tp_new =   nitro_Device_new,
+};
+#else
 PyTypeObject nitro_DeviceType = {
 
     PyObject_HEAD_INIT(NULL)
@@ -184,7 +201,7 @@ PyTypeObject nitro_DeviceType = {
     0,                         /* tp_alloc */
     nitro_Device_new,                 /* tp_new */
 };
-
+#endif
 
 #define CHECK_ABSTRACT() if (!self->nitro_device) { \
         PyErr_SetString(PyExc_Exception,"Device is abstract and cannot be uses directly."); \
@@ -216,13 +233,12 @@ PyObject* nitro_Device_Unlock(nitro_DeviceObject* self) {
 
 
 PyObject* nitro_Device_Get(nitro_DeviceObject* self, PyObject* args) {
-
       CHECK_ABSTRACT();
-
       DataType term(0);
       DataType reg(0);
       int32 timeout=-1;
       uint32 width=0;
+      PyObject obj1, obj2;
       if (!PyArg_ParseTuple ( args, "O&O&|II", to_datatype, &term, to_datatype, &reg, &timeout, &width ) ) {
         return NULL;
       }
@@ -243,7 +259,6 @@ PyObject* nitro_Device_Get(nitro_DeviceObject* self, PyObject* args) {
         delete saveme;
         return NULL;
       }
-
       return from_datatype(ret);
 }
 
@@ -324,9 +339,9 @@ PyObject* nitro_Device_Read(nitro_DeviceObject* self, PyObject *args) {
         return NULL;
     }
     uint32 length;
-    if (PyString_Check(pydata)) {
-        data = (uint8*)PyString_AsString(pydata);
-        length = PyString_Size(pydata);
+    if (PyBytes_Check(pydata)) {
+        data = (uint8*)PyBytes_AsString(pydata);
+        length = PyBytes_Size(pydata);
     } else if(PyObject_CheckReadBuffer(pydata)) {
       void *d;
       Py_ssize_t l;
@@ -377,9 +392,9 @@ PyObject* nitro_Device_Write(nitro_DeviceObject* self, PyObject *args) {
     }
 
     uint32 length;
-    if (PyString_Check(pydata)) {
-        data = (uint8*)PyString_AsString(pydata);
-        length = PyString_Size(pydata);
+    if (PyBytes_Check(pydata)) {
+        data = (uint8*)PyBytes_AsString(pydata);
+        length = PyBytes_Size(pydata);
     } else if(PyObject_CheckReadBuffer(pydata)) {
       const void *d;
       Py_ssize_t l;
@@ -445,12 +460,12 @@ PyObject* nitro_Device_LoadXML(nitro_DeviceObject* self, PyObject *args) {
 PyObject* nitro_Device_WriteXML(nitro_DeviceObject* self, PyObject *arg ){
     CHECK_ABSTRACT();
     const char* s;
-    if (!PyString_Check( arg )) {
+    if (!PyBytes_Check( arg )) {
         PyErr_SetString( PyExc_Exception, "write_xml(file_path)" );
         return NULL;
     }
 
-    s=PyString_AsString(arg);
+    s=PyBytes_AsString(arg);
     try {
 
         XmlWriter w ( s );
@@ -652,7 +667,7 @@ PyObject* nitro_Device_SetTimeout(nitro_DeviceObject* self, PyObject *arg) {
   
   CHECK_ABSTRACT();
 
-  unsigned long timeout = PyInt_AsUnsignedLongMask(arg);
+  unsigned long timeout = PyLong_AsUnsignedLongMask(arg);
   if (PyErr_Occurred()) {
     PyErr_SetObject ( PyExc_Exception, arg );
     return NULL;

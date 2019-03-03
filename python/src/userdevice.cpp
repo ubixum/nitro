@@ -56,12 +56,12 @@ nitro_UserDevice_init(nitro_UserDeviceObject* self, PyObject *args, PyObject *kw
         str_args[len] = NULL;
         for (int i=0;i<len; ++i ) {
             PyObject* str = PyList_GetItem(user_args,i);
-            if (!PyString_Check(str)) {
+            if (!PyBytes_Check(str)) {
                 delete [] str_args;
                 PyErr_SetString ( PyExc_Exception, "Non String object in list" );
-                return NULL;
+                return 0;
             }
-            str_args[i] = PyString_AsString(str);
+            str_args[i] = PyBytes_AsString(str);
         }
     } else {
         str_args = new const char* [1];
@@ -69,8 +69,8 @@ nitro_UserDevice_init(nitro_UserDeviceObject* self, PyObject *args, PyObject *kw
     }
 
     void* ptr = NULL;
-    if (NULL != cobj && PyCObject_Check(cobj)) {
-        ptr = PyCObject_AsVoidPtr(cobj);
+    if (NULL != cobj && PyCapsule_CheckExact(cobj)) {
+      ptr = PyCapsule_GetPointer(cobj, NULL);
     }
 
     try {
@@ -83,6 +83,18 @@ nitro_UserDevice_init(nitro_UserDeviceObject* self, PyObject *args, PyObject *kw
     return 0;
 }
 
+#if PY_MAJOR_VERSION >= 3
+PyTypeObject nitro_UserDeviceType = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "nitro.UserDevice",            /*tp_name*/
+    .tp_basicsize = sizeof(nitro_UserDeviceObject),  /*tp_basicsize*/
+    .tp_itemsize=0,                         /*tp_itemsize*/
+    .tp_flags = Py_TPFLAGS_DEFAULT,        /*tp_flags*/
+    .tp_doc = "Nitro UserDevice Object",           /* tp_doc */
+    .tp_init = (initproc)nitro_UserDevice_init,  /* tp_init */
+};
+
+#else
 PyTypeObject nitro_UserDeviceType = {
 
     PyObject_HEAD_INIT(NULL)
@@ -125,5 +137,5 @@ PyTypeObject nitro_UserDeviceType = {
     0,                         /* tp_alloc */
     0,                 /* tp_new */
 };
-
+#endif
 

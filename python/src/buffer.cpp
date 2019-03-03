@@ -28,7 +28,11 @@ nitro_Buffer_new ( PyTypeObject* type, PyObject *args, PyObject *kwds ) {
 }
 
 static void nitro_Buffer_dealloc (nitro_BufferObject* self) {
-    self->ob_type->tp_free((PyObject*)self);
+#if PY_MAJOR_VERSION >= 3
+  self->ob_base.ob_type->tp_free((PyObject*)self);
+#else
+  self->ob_type->tp_free((PyObject*)self);
+#endif
 }
 
 
@@ -42,11 +46,11 @@ nitro_Buffer_init(nitro_BufferObject* self, PyObject* args, PyObject* kwds ) {
 		PyErr_SetString ( PyExc_Exception, "Buffer(CObject,len)" );
 		return -1;
 	}
-	if (!PyCObject_Check(cobj)) {
+	if (!PyCapsule_CheckExact(cobj)) {
 		PyErr_SetString ( PyExc_Exception, "Buffer(CObject,len)" );
 		return -1;
 	}
-	self->m_buf = (uint8*) PyCObject_AsVoidPtr(cobj);
+	self->m_buf = (uint8*) PyCapsule_GetPointer(cobj, NULL);
 	self->m_len = len;
 
 	return 0;
@@ -74,15 +78,22 @@ Py_ssize_t buffer_charbuffer ( PyObject* self, Py_ssize_t seg, char** buf ) {
 }
 
 
-
 static 
+#if PY_MAJOR_VERSION >= 3
+PyBufferProcs buffer_procs = {
+//	buffer_readproc, // read buffer
+//	buffer_readproc, // write buffer ( they are both the same )
+//	buffer_seg_count,
+//	(charbufferproc)buffer_charbuffer
+};
+#else
 PyBufferProcs buffer_procs = {
 	buffer_readproc, // read buffer
 	buffer_readproc, // write buffer ( they are both the same )
 	buffer_seg_count,
 	(charbufferproc)buffer_charbuffer
 };
-
+#endif
 
 Py_ssize_t nitro_Buffer_Length(PyObject *o) {
     return ((nitro_BufferObject*)o)->m_len;
@@ -106,7 +117,7 @@ int nitro_Buffer_SetItem(PyObject *o, Py_ssize_t i, PyObject *v) {
         return -1;
     }
  
-    long l = PyInt_AsLong(v); 
+    long l = PyLong_AsLong(v); 
     if (PyErr_Occurred()) { return -1; }
     self->m_buf[i] = (uint8) l;
 
@@ -126,7 +137,20 @@ PySequenceMethods buffer_sequence= {
     NULL, //binaryfunc PySequenceMethods.sq_inplace_concat 
     NULL //ssizeargfunc PySequenceMethods.sq_inplace_repeat 
 };
-
+#if PY_MAJOR_VERSION >= 3
+PyTypeObject nitro_BufferType = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name="nitro.Buffer",            /*tp_name*/
+    .tp_basicsize=sizeof(nitro_BufferObject),  /*tp_basicsize*/
+    .tp_dealloc=(destructor)nitro_Buffer_dealloc,   /*tp_dealloc*/
+    .tp_as_sequence=&buffer_sequence,   /*tp_as_sequence*/
+    .tp_as_buffer=&buffer_procs,  /*tp_as_buffer*/
+    .tp_flags=Py_TPFLAGS_DEFAULT,   /*tp_flags*/
+    .tp_doc="Nitro Buffer Object",           /* tp_doc */
+    .tp_init=(initproc)nitro_Buffer_init,  /* tp_init */
+    .tp_new=nitro_Buffer_new,                 /* tp_new */
+};
+#else
 PyTypeObject nitro_BufferType = {
 
     PyObject_HEAD_INIT(NULL)
@@ -169,10 +193,10 @@ PyTypeObject nitro_BufferType = {
     0,                         /* tp_alloc */
     nitro_Buffer_new,                 /* tp_new */
 };
-
+#endif
 
 PyObject* nitro_BuildBuffer ( uint8* buf, uint32 len ) { 
-        PyObject* buf_obj = PyCObject_FromVoidPtr((void*)buf, NULL);
+  PyObject* buf_obj = PyCapsule_New((void*)buf, NULL,NULL);
         PyObject* arg = Py_BuildValue ( "OI", buf_obj, len );
         PyObject* ret = PyObject_CallObject ( (PyObject*)&nitro_BufferType, arg );
         Py_DECREF(arg);

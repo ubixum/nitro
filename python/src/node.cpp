@@ -47,7 +47,11 @@ nitro_Node_new ( PyTypeObject* type, PyObject *args, PyObject *kwds ) {
 
 static void nitro_Node_dealloc (nitro_NodeObject* self) {
     delete self->m_node;
+#if PY_MAJOR_VERSION >= 3
+    self->ob_base.ob_type->tp_free((PyObject*)self);
+#else
     self->ob_type->tp_free((PyObject*)self);
+#endif
 }
 
 
@@ -66,11 +70,11 @@ node_init_help ( nitro_NodeObject* self, PyObject *args, PyObject *kwds, NodeRef
     return -1;
   }
     
-  if ( PyString_Check(init) ) {
-      const char* name = PyString_AsString(init);
+  if ( PyBytes_Check(init) ) {
+      const char* name = PyBytes_AsString(init);
       target_node->set_name ( name );
-  } else if ( PyCObject_Check(init) ) {
-      *(self->m_node) = *(Nitro::NodeRef*)PyCObject_AsVoidPtr(init);
+  } else if ( PyCapsule_CheckExact(init) ) {
+    *(self->m_node) = *(Nitro::NodeRef*)PyCapsule_GetPointer(init,NULL);
   } else {
       PyErr_SetObject ( PyExc_Exception, init );
       return -1;
@@ -148,7 +152,7 @@ PyObject* nitro_Node_Keys ( nitro_NodeObject* self ) {
        int i=0;
        for (DITreeIter ti = n->child_begin(); ti != n->child_end(); ++ti ) {
             NodeRef c = *ti;
-            PyList_SetItem ( keys, i++, PyString_FromString ( c->get_name().c_str() ) ); 
+            PyList_SetItem ( keys, i++, PyUnicode_FromString ( c->get_name().c_str() ) ); 
        }
        return keys; 
    } catch ( const Exception &e) {
@@ -163,7 +167,7 @@ PyObject* nitro_Node_Attr_Keys ( nitro_NodeObject* self ) {
        PyObject* keys = PyList_New(n->num_attrs());
        int i=0;
        for (DIAttrIter ti = n->attrs_begin(); ti != n->attrs_end(); ++ti ) {
-	 PyList_SetItem ( keys, i++, PyString_FromString ( ti->first.c_str()));
+	 PyList_SetItem ( keys, i++, PyUnicode_FromString ( ti->first.c_str()));
        }
        return keys; 
    } catch ( const Exception &e) {
@@ -253,7 +257,7 @@ PyObject* nitro_Node_Items(nitro_NodeObject* self) {
        for (DITreeIter ti = node->child_begin(); ti != node->child_end(); ++ti ) {
            NodeRef c = *ti;
            PyObject* tuple = PyTuple_New(2);
-           PyTuple_SetItem(tuple, 0, PyString_FromString ( c->get_name().c_str() )); 
+           PyTuple_SetItem(tuple, 0, PyUnicode_FromString ( c->get_name().c_str() )); 
            PyTuple_SetItem(tuple, 1, nitro_BuildNode ( c )); 
            PyList_SetItem(items, i++, tuple ); // tuple ref stolen
        }
@@ -270,7 +274,7 @@ PyObject* nitro_Node_Attr_Items(nitro_NodeObject* self) {
        int i=0;
        for (DIAttrIter ti = node->attrs_begin(); ti != node->attrs_end(); ++ti ) {
            PyObject* tuple = PyTuple_New(2);
-           PyTuple_SetItem(tuple, 0, PyString_FromString ( ti->first.c_str() )); 
+           PyTuple_SetItem(tuple, 0, PyUnicode_FromString ( ti->first.c_str() )); 
 	   PyObject *v = from_datatype(ti->second);
 	   if(!v) { Py_DECREF(tuple); Py_DECREF(items); return NULL; }
            PyTuple_SetItem(tuple, 1, v );
@@ -286,7 +290,11 @@ PyObject* nitro_Node_reduce (nitro_NodeObject* self) {
     // list  of attrs
     // and of children
     return Py_BuildValue ( "O(sNN)",
+#if PY_MAJOR_VERSION >= 3
+        self->ob_base.ob_type,
+#else                           
         self->ob_type,
+#endif                           
         (*self->m_node)->get_name().c_str(),
         nitro_Node_Attr_Items ( self ),
         nitro_Node_Values ( self ) );
@@ -326,11 +334,11 @@ static PyObject* nitro_Node_GetAttr(PyObject* s, PyObject* attr) {
    // no class attr found.  
    nitro_NodeObject* self=(nitro_NodeObject*)s;
    const char* a;
-   if (!PyString_Check(attr)) {
+   if (!PyUnicode_Check(attr)) {
     PyErr_SetObject(PyExc_Exception, attr);
     return NULL;
    }
-   a=PyString_AsString(attr);
+   a=PyUnicode_AsUTF8(attr);
 
 
    if (!strcmp(a,"name")) {
@@ -348,13 +356,13 @@ static PyObject* nitro_Node_GetAttr(PyObject* s, PyObject* attr) {
 static int nitro_Node_SetAttr(PyObject* s, PyObject* attr, PyObject* v) {
     nitro_NodeObject* self=(nitro_NodeObject*)s;
     const char* a;
-    if (!PyString_Check(attr)) {
+    if (!PyUnicode_Check(attr)) {
         PyErr_SetObject ( PyExc_Exception, attr );
         return -1;
     }
 
 
-    a=PyString_AsString(attr);
+    a=PyUnicode_AsUTF8(attr);
     try {
         DataType dt(0);
         if ( !to_datatype ( v, &dt ) ) return -1;
@@ -384,11 +392,11 @@ static PyObject* nitro_Node_GetItem (PyObject* s, PyObject* key) {
     nitro_NodeObject* self=(nitro_NodeObject*)s;
 
     const char* a;
-    if (!PyString_Check(key)) {
+    if (!PyUnicode_Check(key)) {
         PyErr_SetObject(PyExc_Exception, key);
         return NULL;
     }
-    a=PyString_AsString(key);
+    a=PyUnicode_AsUTF8(key);
 
     try {
 
@@ -402,11 +410,11 @@ static PyObject* nitro_Node_GetItem (PyObject* s, PyObject* key) {
 }
 
 static int nitro_Node_SetItem(PyObject* s, PyObject* key, PyObject *v) {
-    if (!PyString_Check(key)) {
+    if (!PyUnicode_Check(key)) {
         PyErr_SetObject(PyExc_Exception, key );
         return -1;
     }
-    const char* k = PyString_AsString(key);
+    const char* k = PyUnicode_AsUTF8(key);
     nitro_NodeObject* self = (nitro_NodeObject*)s;
     try {
         if (NULL==v) {
@@ -452,32 +460,37 @@ PyObject* nitro_Node_GetIter ( PyObject* s ) {
 
 
 // ************************ str function *******************
-
+void PyUnicode_ConcatAndDel(PyObject **unicode, PyObject *right) {
+  PyObject *left = unicode[0];
+  unicode[0] = PyUnicode_Concat(left, right);
+  Py_DECREF(right);
+  Py_DECREF(left);
+}
 
 PyObject* raw_str(const NodeRef& n) {
-    PyObject* str = PyString_FromString ( "{'name':'" );
-    PyString_ConcatAndDel ( &str, PyString_FromString ( n->get_name().c_str() ) );
-    PyString_ConcatAndDel ( &str, PyString_FromString ( "', " ) );
+    PyObject* str = PyUnicode_FromString ( "{'name':'" );
+    PyUnicode_ConcatAndDel ( &str, PyUnicode_FromString ( n->get_name().c_str() ) );
+    PyUnicode_ConcatAndDel ( &str, PyUnicode_FromString ( "', " ) );
     for (DIAttrIter ai=n->attrs_begin(); ai != n->attrs_end(); ++ai ) {
-       PyString_ConcatAndDel ( &str, PyString_FromString ( "'" ) );
-       PyString_ConcatAndDel ( &str, PyString_FromString ( ai->first.c_str() ) );
-       PyString_ConcatAndDel ( &str, PyString_FromString ( "':" ) );
+       PyUnicode_ConcatAndDel ( &str, PyUnicode_FromString ( "'" ) );
+       PyUnicode_ConcatAndDel ( &str, PyUnicode_FromString ( ai->first.c_str() ) );
+       PyUnicode_ConcatAndDel ( &str, PyUnicode_FromString ( "':" ) );
        bool isint = ai->second.get_type() != STR_DATA;
-       if (!isint) PyString_ConcatAndDel (&str, PyString_FromString ( "'" ) );
-       PyString_ConcatAndDel ( &str, PyString_FromString ( ((string)ai->second).c_str() ) );
-       if (!isint) PyString_ConcatAndDel ( &str, PyString_FromString ( "'" ) );
-       PyString_ConcatAndDel ( &str, PyString_FromString ( ", " ) );
+       if (!isint) PyUnicode_ConcatAndDel (&str, PyUnicode_FromString ( "'" ) );
+       PyUnicode_ConcatAndDel ( &str, PyUnicode_FromString ( ((string)ai->second).c_str() ) );
+       if (!isint) PyUnicode_ConcatAndDel ( &str, PyUnicode_FromString ( "'" ) );
+       PyUnicode_ConcatAndDel ( &str, PyUnicode_FromString ( ", " ) );
     }
     if (n->has_children()) {
-        PyString_ConcatAndDel ( &str, PyString_FromString ( "children: [\n" ) );
+        PyUnicode_ConcatAndDel ( &str, PyUnicode_FromString ( "children: [\n" ) );
         for (DITreeIter ti = n->child_begin(); ti != n->child_end(); ++ti ) {
             NodeRef c=*ti;
-            PyString_ConcatAndDel ( &str, raw_str(c) ); 
-            PyString_ConcatAndDel ( &str, PyString_FromString ( ", \n" ) );
+            PyUnicode_ConcatAndDel ( &str, raw_str(c) ); 
+            PyUnicode_ConcatAndDel ( &str, PyUnicode_FromString ( ", \n" ) );
         }
-        PyString_ConcatAndDel ( &str, PyString_FromString("]") );
+        PyUnicode_ConcatAndDel ( &str, PyUnicode_FromString("]") );
     }
-    PyString_ConcatAndDel ( &str, PyString_FromString("}") );
+    PyUnicode_ConcatAndDel ( &str, PyUnicode_FromString("}") );
     return str;
 }
 
@@ -493,7 +506,25 @@ PyObject* nitro_Node_Repr(PyObject* s) {
 
 }
 
-
+#if PY_MAJOR_VERSION >= 3
+PyTypeObject nitro_NodeType = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name="nitro.Node",            /*tp_name*/
+    .tp_basicsize=sizeof(nitro_NodeObject),  /*tp_basicsize*/
+    .tp_itemsize=0,                         /*tp_itemsize*/
+    .tp_dealloc=(destructor)nitro_Node_dealloc,   /*tp_dealloc*/
+    .tp_repr=nitro_Node_Repr,           /*tp_repr*/
+    .tp_as_mapping=&nitro_Node_Mapping,       /*tp_as_mapping*/
+    .tp_getattro=nitro_Node_GetAttr,        /*tp_getattro*/
+    .tp_setattro=nitro_Node_SetAttr,        /*tp_setattro*/
+    .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,   /*tp_flags*/
+    .tp_doc ="Nitro Node Object",           /* tp_doc */
+    .tp_iter = nitro_Node_GetIter,    /* tp_iter */
+    .tp_methods = nitro_Node_Methods,     /* tp_methods */
+    .tp_init =(initproc)nitro_Node_init,  /* tp_init */
+    .tp_new = nitro_Node_new,                 /* tp_new */
+};
+#else
 PyTypeObject nitro_NodeType = {
 
     PyObject_HEAD_INIT(NULL)
@@ -536,7 +567,7 @@ PyTypeObject nitro_NodeType = {
     0,                         /* tp_alloc */
     nitro_Node_new,                 /* tp_new */
 };
-
+#endif
 
 // ************************** extending classes ***********************************
 
@@ -547,6 +578,18 @@ nitro_DI_init ( nitro_DeviceInterfaceObject* self, PyObject *args, PyObject *kwd
   return node_init_help ( (nitro_NodeObject*)self, args, kwds, DeviceInterface::create("tmp") );
 }
 
+#if PY_MAJOR_VERSION >= 3
+PyTypeObject nitro_DeviceInterfaceType = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name="nitro.DeviceInterface",            /*tp_name*/
+    .tp_basicsize=sizeof(nitro_DeviceInterfaceObject),  /*tp_basicsize*/
+    .tp_itemsize=0,                         /*tp_itemsize*/
+    .tp_flags=Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,   /*tp_flags*/
+    .tp_doc="Nitro Device Interface Object", /* tp_doc */
+    .tp_base=&nitro_NodeType,           /* tp_base */
+    .tp_init = (initproc)nitro_DI_init,  /* tp_init */
+};
+#else
 PyTypeObject nitro_DeviceInterfaceType = {
 
     PyObject_HEAD_INIT(NULL)
@@ -589,7 +632,7 @@ PyTypeObject nitro_DeviceInterfaceType = {
     0,                         /* tp_alloc */
     0,                       /* tp_new */
 };
-
+#endif
 // ******************* Terminal *********************************8
 
 static int
@@ -598,6 +641,18 @@ nitro_Term_init ( nitro_TerminalObject* self, PyObject *args, PyObject *kwds ) {
    return node_init_help ( (nitro_NodeObject*)self, args, kwds, Terminal::create("tmp") );
 }
 
+#if PY_MAJOR_VERSION >= 3
+PyTypeObject nitro_TerminalType = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name="nitro.Terminal",            /*tp_name*/
+    .tp_basicsize=sizeof(nitro_TerminalObject),  /*tp_basicsize*/
+    .tp_itemsize=0,                         /*tp_itemsize*/
+    .tp_flags=Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,   /*tp_flags*/
+    .tp_doc="Nitro Terminal Object", /* tp_doc */
+    .tp_base=&nitro_NodeType,           /* tp_base */
+    .tp_init=(initproc)nitro_Term_init,  /* tp_init */
+};
+#else
 PyTypeObject nitro_TerminalType = {
 
     PyObject_HEAD_INIT(NULL)
@@ -640,7 +695,7 @@ PyTypeObject nitro_TerminalType = {
     0,                         /* tp_alloc */
     0,                       /* tp_new */
 };
-
+#endif
 // ******************* Register *********************************8
 
 static int
@@ -650,6 +705,17 @@ nitro_Register_init ( nitro_RegisterObject* self, PyObject *args, PyObject *kwds
 
 }
 
+#if PY_MAJOR_VERSION >= 3
+PyTypeObject nitro_RegisterType = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name="nitro.Register",            /*tp_name*/
+    .tp_basicsize=sizeof(nitro_RegisterObject),  /*tp_basicsize*/
+    .tp_flags=Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,   /*tp_flags*/
+    .tp_doc="Nitro Register Object", /* tp_doc */
+    .tp_base=&nitro_NodeType,           /* tp_base */
+    .tp_init=(initproc)nitro_Register_init,  /* tp_init */
+};
+#else
 PyTypeObject nitro_RegisterType = {
 
     PyObject_HEAD_INIT(NULL)
@@ -692,7 +758,7 @@ PyTypeObject nitro_RegisterType = {
     0,                         /* tp_alloc */
     0,                       /* tp_new */
 };
-
+#endif
 // ******************* Subegister *********************************8
 
 static int
@@ -700,6 +766,17 @@ nitro_Subregister_init ( nitro_SubregisterObject* self, PyObject *args, PyObject
     return node_init_help ( (nitro_NodeObject*)self, args, kwds, Subregister::create("tmp") );
 }
 
+#if PY_MAJOR_VERSION >= 3
+PyTypeObject nitro_SubregisterType = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name="nitro.Subregister",            /*tp_name*/
+    .tp_basicsize=sizeof(nitro_SubregisterObject),  /*tp_basicsize*/
+    .tp_flags=Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,   /*tp_flags*/
+    .tp_doc="Nitro Subregister Object", /* tp_doc */
+    .tp_base=&nitro_NodeType,           /* tp_base */
+    .tp_init=(initproc)nitro_Subregister_init,  /* tp_init */
+};
+#else
 PyTypeObject nitro_SubregisterType = {
 
     PyObject_HEAD_INIT(NULL)
@@ -742,7 +819,7 @@ PyTypeObject nitro_SubregisterType = {
     0,                         /* tp_alloc */
     0,                       /* tp_new */
 };
-
+#endif
 // ******************* Valuemap *********************************8
 
 static int
@@ -750,6 +827,17 @@ nitro_Valuemap_init( nitro_ValuemapObject* self, PyObject *args, PyObject *kwds 
     return node_init_help ( (nitro_NodeObject*)self, args, kwds, Valuemap::create("tmp") );
 }
 
+#if PY_MAJOR_VERSION >= 3
+PyTypeObject nitro_ValuemapType = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name="nitro.Valuemap",            /*tp_name*/
+    .tp_basicsize=sizeof(nitro_ValuemapObject),  /*tp_basicsize*/
+    .tp_flags=Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,   /*tp_flags*/
+    .tp_doc="Nitro Valuemap Object", /* tp_doc */
+    .tp_base=&nitro_NodeType,           /* tp_base */
+    .tp_init=(initproc)nitro_Valuemap_init,  /* tp_init */
+};
+#else
 PyTypeObject nitro_ValuemapType = {
 
     PyObject_HEAD_INIT(NULL)
@@ -792,12 +880,13 @@ PyTypeObject nitro_ValuemapType = {
     0,                         /* tp_alloc */
     0,                       /* tp_new */
 };
-
+#endif
+    
 // *************** helper ***********************
 //
 
 PyObject* nitro_BuildNode ( const NodeRef & node ) { 
-        PyObject* node_obj = PyCObject_FromVoidPtr((void*)&node, NULL);
+  PyObject* node_obj = PyCapsule_New((void*)&node, NULL, NULL);
         PyObject* arg = Py_BuildValue ( "(O)", node_obj );
         PyObject* ret = PyObject_CallObject ( (PyObject*)&nitro_NodeType, arg );
         Py_DECREF(arg);

@@ -119,7 +119,20 @@ nitro_USBDevice_init(nitro_USBDeviceObject* self, PyObject *args, PyObject *kwds
     return -1;
     
 }
-
+#if PY_MAJOR_VERSION >= 3
+PyTypeObject nitro_USBDeviceType =
+  {
+    PyVarObject_HEAD_INIT(NULL, 0)
+   .tp_name = "nitro.USBDevice",            /*tp_name*/
+   .tp_basicsize = sizeof(nitro_USBDeviceObject),  /*tp_basicsize*/
+   .tp_itemsize = 0,                         /*tp_itemsize*/
+   .tp_dealloc = (destructor)nitro_USBDevice_dealloc,   /*tp_dealloc*/
+   .tp_flags = Py_TPFLAGS_DEFAULT,        /*tp_flags*/
+   .tp_doc = "Nitro USB Device Object",           /* tp_doc */
+   .tp_methods = nitro_USBDevice_methods,   /* tp_methods */
+   .tp_init = (initproc)nitro_USBDevice_init,  /* tp_init */
+};
+#else
 PyTypeObject nitro_USBDeviceType = {
 
     PyObject_HEAD_INIT(NULL)
@@ -162,7 +175,7 @@ PyTypeObject nitro_USBDeviceType = {
     0,                         /* tp_alloc */
     0,                 /* tp_new */
 };
-
+#endif
 
 PyObject* nitro_USBDevice_Open(nitro_USBDeviceObject* self, PyObject* args) {
     uint32 idx=0;
@@ -185,16 +198,20 @@ PyObject* nitro_USBDevice_OpenBySerial(nitro_USBDeviceObject* self, PyObject* ar
 
     try {
 
-        if (PyString_Check(arg)) {
+        if (PyBytes_Check(arg)) {
              Py_ssize_t length;
              char *buffer;
-             if (-1==PyString_AsStringAndSize( arg, &buffer, &length ) ) return NULL; // type error raised by function
+             if (-1==PyBytes_AsStringAndSize( arg, &buffer, &length ) ) return NULL; // type error raised by function
              std::string serial;
              serial.assign ( buffer, length );
              ((USBDevice*)self->dev_base.nitro_device)->open(serial);
         } else if (PyUnicode_Check(arg)) {
              wchar_t buf[8];
+#if PY_MAJOR_VERSION >= 3
+             if (-1==PyUnicode_AsWideChar ( arg, buf, 8 )) return NULL;
+#else
              if (-1==PyUnicode_AsWideChar ( (PyUnicodeObject*)arg, buf, 8 )) return NULL;
+#endif             
              std::wstring serial ( buf, 8 );
              ((USBDevice*)self->dev_base.nitro_device)->open(serial);
         }
@@ -257,12 +274,12 @@ PyObject* nitro_USBDevice_LoadFirmware(nitro_USBDeviceObject* self, PyObject* ar
     if (!PyArg_ParseTuple( args, "O", &str)) {
         return NULL;
     }
-    if (!PyString_Check(str)) {
+    if (!PyBytes_Check(str)) {
         PyErr_SetString(PyExc_Exception, "Firmware bytes should be entered as a String");
         return NULL;
     }
-    const char* firmware = PyString_AsString(str);
-    int length = PyString_Size(str);
+    const char* firmware = PyBytes_AsString(str);
+    int length = PyBytes_Size(str);
     try {
        ((USBDevice*)self->dev_base.nitro_device)->load_firmware ( firmware, length ); 
     } catch ( const Exception &e) {
@@ -297,7 +314,7 @@ PyObject* nitro_USBDevice_GetDeviceList(nitro_USBDeviceObject* self, PyObject* a
        for(unsigned int i=0; i<vec.size(); i++) {
 	   element = PyTuple_New(vec[i].size());
 	   for(unsigned int j=0; j<vec[i].size(); j++) {
-	       PyTuple_SET_ITEM(element, j, PyInt_FromLong(vec[i][j]));
+	       PyTuple_SET_ITEM(element, j, PyLong_FromLong(vec[i][j]));
 	   }
 	   PyList_SET_ITEM(list, i, element);
        }
@@ -321,10 +338,10 @@ PyObject* nitro_USBDevice_GetSerial(nitro_USBDeviceObject* self, PyObject* args)
 }
 PyObject* nitro_USBDevice_SetSerial(nitro_USBDeviceObject* self, PyObject *arg) {
    try {
-       if (PyString_Check(arg)) {
+       if (PyBytes_Check(arg)) {
            Py_ssize_t length;
            char *buffer;
-           if (-1==PyString_AsStringAndSize( arg, &buffer, &length ) ) return NULL; // type error raised by function
+           if (-1==PyBytes_AsStringAndSize( arg, &buffer, &length ) ) return NULL; // type error raised by function
            std::string serial;
            serial.assign ( buffer, length );
            ((USBDevice*)self->dev_base.nitro_device)->set_device_serial(serial);
@@ -332,8 +349,12 @@ PyObject* nitro_USBDevice_SetSerial(nitro_USBDeviceObject* self, PyObject *arg) 
               Py_RETURN_NONE;
        } else if (PyUnicode_Check(arg)) {
             wchar_t buf[8];
+#if PY_MAJOR_VERSION >= 3
+            if (-1==PyUnicode_AsWideChar ( arg, buf, 8 )) return NULL;
+#else            
             if (-1==PyUnicode_AsWideChar ( (PyUnicodeObject*)arg, buf, 8 )) return NULL;
-            std::wstring serial ( buf, 8 );
+#endif
+ std::wstring serial ( buf, 8 );
             ((USBDevice*)self->dev_base.nitro_device)->set_device_serial(serial);          
     
             Py_RETURN_NONE;

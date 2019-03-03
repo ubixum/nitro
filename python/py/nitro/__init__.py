@@ -17,7 +17,7 @@
 from _nitro import Device, USBDevice, UserDevice, XmlReader, XmlWriter, _NITRO_API , Exception, Buffer, Node, \
     GETSET_VERIFY, DOUBLEGET_VERIFY, STATUS_VERIFY, CHECKSUM_VERIFY, RETRY_ON_FAILURE, LOG_IO, \
     version, str_version, load_di
-from di import * 
+from .di import * 
 
 import logging
 log = logging.getLogger(__name__)
