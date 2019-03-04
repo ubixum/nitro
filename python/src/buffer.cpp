@@ -81,6 +81,7 @@ Py_ssize_t buffer_charbuffer ( PyObject* self, Py_ssize_t seg, char** buf ) {
 static 
 #if PY_MAJOR_VERSION >= 3
 PyBufferProcs buffer_procs = {
+// TODO: needs implemented for python3
 //	buffer_readproc, // read buffer
 //	buffer_readproc, // write buffer ( they are both the same )
 //	buffer_seg_count,
