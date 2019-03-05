@@ -1,11 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import nitro
 
 import sys, os
 
 def print_usage():
-    print "Usage: diconv <input filename> <output filename>"
+    print("Usage: diconv <input filename> <output filename>")
     exit()
 
 def get_extension(filename):
@@ -25,7 +25,7 @@ def RstWriter(di, out):
         out.write('\n' + table_bars + '\n' ) 
         
 
-    for t in di.keys():
+    for t in list(di.keys()):
         term=di[t]
         title = '%s (Address %s)' % (t, hex(term.addr))
         out.write('\n\n'+title+'\n')
@@ -34,7 +34,7 @@ def RstWriter(di, out):
             out.write('\n%s\n\n' % term.comment )
 
         need_close=False
-        if len(term.keys()):
+        if len(list(term.keys())):
             write_header()
             for i,r in enumerate(term.keys()):
                 out.write( ('{:<31}' *5 ).format ( r, hex(term[r].addr), term[r].width, hex(term[r].init),
@@ -48,7 +48,7 @@ def RstWriter(di, out):
                     out.write ( subreg_bars ) 
                     out.write ( ('    {:<31}' * 4 + '\n' ).format ( 'name', 'bits', 'initial', 'comment' ) )
                     out.write ( subreg_bars ) 
-                    for k in term[r].iterkeys():
+                    for k in list(term[r].keys()):
                         s=term[r][k]
                         bits = '[%d:%d]' % ( 
                             s.width+s.addr-1,
@@ -80,7 +80,8 @@ if __name__ == '__main__':
     
     if itype == "py":
         d=dict()
-        execfile(ifile, d)
+        #execfile(ifile, d)
+        exec(compile(open(ifile, "rb").read(), ifile, 'exec'), d)
         di = d["di"]
     elif itype == "xml":
         x = nitro.XmlReader(ifile)

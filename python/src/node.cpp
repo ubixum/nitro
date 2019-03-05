@@ -79,8 +79,8 @@ node_init_help ( nitro_NodeObject* self, PyObject *args, PyObject *kwds, NodeRef
     return -1;
   }
     
-  if ( PyBytes_Check(init) ) {
-      const char* name = PyBytes_AsString(init);
+  if ( PyUnicode_Check(init) ) {
+      const char* name = PyUnicode_AsUTF8(init);
       target_node->set_name ( name );
   } else if ( PyCapsule_CheckExact(init) ) {
     *(self->m_node) = *(Nitro::NodeRef*)PyCapsule_GetPointer(init,NULL);

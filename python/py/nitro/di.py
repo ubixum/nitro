@@ -21,16 +21,23 @@ __all__ = [ 'DeviceInterface', 'Terminal', 'Register', 'SubReg', 'Valuemap' ,
 'printVerilogInstance', 'printVerilogDefs', 'printVerilogModule', 'printCDefs', ]
 
 
+def hasattr_(k,v):
+    try:
+        getattr(k,v)
+        return True
+    except:
+        return False
+
 class EasyNode:
     child_kw_name = "put something here"
     def __init__(self, **kw ):
         for k in kw.keys():
             if k != self.child_kw_name:
                 val=kw[k]
-                if k=='valuemap' and type(val)==types.DictType:
+                if k=='valuemap' and type(val)==dict:
                     val=Valuemap(**val)
                 self.__setattr__(k,val)
-        if kw.has_key(self.child_kw_name):
+        if self.child_kw_name in kw:
             for c in kw[self.child_kw_name]:
                 self.add_child(c)
 class DeviceInterface ( _nitro.DeviceInterface , EasyNode ):
@@ -72,12 +79,12 @@ def getRegs(ep, types=None, modes=None ):
 
 
 def getValueFromMap ( x, reg):
-    if type(x) != types.StringType:
+    if type(x) not in [str,bytes]:#types.StringType:
         return x
-    if not hasattr(reg,'valuemap'):
+    if not hasattr_(reg,'valuemap'):
         return x
     m=reg.valuemap
-    if not hasattr(m,x):
+    if not hasattr_(m,x):
         return x
     return reg.valuemap.__getattribute__( x )
 
@@ -103,15 +110,15 @@ def printVerilogModule(ep, module, filename):
         if(reg.num_children()>0):
             # subreg
             for subreg in reg.values():
-                if reg.mode =='read':
+                if reg.mode ==b'read':
                     f.write("  input      ")
                 else:
                     f.write("  output     ");
                 if subreg.width > 1:
                     f.write("["+str(subreg.width-1)+":0] ")
-                f.write("%s,\n" % subreg.vlog_name )
+                f.write("%s,\n" % subreg.vlog_name.decode("utf8") )
 
-            if(reg.mode != "read"):
+            if(reg.mode != b"read"):
                 f.write("  output reg ");
                 
                 if(reg.width > 1 or reg.array > 1):
@@ -119,7 +126,7 @@ def printVerilogModule(ep, module, filename):
                 f.write(reg.name + ",\n");
 
         else:
-            if(reg.mode == "read"):
+            if(reg.mode == b"read"):
                 f.write("  input      ");
             else:
                 f.write("  output reg ");
@@ -135,10 +142,10 @@ def printVerilogModule(ep, module, filename):
     # subreg combinations
     for reg in ep.values():
        if reg.num_children()>0:
-            if reg.mode == 'write':
+            if reg.mode == b'write':
                 #f.write("reg [%d:0] %s;\n" % ( reg.width-1, reg.name ))
                 for subreg in reg.values():
-                    f.write("assign %s = %s" % ( subreg.vlog_name , reg.name ))
+                    f.write("assign %s = %s" % ( subreg.vlog_name.decode("utf8") , reg.name ))
                     if reg.width > 1:
                         f.write("[")
                         if subreg.width>1:
@@ -149,7 +156,7 @@ def printVerilogModule(ep, module, filename):
                 f.write("wire [%d:0] %s = {" % ( reg.width-1, reg.name))
                 subregs = reg.values()
                 subregs.reverse()
-                f.write ( ", ".join ( [ s.vlog_name for s in subregs ] ) ) 
+                f.write ( ", ".join ( [ s.vlog_name.decode("utf8") for s in subregs ] ) )
                 f.write ( "};\n" )
 
     def init_str(width, init):
@@ -178,7 +185,7 @@ def printVerilogModule(ep, module, filename):
 
   
     #Create triggers
-    triggers = getRegs(ep, types=["trigger"], modes=["write"])
+    triggers = getRegs(ep, types=[b"trigger"], modes=[b"write"])
     if len(triggers):
         f.write("// Create triggers\n")
         f.write("always @(posedge clk or negedge resetb) begin\n");
@@ -194,7 +201,7 @@ def printVerilogModule(ep, module, filename):
     #End triggers
 
     #Writable registers:
-    writable = getRegs(ep, types=["int"], modes=["write"])
+    writable = getRegs(ep, types=[b"int"], modes=[b"write"])
 
 
     if len(writable):
@@ -217,14 +224,14 @@ def printVerilogModule(ep, module, filename):
         f.write("  end else if(we) begin\n");
         f.write("    case(addr)\n");
         for reg in writable:
-            w = (reg.width-1)/ep.regDataWidth
+            w = int((reg.width-1)/ep.regDataWidth)
             for array in range(reg.array):
                 n = w
                 i = w
                 while(i>=0):
                     curAddr = i
                     arrayOffset = reg.addr+array*(w+1)
-                    if ep.endian=='big':
+                    if ep.endian==b'big':
                         curAddr = w-i
                     f.write("      " + str(curAddr+arrayOffset) + ": " + reg.name);
                     if(reg.width > 1 or reg.array > 1):
@@ -247,7 +254,7 @@ def printVerilogModule(ep, module, filename):
     #End writable registers
     
     #Readable registers
-    readable = getRegs(ep, types=["int"])
+    readable = getRegs(ep, types=[b"int"])
     f.write("// Create readable registers\n")
     f.write("always @(posedge clk or negedge resetb) begin\n");
     f.write(" if (!resetb) begin\n" )
@@ -262,14 +269,14 @@ def printVerilogModule(ep, module, filename):
 #    f.write(") begin\n");
     f.write("  case(addr)\n");
     for reg in readable:
-        w = (reg.width-1)/ep.regDataWidth
+        w = int((reg.width-1)/ep.regDataWidth)
         for array in range(reg.array):
             n = w
             i = w
             while(i>=0):
                 curAddr = i
                 arrayOffset = reg.addr+array*(w+1)
-                if ep.endian=='big':
+                if ep.endian==b'big':
                     curAddr = w-i
                 f.write("    " + str(curAddr+arrayOffset) + ": datao <= ")
                 if((reg.width > 1) or (reg.array > 1)):
@@ -303,13 +310,13 @@ def printVerilogInstance(ep, module, filename, clk="di_clk", resetb="resetb", we
 
     f = open(filename, "w")
     for reg in ep.values():
-        if reg.mode=='write':
+        if reg.mode==b'write':
             if reg.num_children()>0:
                 for subreg in reg.values():
                     if subreg.width > 1:
-                        f.write("  wire [%d:0] %s;\n" % (subreg.width-1, subreg.vlog_name))
+                        f.write("  wire [%d:0] %s;\n" % (subreg.width-1, subreg.vlog_name.decode("utf8")))
                     else:
-                        f.write("  wire %s;\n" % (subreg.vlog_name))
+                        f.write("  wire %s;\n" % (subreg.vlog_name.decode("utf8")))
             f.write("  wire ");
             if(reg.width > 1 or reg.array > 1):
                 f.write("[" + str(reg.width*reg.array-1) + ":0] ");
@@ -335,11 +342,11 @@ def printVerilogInstance(ep, module, filename, clk="di_clk", resetb="resetb", we
     for i,reg in enumerate(ep.values()):
         if reg.num_children()>0:
             for j,r in enumerate(reg.values()):
-                f.write("     ." + r.vlog_name+ "(" + r.vlog_name + ")");
-                if j+1 != len(reg) or i+1 != len(ep) or reg.mode=="write":
+                f.write("     ." + r.vlog_name.decode("utf8") + "(" + r.vlog_name.decode("utf8") + ")");
+                if j+1 != len(reg) or i+1 != len(ep) or reg.mode==b"write":
                     f.write(',')
                 f.write('\n')
-            if reg.mode == "write":
+            if reg.mode == b"write":
                 f.write("     ." + reg.name+ "(" + reg.name + ")");
                 if(i+1 != len(ep)):
                     f.write(",");
@@ -364,7 +371,7 @@ def printVerilogDefs(di, module, filename):
         f.write("`define TERM_" + term.name + " " + str(term.addr) + "\n");
         f.write("`define   TERM_" + term.name + "_ADDR_WIDTH " + str(term.regAddrWidth) + "\n")
         for reg in term.values():
-            w = (reg.width-1)/term.regDataWidth
+            w = int((reg.width-1)/term.regDataWidth)
             for array in range(reg.array):
                 n = w
                 i = w
@@ -386,7 +393,7 @@ def printVerilogDefs(di, module, filename):
             f.write("`define      WIDTH_"+term.name+"_"+reg.name+" %d\n" % reg.width)
             if(reg.array > 1):
                 f.write("`define      ARRAY_SIZE_"+term.name+"_"+reg.name+" %d\n" % reg.array)
-            if hasattr(reg, "valuemap"):
+            if hasattr_(reg, "valuemap"):
                 for k,v in reg.valuemap.attr_items():
                     f.write("`define       "+term.name+"_"+reg.name+"_"+k+" " + str(v)+"\n")
             for subreg in reg.values():
@@ -412,7 +419,7 @@ def printCDefs(di, filename, registers_only=False):
         for reg in term.values():
             reg_name = term_name + "_" + reg.name.upper()
            
-            w = (reg.width-1)/term.regDataWidth
+            w = int((reg.width-1)/term.regDataWidth)
             for array in range(reg.array):
                 n = w
                 i = w
@@ -434,7 +441,7 @@ def printCDefs(di, filename, registers_only=False):
                             s_name = reg_name + "_" + s.name.upper()
                             f.write ( "#define      " + s_name + " " + str(s.addr) + "\n" ) 
                     i=i-1
-            if hasattr(reg, "valuemap"):
+            if hasattr_(reg, "valuemap"):
                 for k,v in reg.valuemap.attr_items():
                     f.write("#define       "+term.name.upper()+"_"+reg.name.upper()+"_"+k.upper()+" " + str(v)+"\n")
 #                f.write("#define    WIDTH_"+term_name+"_"+reg.name+" %d\n" % reg.width)
