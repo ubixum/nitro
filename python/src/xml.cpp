@@ -93,14 +93,79 @@ static PyMethodDef nitro_XmlReader_Methods[] = {
 #if PY_MAJOR_VERSION >= 3
 PyTypeObject nitro_XmlReaderType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name="nitro.XmlReader",            /*tp_name*/
-    .tp_basicsize=sizeof(nitro_XmlReaderObject),  /*tp_basicsize*/
-    .tp_dealloc=(destructor)nitro_XmlReader_dealloc,   /*tp_dealloc*/
-    .tp_flags=Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,   /*tp_flags*/
-    .tp_doc="Nitro XmlReader Object",           /* tp_doc */
-    .tp_methods=nitro_XmlReader_Methods,     /* tp_methods */
-    .tp_init=(initproc)nitro_XmlReader_init, /* tp_init */
-    .tp_new=nitro_XmlReader_new,            /* tp_new */
+    "nitro.XmlReader", // char *tp_name; For printing, in format "<module>.<name>"
+    sizeof(nitro_XmlReaderObject),//Py_ssize_t tp_basicsize, 
+    NULL, //tp_itemsize; /* For allocation */
+
+    /* Methods to implement standard operations */
+    (destructor)nitro_XmlReader_dealloc, //destructor tp_dealloc;
+    NULL, //printfunc tp_print;
+    NULL, //getattrfunc tp_getattr;
+    NULL, //setattrfunc tp_setattr;
+    NULL, //PyAsyncMethods *tp_as_async; formerly known as tp_compare (Python 2) or tp_reserved (Python 3)
+    NULL, //reprfunc tp_repr;
+
+    /* Method suites for standard classes */
+    NULL, //PyNumberMethods *tp_as_number;
+    NULL, //PySequenceMethods *tp_as_sequence;
+    NULL, //PyMappingMethods *tp_as_mapping;
+    
+    /* More standard operations (here for binary compatibility) */
+    NULL, //hashfunc tp_hash;
+    NULL, //ternaryfunc tp_call;
+    NULL, //reprfunc tp_str;
+    NULL, //getattrofunc tp_getattro;
+    NULL, //setattrofunc tp_setattro;
+
+    /* Functions to access object as input/output buffer */
+    NULL, //PyBufferProcs *tp_as_buffer;
+
+    /* Flags to define presence of optional/expanded features */
+    Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,//unsigned long tp_flags;
+
+    "Nitro XmlReader Object",//const char *tp_doc; /* Documentation string */
+
+    /* call function for all accessible objects */
+    NULL, //traverseproc tp_traverse;
+
+    /* delete references to contained objects */
+    NULL, //inquiry tp_clear;
+
+    /* rich comparisons */
+    NULL, //richcmpfunc tp_richcompare;
+
+    /* weak reference enabler */
+    NULL, //Py_ssize_t tp_weaklistoffset;
+
+    /* Iterators */
+    NULL, //getiterfunc tp_iter;
+    NULL, //iternextfunc tp_iternext;
+
+    /* Attribute descriptor and subclassing stuff */
+    nitro_XmlReader_Methods, //struct PyMethodDef *tp_methods;
+    NULL, //struct PyMemberDef *tp_members;
+    NULL, //struct PyGetSetDef *tp_getset;
+    NULL, //struct _typeobject *tp_base;
+    NULL, //PyObject *tp_dict;
+    NULL, //descrgetfunc tp_descr_get;
+    NULL, //descrsetfunc tp_descr_set;
+    NULL, //Py_ssize_t tp_dictoffset;
+    (initproc)nitro_XmlReader_init,//initproc tp_init;
+    NULL, //allocfunc tp_alloc;
+    nitro_XmlReader_new, //newfunc tp_new;
+    NULL, //freefunc tp_free; /* Low-level free-memory routine */
+    NULL, //inquiry tp_is_gc; /* For PyObject_IS_GC */
+    NULL, //PyObject *tp_bases;
+    NULL, //PyObject *tp_mro; /* method resolution order */
+    NULL, //PyObject *tp_cache;
+    NULL, //PyObject *tp_subclasses;
+    NULL, //PyObject *tp_weaklist;
+    NULL, //destructor tp_del;
+    
+    ///* Type attribute cache version tag. Added in version 2.6 */
+    NULL, //unsigned int tp_version_tag;
+    
+    NULL //destructor tp_finalize;
 };
 #else
 PyTypeObject nitro_XmlReaderType = {
@@ -216,14 +281,79 @@ static PyMethodDef nitro_XmlWriter_Methods[] = {
 #if PY_MAJOR_VERSION >= 3
 PyTypeObject nitro_XmlWriterType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name="nitro.XmlWriter",            /*tp_name*/
-    .tp_basicsize=sizeof(nitro_XmlWriterObject),  /*tp_basicsize*/
-    .tp_dealloc=(destructor)nitro_XmlWriter_dealloc,   /*tp_dealloc*/
-    .tp_flags=Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,   /*tp_flags*/
-    .tp_doc="Nitro XmlWriter Object",           /* tp_doc */
-    .tp_methods=nitro_XmlWriter_Methods,     /* tp_methods */
-    .tp_init=(initproc)nitro_XmlWriter_init, /* tp_init */
-    .tp_new=nitro_XmlWriter_new,            /* tp_new */
+    "nitro.XmlWriter", // char *tp_name; For printing, in format "<module>.<name>"
+    sizeof(nitro_XmlWriterObject),//Py_ssize_t tp_basicsize, 
+    NULL, //tp_itemsize; /* For allocation */
+
+    /* Methods to implement standard operations */
+    (destructor)nitro_XmlWriter_dealloc,//destructor tp_dealloc;
+    NULL, //printfunc tp_print;
+    NULL, //getattrfunc tp_getattr;
+    NULL, //setattrfunc tp_setattr;
+    NULL, //PyAsyncMethods *tp_as_async; formerly known as tp_compare (Python 2) or tp_reserved (Python 3)
+    NULL, //reprfunc tp_repr;
+
+    /* Method suites for standard classes */
+    NULL, //PyNumberMethods *tp_as_number;
+    NULL, //PySequenceMethods *tp_as_sequence;
+    NULL, //PyMappingMethods *tp_as_mapping;
+    
+    /* More standard operations (here for binary compatibility) */
+    NULL, //hashfunc tp_hash;
+    NULL, //ternaryfunc tp_call;
+    NULL, //reprfunc tp_str;
+    NULL, //getattrofunc tp_getattro;
+    NULL, //setattrofunc tp_setattro;
+
+    /* Functions to access object as input/output buffer */
+    NULL, //PyBufferProcs *tp_as_buffer;
+
+    /* Flags to define presence of optional/expanded features */
+    Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,//unsigned long tp_flags;
+
+    "Nitro XmlWriter Object",//const char *tp_doc; /* Documentation string */
+
+    /* call function for all accessible objects */
+    NULL, //traverseproc tp_traverse;
+
+    /* delete references to contained objects */
+    NULL, //inquiry tp_clear;
+
+    /* rich comparisons */
+    NULL, //richcmpfunc tp_richcompare;
+
+    /* weak reference enabler */
+    NULL, //Py_ssize_t tp_weaklistoffset;
+
+    /* Iterators */
+    NULL, //getiterfunc tp_iter;
+    NULL, //iternextfunc tp_iternext;
+
+    /* Attribute descriptor and subclassing stuff */
+    nitro_XmlWriter_Methods,//struct PyMethodDef *tp_methods;
+    NULL, //struct PyMemberDef *tp_members;
+    NULL, //struct PyGetSetDef *tp_getset;
+    NULL, //struct _typeobject *tp_base;
+    NULL, //PyObject *tp_dict;
+    NULL, //descrgetfunc tp_descr_get;
+    NULL, //descrsetfunc tp_descr_set;
+    NULL, //Py_ssize_t tp_dictoffset;
+    (initproc)nitro_XmlWriter_init,//initproc tp_init;
+    NULL, //allocfunc tp_alloc;
+    nitro_XmlWriter_new, //newfunc tp_new;
+    NULL, //freefunc tp_free; /* Low-level free-memory routine */
+    NULL, //inquiry tp_is_gc; /* For PyObject_IS_GC */
+    NULL, //PyObject *tp_bases;
+    NULL, //PyObject *tp_mro; /* method resolution order */
+    NULL, //PyObject *tp_cache;
+    NULL, //PyObject *tp_subclasses;
+    NULL, //PyObject *tp_weaklist;
+    NULL, //destructor tp_del;
+    
+    ///* Type attribute cache version tag. Added in version 2.6 */
+    NULL, //unsigned int tp_version_tag;
+    
+    NULL //destructor tp_finalize;
 };
 #else
 PyTypeObject nitro_XmlWriterType = {

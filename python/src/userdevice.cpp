@@ -86,12 +86,79 @@ nitro_UserDevice_init(nitro_UserDeviceObject* self, PyObject *args, PyObject *kw
 #if PY_MAJOR_VERSION >= 3
 PyTypeObject nitro_UserDeviceType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "nitro.UserDevice",            /*tp_name*/
-    .tp_basicsize = sizeof(nitro_UserDeviceObject),  /*tp_basicsize*/
-    .tp_itemsize=0,                         /*tp_itemsize*/
-    .tp_flags = Py_TPFLAGS_DEFAULT,        /*tp_flags*/
-    .tp_doc = "Nitro UserDevice Object",           /* tp_doc */
-    .tp_init = (initproc)nitro_UserDevice_init,  /* tp_init */
+    "nitro.UserDevice",// char *tp_name; For printing, in format "<module>.<name>"
+    sizeof(nitro_UserDeviceObject),//Py_ssize_t tp_basicsize, 
+    NULL, //tp_itemsize; /* For allocation */
+
+    /* Methods to implement standard operations */
+    NULL, //destructor tp_dealloc;
+    NULL, //printfunc tp_print;
+    NULL, //getattrfunc tp_getattr;
+    NULL, //setattrfunc tp_setattr;
+    NULL, //PyAsyncMethods *tp_as_async; formerly known as tp_compare (Python 2) or tp_reserved (Python 3)
+    NULL, //reprfunc tp_repr;
+
+    /* Method suites for standard classes */
+    NULL, //PyNumberMethods *tp_as_number;
+    NULL, //PySequenceMethods *tp_as_sequence;
+    NULL, //PyMappingMethods *tp_as_mapping;
+    
+    /* More standard operations (here for binary compatibility) */
+    NULL, //hashfunc tp_hash;
+    NULL, //ternaryfunc tp_call;
+    NULL, //reprfunc tp_str;
+    NULL, //getattrofunc tp_getattro;
+    NULL, //setattrofunc tp_setattro;
+
+    /* Functions to access object as input/output buffer */
+    NULL, //PyBufferProcs *tp_as_buffer;
+
+    /* Flags to define presence of optional/expanded features */
+    Py_TPFLAGS_DEFAULT,//unsigned long tp_flags;
+
+    "Nitro UserDevice Object",//const char *tp_doc; /* Documentation string */
+
+    /* call function for all accessible objects */
+    NULL, //traverseproc tp_traverse;
+
+    /* delete references to contained objects */
+    NULL, //inquiry tp_clear;
+
+    /* rich comparisons */
+    NULL, //richcmpfunc tp_richcompare;
+
+    /* weak reference enabler */
+    NULL, //Py_ssize_t tp_weaklistoffset;
+
+    /* Iterators */
+    NULL, //getiterfunc tp_iter;
+    NULL, //iternextfunc tp_iternext;
+
+    /* Attribute descriptor and subclassing stuff */
+    NULL, //struct PyMethodDef *tp_methods;
+    NULL, //struct PyMemberDef *tp_members;
+    NULL, //struct PyGetSetDef *tp_getset;
+    NULL, //struct _typeobject *tp_base;
+    NULL, //PyObject *tp_dict;
+    NULL, //descrgetfunc tp_descr_get;
+    NULL, //descrsetfunc tp_descr_set;
+    NULL, //Py_ssize_t tp_dictoffset;
+    (initproc)nitro_UserDevice_init, //initproc tp_init;
+    NULL, //allocfunc tp_alloc;
+    NULL, //newfunc tp_new;
+    NULL, //freefunc tp_free; /* Low-level free-memory routine */
+    NULL, //inquiry tp_is_gc; /* For PyObject_IS_GC */
+    NULL, //PyObject *tp_bases;
+    NULL, //PyObject *tp_mro; /* method resolution order */
+    NULL, //PyObject *tp_cache;
+    NULL, //PyObject *tp_subclasses;
+    NULL, //PyObject *tp_weaklist;
+    NULL, //destructor tp_del;
+    
+    ///* Type attribute cache version tag. Added in version 2.6 */
+    NULL, //unsigned int tp_version_tag;
+    
+    NULL //destructor tp_finalize;
 };
 
 #else

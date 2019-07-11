@@ -141,7 +141,7 @@ PySequenceMethods buffer_sequence= {
 #if PY_MAJOR_VERSION >= 3
 PyTypeObject nitro_BufferType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-	"nitro.Buffer", //	const char *tp_name; For printing, in format "<module>.<name>" */
+	"nitro.Buffer", //const char *tp_name; For printing, in format "<module>.<name>"
 	sizeof(nitro_BufferObject), //Py_ssize_t tp_basicsize, 
 	NULL, //tp_itemsize; /* For allocation */
 
