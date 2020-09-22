@@ -46,6 +46,7 @@
     <ProjectGuid>{A5E74A24-E6CF-498B-A9C8-6922C70510E4}</ProjectGuid>
     <RootNamespace>driver</RootNamespace>
     <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win64|Win32'" Label="Configuration">
@@ -287,7 +288,7 @@
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>libusb;..\include;..\..\firmware;xerces-c\src;c:\Python27\include;..\python\py\nitro\include;libgmp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>libusb;..\include;..\..\firmware;xerces-c\src;c:\Program Files\Python37\include;..\python\py\nitro\include;libgmp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;DRIVER_EXPORTS;XERCES_STATIC_LIBRARY;USB_CORE_LIBUSB1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -299,9 +300,9 @@
       <AdditionalIncludeDirectories>..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>gmp.lib;gmpxx.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>gmp.lib;gmpxx.lib;libusb-1.0.lib;xerces-c_static_3.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)nitro.dll</OutputFile>
-      <AdditionalLibraryDirectories>libgmp\x64\Release;libusb\lib\msvc_x64;c:\Python27\libs;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>xerces-c\build\Win64\VC14\Static Release;libgmp\x64\Release;c:\Program Files\Python37\libs;libusb\x64\Release\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>LIBCMT.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -313,6 +314,9 @@
     <PostBuildEvent>
       <Command />
     </PostBuildEvent>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Static Release|Win32'">
     <ClCompile>
@@ -502,15 +506,6 @@
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Win64|Win32'">..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Win64|x64'">..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="libusb\msvc\libusb_static_2017.vcxproj">
-      <Project>{349ee8f9-7d25-4909-aaf5-ff3fade72187}</Project>
-    </ProjectReference>
-    <ProjectReference Include="xerces-c\projects\Win32\VC9\xerces-all\XercesLib\XercesLib.vcxproj">
-      <Project>{152ce948-f659-4206-a50a-1d2b9658ef96}</Project>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -18,6 +18,7 @@
     <ProjectGuid>{802E1DDF-26D6-402E-BC4C-FA3F30F6F7E0}</ProjectGuid>
     <RootNamespace>userdev_dll</RootNamespace>
     <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win64|Win32'" Label="Configuration">

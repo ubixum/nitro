@@ -1,0 +1,1 @@
+Had to modify xerces-c project file to have multithreaded dll as well as updated toolset to match VC17.
