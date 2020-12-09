@@ -1,4 +1,4 @@
-PYTHON=python
+PYTHON?=python
 
 .PHONY: build install clean
 

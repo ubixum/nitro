@@ -1,4 +1,4 @@
-PYTHON=python
+PYTHON?=python
 SHELL := /bin/bash
 BUILDDIR=build
 DESTDIR?=/
