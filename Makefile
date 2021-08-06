@@ -17,7 +17,7 @@ PROG_FILES=$(addprefix prog/, $(addsuffix .cpp, $(PROG_NAMES)))
 PROGS=$(addprefix $(BINDIR)/, $(PROG_NAMES))
 
 
-CPPFLAGS:=$(CPPFLAGS) -Wall -fPIC -Iinclude -I$(shell $(PYTHON) -c "from distutils import sysconfig; print(sysconfig.get_config_var('INCLUDEPY'));") -Ipython/py/nitro/include
+CPPFLAGS:=$(CPPFLAGS) -Wall -fPIC -Iinclude -I$(shell $(PYTHON) -c "from distutils import sysconfig; print(sysconfig.get_config_var('INCLUDEPY'));") -Ipython/py/nitro/include -DNDEBUG
 PYLIB:=$(shell $(PYTHON) -c "from distutils import sysconfig; print(sysconfig.get_config_var('BLDLIBRARY'))")
 
 USBLIB=-lusb-1.0
