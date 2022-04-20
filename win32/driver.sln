@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27130.2027
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30503.244
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "driver", "driver.vcxproj", "{A5E74A24-E6CF-498B-A9C8-6922C70510E4}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -22,7 +22,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "python", "python.vcxproj", 
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XercesLib", "xerces-c\projects\Win32\VC14\xerces-all\XercesLib\XercesLib.vcxproj", "{152CE948-F659-4206-A50A-1D2B9658EF96}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libusb-1.0 (static)", "libusb\msvc\libusb_static_2017.vcxproj", "{349EE8F9-7D25-4909-AAF5-FF3FADE72187}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libusb-1.0 (static)", "libusb\msvc\libusb_static_2019.vcxproj", "{349EE8F9-7D25-4909-AAF5-FF3FADE72187}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -600,12 +600,12 @@ Global
 		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Static Release|Win32.Build.0 = Release|Win32
 		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Static Release|x64.ActiveCfg = Release|x64
 		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Static Release|x64.Build.0 = Release|x64
-		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Static|ARM.ActiveCfg = Release|ARM
-		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Static|ARM.Build.0 = Release|ARM
-		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Static|ARM64.ActiveCfg = Release|ARM64
-		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Static|ARM64.Build.0 = Release|ARM64
-		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Static|Win32.ActiveCfg = Release|Win32
-		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Static|Win32.Build.0 = Release|Win32
+		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Static|ARM.ActiveCfg = Debug|ARM
+		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Static|ARM.Build.0 = Debug|ARM
+		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Static|ARM64.ActiveCfg = Debug|ARM64
+		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Static|ARM64.Build.0 = Debug|ARM64
+		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Static|Win32.ActiveCfg = Debug|Win32
+		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Static|Win32.Build.0 = Debug|Win32
 		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Static|x64.ActiveCfg = Debug|x64
 		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Static|x64.Build.0 = Debug|x64
 		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Test Debug|ARM.ActiveCfg = Debug|ARM
@@ -616,12 +616,12 @@ Global
 		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Test Debug|Win32.Build.0 = Debug|Win32
 		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Test Debug|x64.ActiveCfg = Debug|x64
 		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Test Debug|x64.Build.0 = Debug|x64
-		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Test|ARM.ActiveCfg = Release|ARM
-		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Test|ARM.Build.0 = Release|ARM
-		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Test|ARM64.ActiveCfg = Release|ARM64
-		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Test|ARM64.Build.0 = Release|ARM64
-		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Test|Win32.ActiveCfg = Release|Win32
-		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Test|Win32.Build.0 = Release|Win32
+		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Test|ARM.ActiveCfg = Debug|ARM
+		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Test|ARM.Build.0 = Debug|ARM
+		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Test|ARM64.ActiveCfg = Debug|ARM64
+		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Test|ARM64.Build.0 = Debug|ARM64
+		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Test|Win32.ActiveCfg = Debug|Win32
+		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Test|Win32.Build.0 = Debug|Win32
 		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Test|x64.ActiveCfg = Debug|x64
 		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Test|x64.Build.0 = Debug|x64
 	EndGlobalSection
