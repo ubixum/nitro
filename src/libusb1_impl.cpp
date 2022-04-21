@@ -576,6 +576,7 @@ typedef struct {
     unsigned transferred;
     unsigned timeout;
     int err;
+    int completed;
     std::mutex mutex;
 
 } usb_async_tx_struct;
@@ -628,18 +629,18 @@ void usb_tx_callback(libusb_transfer *tx) {
     }
 
     if (tx_struct->err) {
-	usb_tx_free_helper(tx, "libusb error" );
+	    usb_tx_free_helper(tx, "libusb error" );    
     } else {
         tx_struct->transferred += tx->actual_length;
         usb_tx_submit_helper(tx_struct, tx); // resubmit or free
     }
+    tx_struct->completed = tx_struct->transfers.size() == 0 ? 1 : 0;
 }
 
 
 void usb_tx_submit_helper(tx_struct_ptr tx_struct, libusb_transfer *tx) {
 
     // NOTE tx_struct->mutex locked by calling function
-
 
     // note tx_struct always locked first!
     std::lock_guard<std::mutex> lock ( *tx_struct->devlock);
@@ -699,6 +700,7 @@ int USBDevice::impl::bulk_transfer ( NITRO_DIR d, uint8 ep, uint8* data, size_t 
    tx_struct->queued = 0;
    tx_struct->transferred = 0;
    tx_struct->err=0;
+   tx_struct->completed = 0;
    tx_struct->timeout=timeout;
    usb_debug ( "Transfer Timeout " << timeout ); 
 
@@ -715,43 +717,17 @@ int USBDevice::impl::bulk_transfer ( NITRO_DIR d, uint8 ep, uint8* data, size_t 
     }
     tx_struct->mutex.unlock();
 
-   // the tx callback queues events adding to transferred
-   bool completed=false;
-   do {
-
-       tx_struct->mutex.lock();
-	   completed = tx_struct->transfers.empty();
-       //tx_struct->transferred >= length || tx_struct->err;
-       if (tx_struct->err || std::chrono::system_clock::now() > stop) {
-           // cancel any transfer that's outstanding even if it's already canceled
-           if (!tx_struct->err) tx_struct->err = LIBUSB_ERROR_TIMEOUT;
-	   tx_struct->transfers.erase(std::remove_if(
-		tx_struct->transfers.begin(),tx_struct->transfers.end(), [](auto tx) {
-		   
-		   /*
-		      just remove all the transfers regardless of status.
-			  Before when we tried to free them here thinking the callback would
-			  not be called for cancels that returned "NOT_FOUND" turned out
-			  to be incorrect and cause crashes.
-		   */
-		libusb_cancel_transfer(tx);
-		return true;
-	   }),
-	   tx_struct->transfers.end());
- 
-       }
-       
-       tx_struct->mutex.unlock();
-       if (!completed) {
-           int ret;
-           if ((ret = libusb_handle_events_timeout(NULL, &tv))) {
-               tx_struct->err = ret;
-           }
-       }
-   } while (!completed);
+   // the tx callback queues events adding to transferred   '
+    while (!tx_struct->completed) {
+        int ret;
+        //usb_debug("libusb_handle_events..");
+        if ((ret = libusb_handle_events_timeout_completed(NULL, &tv, &tx_struct->completed))) {
+            tx_struct->err = ret;
+        }
+    }
 
    // tx_struct empty now so no need to lock mutex
-   assert(tx_struct.use_count()==1); // we have a bug in the libusb or usage of it if
+   assert(tx_struct.use_count()==1); // we have a bug in the libusb or usage of it if   
    // refs haven't all been cleaned up.
 
    if (tx_struct->err || tx_struct->transferred < length ) {
