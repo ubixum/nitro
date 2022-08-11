@@ -399,7 +399,7 @@ int to_datatype(PyObject *object, void *address) {
 
             PyObject *first = PySequence_GetItem ( item, 0 );
             if ( !PyBytes_Check (first)) {
-                PyErr_SetString(PyExc_Exception,"Mapping key must be a string.");
+                PyErr_SetString(PyExc_Exception,"Mapping key must be bytes.");
                 Py_DECREF(first);
                 Py_DECREF(item);
                 return 0;
